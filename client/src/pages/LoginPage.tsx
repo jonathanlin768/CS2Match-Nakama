@@ -1,27 +1,108 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
-import { Mail, Lock, Eye, EyeOff, Gamepad2 } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Gamepad2, AlertCircle } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+
+type Tab = "login" | "register";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { status, login, register, error } = useAuth();
+
+  const [activeTab, setActiveTab] = useState<Tab>("login");
+
+  // Login form state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // Register form state
+  const [regEmail, setRegEmail] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regConfirmPassword, setRegConfirmPassword] = useState("");
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
+  const [isRegLoading, setIsRegLoading] = useState(false);
+
+  // 恢复成功 → 自动跳转
+  useEffect(() => {
+    if (status === "authenticated") {
+      navigate("/home", { replace: true });
+    }
+  }, [status, navigate]);
+
+  // 收到服务端错误 → 展示
+  useEffect(() => {
+    if (error) {
+      setFormError(errorToMessage(error));
+    }
+  }, [error]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setFormError(null);
 
-    // Simulate login delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // Redirect to home page after login
-    navigate("/home");
+    try {
+      await login(email, password);
+      // 成功后 status 变为 "authenticated"，上面的 useEffect 会跳转
+    } catch {
+      // 错误由 error 状态管理，上面的 useEffect 会设置 formError
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsRegLoading(true);
+    setFormError(null);
+
+    // 客户端校验：两次密码一致
+    if (regPassword !== regConfirmPassword) {
+      setFormError("两次输入的密码不一致");
+      setIsRegLoading(false);
+      return;
+    }
+
+    // 客户端校验：密码长度 >= 8
+    if (regPassword.length < 8) {
+      setFormError("密码长度至少需要8位");
+      setIsRegLoading(false);
+      return;
+    }
+
+    try {
+      await register(regEmail, regPassword);
+      // 成功后 status 变为 "authenticated"，上面的 useEffect 会跳转
+    } catch {
+      // 错误由 error 状态管理，上面的 useEffect 会设置 formError
+    } finally {
+      setIsRegLoading(false);
+    }
+  };
+
+  // 任何输入变化时清除错误
+  const clearError = () => {
+    if (formError) setFormError(null);
+  };
+
+  // 恢复中 → 加载画面
+  if (status === "restoring") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-10 h-10 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground">正在恢复登录...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // guest → 登录/注册表单
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Background with gradient overlay */}
@@ -41,95 +122,257 @@ export default function LoginPage() {
                 <div className="text-xs text-muted-foreground tracking-widest">SIMULATOR</div>
               </div>
             </div>
-            <p className="text-muted-foreground">登录您的账户，开始电竞之旅</p>
+            <p className="text-muted-foreground">
+              {activeTab === "login" ? "登录您的账户，开始电竞之旅" : "创建新账户，加入电竞世界"}
+            </p>
           </div>
 
-          {/* Login Card */}
+          {/* Card */}
           <div className="bg-card rounded-md border border-border p-6 lg:p-8">
-            <h2 className="text-xl font-semibold mb-6 text-center">账户登录</h2>
-
-            <form onSubmit={handleLogin} className="space-y-5">
-              {/* Email Field */}
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium mb-2 text-muted-foreground">
-                  电子邮件
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="请输入您的邮箱"
-                    className="w-full pl-10 pr-4 py-3 bg-secondary border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Password Field */}
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium mb-2 text-muted-foreground">
-                  密码
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="请输入您的密码"
-                    className="w-full pl-10 pr-12 py-3 bg-secondary border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
-                      <Eye className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Remember Me & Forgot Password */}
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded border-border bg-secondary text-primary focus:ring-primary/50"
-                  />
-                  <span className="text-sm text-muted-foreground">记住我</span>
-                </label>
-                <Link to="#" className="text-sm text-primary hover:underline">
-                  忘记密码？
-                </Link>
-              </div>
-
-              {/* Login Button */}
+            {/* Tabs */}
+            <div className="flex mb-6 border-b border-border">
               <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-semibold rounded-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                type="button"
+                onClick={() => {
+                  setActiveTab("login");
+                  clearError();
+                }}
+                className={`flex-1 pb-3 text-sm font-medium text-center transition-colors relative ${
+                  activeTab === "login"
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
               >
-                {isLoading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                    登录中...
-                  </>
-                ) : (
-                  "登录"
+                登录
+                {activeTab === "login" && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t" />
                 )}
               </button>
-            </form>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("register");
+                  clearError();
+                }}
+                className={`flex-1 pb-3 text-sm font-medium text-center transition-colors relative ${
+                  activeTab === "register"
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                注册
+                {activeTab === "register" && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t" />
+                )}
+              </button>
+            </div>
+
+            {/* Error Message */}
+            {formError && (
+              <div className="mb-4 p-3 rounded-md bg-red-500/10 border border-red-500/30 flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-400">{formError}</p>
+              </div>
+            )}
+
+            {activeTab === "login" ? (
+              /* ===== Login Form ===== */
+              <form onSubmit={handleLogin} className="space-y-5">
+                {/* Email Field */}
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium mb-2 text-muted-foreground">
+                    电子邮件
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        clearError();
+                      }}
+                      placeholder="请输入您的邮箱"
+                      className="w-full pl-10 pr-4 py-3 bg-secondary border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Password Field */}
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium mb-2 text-muted-foreground">
+                    密码
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        clearError();
+                      }}
+                      placeholder="请输入您的密码"
+                      className="w-full pl-10 pr-12 py-3 bg-secondary border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-5 h-5" />
+                      ) : (
+                        <Eye className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Remember Me & Forgot Password */}
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={false}
+                      readOnly
+                      className="w-4 h-4 rounded border-border bg-secondary text-primary focus:ring-primary/50"
+                    />
+                    <span className="text-sm text-muted-foreground">记住我</span>
+                  </label>
+                  <Link to="#" className="text-sm text-primary hover:underline">
+                    忘记密码？
+                  </Link>
+                </div>
+
+                {/* Login Button */}
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full py-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-semibold rounded-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                      登录中...
+                    </>
+                  ) : (
+                    "登录"
+                  )}
+                </button>
+              </form>
+            ) : (
+              /* ===== Register Form ===== */
+              <form onSubmit={handleRegister} className="space-y-5">
+                {/* Email Field */}
+                <div>
+                  <label htmlFor="reg-email" className="block text-sm font-medium mb-2 text-muted-foreground">
+                    电子邮件
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      id="reg-email"
+                      type="email"
+                      value={regEmail}
+                      onChange={(e) => {
+                        setRegEmail(e.target.value);
+                        clearError();
+                      }}
+                      placeholder="请输入您的邮箱"
+                      className="w-full pl-10 pr-4 py-3 bg-secondary border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Password Field */}
+                <div>
+                  <label htmlFor="reg-password" className="block text-sm font-medium mb-2 text-muted-foreground">
+                    密码
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      id="reg-password"
+                      type={showRegPassword ? "text" : "password"}
+                      value={regPassword}
+                      onChange={(e) => {
+                        setRegPassword(e.target.value);
+                        clearError();
+                      }}
+                      placeholder="请设置密码"
+                      className="w-full pl-10 pr-12 py-3 bg-secondary border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegPassword(!showRegPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showRegPassword ? (
+                        <EyeOff className="w-5 h-5" />
+                      ) : (
+                        <Eye className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirm Password Field */}
+                <div>
+                  <label htmlFor="reg-confirm-password" className="block text-sm font-medium mb-2 text-muted-foreground">
+                    确认密码
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      id="reg-confirm-password"
+                      type={showRegConfirmPassword ? "text" : "password"}
+                      value={regConfirmPassword}
+                      onChange={(e) => {
+                        setRegConfirmPassword(e.target.value);
+                        clearError();
+                      }}
+                      placeholder="请再次输入密码"
+                      className="w-full pl-10 pr-12 py-3 bg-secondary border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegConfirmPassword(!showRegConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showRegConfirmPassword ? (
+                        <EyeOff className="w-5 h-5" />
+                      ) : (
+                        <Eye className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Register Button */}
+                <button
+                  type="submit"
+                  disabled={isRegLoading}
+                  className="w-full py-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-semibold rounded-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isRegLoading ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                      注册中...
+                    </>
+                  ) : (
+                    "注册"
+                  )}
+                </button>
+              </form>
+            )}
 
             {/* Divider */}
             <div className="relative my-6">
@@ -159,19 +402,11 @@ export default function LoginPage() {
                 <span className="text-sm">GitHub</span>
               </button>
             </div>
-
-            {/* Register Link */}
-            <p className="mt-6 text-center text-sm text-muted-foreground">
-              还没有账户？{" "}
-              <Link to="#" className="text-primary hover:underline font-medium">
-                立即注册
-              </Link>
-            </p>
           </div>
 
           {/* Footer */}
           <p className="mt-6 text-center text-xs text-muted-foreground">
-            登录即表示您同意我们的{" "}
+            {activeTab === "login" ? "登录" : "注册"}即表示您同意我们的{" "}
             <Link to="#" className="text-primary hover:underline">服务条款</Link>
             {" "}和{" "}
             <Link to="#" className="text-primary hover:underline">隐私政策</Link>
@@ -180,4 +415,20 @@ export default function LoginPage() {
       </div>
     </div>
   );
+}
+
+/**
+ * 将 Nakama 错误信息转为用户友好的中文提示
+ */
+function errorToMessage(error: string): string {
+  if (error.includes("Network") || error.includes("fetch") || error.includes("connect")) {
+    return "无法连接服务器，请检查网络";
+  }
+  if (error.includes("已注册")) {
+    return error; // 使用 hook 层返回的中文提示，如"该邮箱已注册，请直接登录"
+  }
+  if (error.includes("credentials") || error.includes("password") || error.includes("email") || error.includes("invalid")) {
+    return "邮箱或密码错误";
+  }
+  return "登录失败，请稍后重试";
 }

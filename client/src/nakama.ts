@@ -21,32 +21,3 @@ const client = new Client(
 );
 
 export default client;
-
-/**
- * 设备认证 — 使用浏览器指纹生成 deviceId
- */
-export async function authenticateDevice(): Promise<{
-  session: import("@heroiclabs/nakama-js").Session | null;
-  error: string | null;
-}> {
-  try {
-    // 生成或恢复 deviceId
-    let deviceId = localStorage.getItem("nakama_device_id");
-    if (!deviceId) {
-      deviceId = crypto.randomUUID();
-      localStorage.setItem("nakama_device_id", deviceId);
-    }
-
-    const session = await client.authenticateDevice(deviceId, true, deviceId.slice(0, 8));
-
-    // 持久化 session（支持页面刷新恢复）
-    localStorage.setItem("nakama_token", session.token ?? "");
-    localStorage.setItem("nakama_refresh", session.refresh_token ?? "");
-
-    return { session, error: null };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("[nakama] Device authentication failed:", message);
-    return { session: null, error: message };
-  }
-}

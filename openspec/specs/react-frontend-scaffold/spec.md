@@ -27,7 +27,7 @@ React + Vite + TypeScript 前端项目骨架规格 — 项目初始化、Nakama 
 
 ### Requirement: Nakama JS SDK 集成
 
-前端项目 SHALL 依赖 `@heroiclabs/nakama-js`，提供 Nakama 客户端单例模块，连接地址从 `VITE_NAKAMA_HOST` 环境变量读取，默认 `localhost:7350`。
+前端项目 SHALL 依赖 `@heroiclabs/nakama-js`，提供 Nakama 客户端单例模块，连接地址从 `VITE_NAKAMA_HOST` 环境变量读取，默认 `localhost:7350`，以及邮箱认证和 Session 恢复的 API 封装。
 
 #### Scenario: 创建 Nakama 客户端
 
@@ -35,20 +35,36 @@ React + Vite + TypeScript 前端项目骨架规格 — 项目初始化、Nakama 
 - **AND** 调用客户端创建函数，传入 server key `"defaultkey"` 和 host `"localhost"`、port `"7350"`、useSSL `false`
 - **THEN** 返回已配置的 `Client` 实例
 
-#### Scenario: 设备认证（Device Authentication）
+#### Scenario: 邮箱注册（Email Registration）
 
-- **WHEN** 用户首次访问前端应用
-- **AND** 前端调用 `client.authenticateDevice(deviceId, true, "username")`
-- **THEN** Nakama 服务器返回有效的 `Session` 对象
-- **AND** Session 包含 `token` 和 `refresh_token`
+- **WHEN** 用户提交邮箱和密码进行注册
+- **AND** 前端调用 `client.authenticateEmail(email, password, true)`
+- **THEN** Nakama 服务器返回有效的 `Session` 对象（账号不存在时自动创建）
+- **AND** `session.created` 为 `true`（新账号）或 `false`（已存在）
 - **AND** Session 信息持久化到 `localStorage`
 
-#### Scenario: 认证失败的降级处理
+#### Scenario: 邮箱登录（Email Authentication）
 
-- **WHEN** Nakama 服务器不可达
-- **AND** 前端调用 `client.authenticateDevice`
-- **THEN** 前端捕获错误并在控制台输出连接失败信息
-- **AND** 不阻塞页面渲染（显示"连接服务器中..."状态）
+- **WHEN** 用户提交已注册的邮箱和密码进行登录
+- **AND** 前端调用 `client.authenticateEmail(email, password, false)`
+- **THEN** Nakama 服务器验证凭证并返回有效的 `Session` 对象
+- **AND** Session 信息持久化到 `localStorage`
+
+#### Scenario: 认证失败的错误处理
+
+- **WHEN** Nakama 服务器不可达或认证信息无效
+- **AND** 前端调用 `authenticateEmail`
+- **THEN** 前端捕获错误并返回错误信息给调用方
+- **AND** 不阻塞页面渲染（LoginPage 显示错误提示）
+
+#### Scenario: Session 恢复
+
+- **WHEN** 前端应用初始化时 localStorage 中存在 token 和 refresh_token
+- **AND** 调用 Session 恢复逻辑
+- **THEN** token 未过期则本地恢复，零网络请求
+- **AND** token 过期但 refresh_token 有效则刷新 Session
+- **AND** 恢复成功则设置当前 session 并跳转受保护页面
+- **AND** 恢复失败则清除过期 token，展示登录页
 
 ### Requirement: 前端 Docker 构建与 Nginx 托管
 
