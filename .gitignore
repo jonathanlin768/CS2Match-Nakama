@@ -47,11 +47,8 @@ logs/
 nakama/data/
 *.dump
 
-# Luban config outputs
-server/data/
-server/config/
-client/src/config/
-client/public/data/
+# Luban-generated config files are committed as source code
+# (server/config/, client/src/config/, client/public/data/)
 
 # OpenSpecConfig
 # (archives are committed as project documentation)
