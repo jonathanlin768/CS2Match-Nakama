@@ -1,0 +1,63 @@
+schema: spec-driven
+
+context: |
+  # CS2 Simu Project — 技术栈与架构
+
+  ## 技术栈
+  - 后端游戏服务器: Nakama 3.30+ (开源游戏后端，支持多人联机、匹配、聊天、社交)
+  - 后端运行时语言: Go 1.22+ (编写 Nakama 服务器插件 — RPC、Match Handler、Hook)
+  - 前端框架: React 18+ (用户界面与交互层)
+  - 前端构建工具: Vite 5+ (快速开发与构建，支持现代 ESM)
+  - Nakama 客户端 SDK: @heroiclabs/nakama-js (官方 JavaScript/TypeScript 客户端 SDK)
+  - 前端状态管理: Zustand / React Query (轻量级状态管理)
+  - 数据库: PostgreSQL 15+ (Nakama 要求的数据库)
+  - 容器化: Docker + Docker Compose (开发环境与生产部署)
+  - 策划配表工具: Luban (游戏配置表解决方案 — Excel → JSON/Binary → 代码生成)
+  - AI 开发工作流: OpenSpec (规范驱动开发 SDD 框架)
+
+  ## 架构决策
+  - 前端通过 Nakama JavaScript SDK 直接与 Nakama 服务器通信（无需中间 Node.js BFF 层）
+  - Nakama 服务器暴露端口: 7350 (HTTP REST API / WebSocket), 7349 (gRPC), 7351 (Web Console)
+  - 游戏同步方案: 服务器权威的状态同步 (Server-Authoritative Fixed Timestep State Sync)
+  - Tick Rate: 10Hz (100ms/tick) 或 20Hz (50ms/tick)
+  - 核心玩法: 1v1 教练对战 — 两名玩家扮演教练，各自挑选 5 名选手，在地图中模拟比赛
+  - 观战与回放: 需要支持实时观战和对局回放
+  - 仅 2 个真实玩家 + 10 个 AI 单位（由服务器驱动）
+  - 客户端只做表现（渲染+插值），不运行游戏逻辑
+
+  ## 部署
+  - 目标环境: AWS (单区域)
+  - 规模: 最多 100 人同时在线（实验项目）
+  - 部署方式: Docker Compose（单节点 Nakama，不需要 K8s）
+  - 数据库: RDS PostgreSQL (托管)
+
+  ## 代码规范
+  - 前端使用 TypeScript
+  - 后端使用 Go，编译为 .so 插件加载到 Nakama
+  - Go Plugin 入口函数: InitModule，注册所有 RPC、Match Handler、Hooks
+  - Match Handler 有 7 个生命周期函数: MatchInit, MatchJoinAttempt, MatchJoin, MatchLeave, MatchLoop, MatchTerminate, MatchSignal
+  - 所有游戏状态变更由 Match Handler 的 MatchLoop 驱动（服务器权威）
+  - 客户端只发送"输入"（战术指令、操作），不直接修改游戏状态
+  - 使用 Nakama Storage Engine 存储玩家数据（权限控制: 客户端只读，服务器可写）
+  - 所有客户端获取数据、触发逻辑的操作通过 RPC
+
+rules:
+  proposal:
+    - 必须明确标注影响的模块范围（Nakama 后端 / React 前端 / 数据库 / 部署）
+    - 如果涉及游戏玩法变更，必须说明对状态同步机制的影响
+    - 必须说明该变更是否需要新的 RPC、Match Handler 或 Storage 操作
+    - 新功能必须标注是否需要更新 Luban 配置表
+  specs:
+    - 使用 Given/When/Then 格式描述测试场景（前端和后端均有）
+    - 每个 Requirement 必须至少包含一个 Scenario
+    - 涉及 Match Handler 的 spec 必须包含 tick 级别的时间精度描述
+    - 涉及客户端渲染的 spec 必须区分"服务器状态"和"客户端表现"
+  design:
+    - 技术方案必须说明与现有 Nakama 插件架构的兼容性
+    - 如果引入新的 Go 依赖或 npm 包，必须提供选型理由
+    - 涉及状态同步的变更必须说明对 MatchLoop 的影响
+  tasks:
+    - 任务必须按依赖排序
+    - 必须包含测试验证任务（前后端分别）
+    - 涉及 Go Plugin 的任务必须包含编译验证步骤
+    - 涉及 Nakama Storage 或 RPC 的任务必须包含权限检查

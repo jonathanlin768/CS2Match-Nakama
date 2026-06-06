@@ -1,0 +1,66 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+dist/
+build/
+*.so
+*.exe
+*.dll
+*.wasm
+
+# Go
+*.exe~
+*.test
+*.out
+go.work
+go.work.sum
+
+# Claude Code (local settings)
+.claude/settings.local.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log
+logs/
+
+# Nakama
+nakama/data/
+*.dump
+
+# Luban config outputs
+server/data/
+server/config/
+client/src/config/
+client/public/data/
+
+# OpenSpec
+openspec/changes/archive/
+
+# Coverage
+coverage/
+*.coverprofile
+
+# Misc
+.cache/
+tmp/
+temp/
