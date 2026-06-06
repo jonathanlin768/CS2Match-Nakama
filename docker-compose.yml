@@ -1,0 +1,82 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: cs2match-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nakama
+      POSTGRES_USER: nakama
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-nakama}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - nakama-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nakama -d nakama"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  nakama:
+    image: registry.heroiclabs.com/heroiclabs/nakama:3.30.0
+    container_name: cs2match-nakama
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint:
+      - "/bin/sh"
+      - "-ecx"
+      - |
+        /nakama/nakama migrate up \
+          --database.address "nakama:${DB_PASSWORD:-nakama}@db:5432/nakama?sslmode=disable" \
+          --logger.level DEBUG && \
+        exec /nakama/nakama \
+          --config /nakama/data/nakama-config.yml \
+          --database.address "nakama:${DB_PASSWORD:-nakama}@db:5432/nakama?sslmode=disable" \
+          --logger.level DEBUG \
+          --runtime.path /nakama/data/modules \
+          --console.username "${CONSOLE_USERNAME:-admin}" \
+          --console.password "${CONSOLE_PASSWORD:-password}" \
+          --socket.server_key "${NAKAMA_SERVER_KEY:-defaultkey}" \
+          --runtime.http_key "${NAKAMA_SERVER_KEY:-defaultkey}"
+    ports:
+      - "7350:7350"
+      - "7351:7351"
+    environment:
+      NAKAMA_SERVER_KEY: ${NAKAMA_SERVER_KEY:-defaultkey}
+      CONSOLE_USERNAME: ${CONSOLE_USERNAME:-admin}
+      CONSOLE_PASSWORD: ${CONSOLE_PASSWORD:-password}
+    volumes:
+      - ./nakama-config.yml:/nakama/data/nakama-config.yml:ro
+      - ./server/build:/nakama/data/modules:ro
+    networks:
+      - nakama-network
+    healthcheck:
+      test: ["CMD-SHELL", "kill -0 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: cs2match-frontend
+    restart: unless-stopped
+    depends_on:
+      nakama:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    networks:
+      - nakama-network
+
+networks:
+  nakama-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    name: cs2match-postgres-data

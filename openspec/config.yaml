@@ -40,6 +40,7 @@ context: |
   - 客户端只发送"输入"（战术指令、操作），不直接修改游戏状态
   - 使用 Nakama Storage Engine 存储玩家数据（权限控制: 客户端只读，服务器可写）
   - 所有客户端获取数据、触发逻辑的操作通过 RPC
+  - 项目所有包名以 windypath.com 作为基域名（Go module: windypath.com/cs2match/<module>；前端 package name: @windypath/<package>）
 
 rules:
   proposal:
@@ -56,8 +57,10 @@ rules:
     - 技术方案必须说明与现有 Nakama 插件架构的兼容性
     - 如果引入新的 Go 依赖或 npm 包，必须提供选型理由
     - 涉及状态同步的变更必须说明对 MatchLoop 的影响
+    - Go module 路径必须使用 windypath.com/cs2match/<module> 格式；前端包名使用 @windypath/<package> 格式
   tasks:
     - 任务必须按依赖排序
     - 必须包含测试验证任务（前后端分别）
     - 涉及 Go Plugin 的任务必须包含编译验证步骤
     - 涉及 Nakama Storage 或 RPC 的任务必须包含权限检查
+    - 创建 Go module 时必须使用 windypath.com/cs2match/<module> 作为模块路径

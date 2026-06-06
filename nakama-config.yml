@@ -1,0 +1,37 @@
+# Nakama 开发环境配置文件
+# 文档: https://heroiclabs.com/docs/nakama/getting-started/configuration/
+# 注: 敏感配置（console、server_key）通过 docker-compose CLI flag 传入
+
+name: nakama-server
+
+# Console 管理后台
+console:
+  port: 7351
+
+# Socket 配置 (WebSocket + HTTP)
+socket:
+  port: 7350
+  # 开发环境允许所有来源
+  allowed_origins:
+    - "*"
+
+# Logger 配置
+logger:
+  level: "DEBUG"
+  stdout: true
+
+# Runtime 配置
+runtime:
+  # Go 插件从 modules 目录加载
+  path: "/nakama/data/modules"
+
+# Session 配置
+session:
+  token_expiry_sec: 86400     # 24h
+  refresh_token_expiry_sec: 604800  # 7 days
+
+# 社交功能
+social:
+  steam:
+    publisher_key: ""
+    app_id: 0
