@@ -53,8 +53,8 @@ server/config/
 client/src/config/
 client/public/data/
 
-# OpenSpec
-openspec/changes/archive/
+# OpenSpecConfig
+# (archives are committed as project documentation)
 
 # Coverage
 coverage/

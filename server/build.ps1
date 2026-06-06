@@ -3,7 +3,7 @@
 # ==============================================
 # 用途: 编译 main.go 为 .so 插件，供 Nakama 容器加载
 # 输出: server/build/backend.so
-# 前置: WSL2 + Go 1.22+ (在 WSL2 中运行)
+# 前置: WSL2 + Go 1.24.5 (在 WSL2 中运行)
 #
 # 使用: wsl bash server/build.sh
 #       或直接在 WSL2 终端中: bash server/build.sh

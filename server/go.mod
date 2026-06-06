@@ -8,3 +8,7 @@ require (
 	github.com/google/go-cmp v0.7.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 )
+
+require windypath.com/cs2match/config v0.0.0
+
+replace windypath.com/cs2match/config => ./config

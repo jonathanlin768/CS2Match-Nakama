@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/heroiclabs/nakama-common/runtime"
+	cfg "windypath.com/cs2match/config"
 )
 
 // InitModule 是 Nakama Go Plugin 的入口函数。
@@ -19,6 +20,19 @@ func InitModule(
 	initializer runtime.Initializer,
 ) error {
 	logger.Info("CS2Match Go plugin loaded successfully")
+
+	// 初始化配置表
+	if err := cfg.Init(); err != nil {
+		logger.Error("Failed to init config: %v", err)
+		return err
+	}
+	logger.Info("Config tables loaded, count=%d", cfg.TableCount())
+
+	// 打印示例道具
+	if item := cfg.GetFirstItem(); item != nil {
+		logger.Info("Sample item: id=%d name=%s desc=%s price=%d",
+			item.Id, item.Name, item.Desc, item.Price)
+	}
 
 	if err := initializer.RegisterRpc("HealthCheck", healthCheckRPC); err != nil {
 		logger.Error("Failed to register HealthCheck RPC: %v", err)

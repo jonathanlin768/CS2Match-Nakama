@@ -10,7 +10,7 @@
 | 层级 | 技术选型 | 版本建议 | 说明 |
 |------|---------|---------|------|
 | **后端游戏服务器** | Nakama | 3.30+ | 开源游戏后端服务器，支持多人联机、匹配、聊天、社交等 |
-| **后端运行时语言** | Go | 1.22+ | 编写Nakama服务器插件（RPC、Match Handler、Hook等） |
+| **后端运行时语言** | Go | 1.24.5 | 编写Nakama服务器插件（RPC、Match Handler、Hook等） |
 | **前端框架** | React | 18+ | 用户界面与交互层 |
 | **前端构建工具** | Vite | 5+ | 快速开发与构建，支持现代ESM |
 | **Nakama客户端SDK** | @heroiclabs/nakama-js | 最新版 | 官方JavaScript/TypeScript客户端SDK |

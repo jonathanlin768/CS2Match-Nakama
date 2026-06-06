@@ -2,12 +2,29 @@ import { useEffect, useState } from "react";
 import "./App.css";
 import { useNakamaAuth } from "./hooks/useNakamaAuth";
 import client from "./nakama";
+import { loadConfig, type Tables } from "./config";
 
 function App() {
   const { status, session, error, reconnect } = useNakamaAuth();
   const [healthCheckResult, setHealthCheckResult] = useState<string | null>(
     null
   );
+  const [configTables, setConfigTables] = useState<Tables | null>(null);
+
+  // 加载配置表
+  useEffect(() => {
+    async function initConfig() {
+      try {
+        const tables = await loadConfig();
+        setConfigTables(tables);
+        const items = tables.Tbitem.getDataList();
+        console.log(`[Config] Loaded ${items.length} items:`, items.map((it) => it.name));
+      } catch (err) {
+        console.error("[Config] Load failed:", err);
+      }
+    }
+    initConfig();
+  }, []);
 
   // 认证成功后自动调用 HealthCheck RPC
   useEffect(() => {
@@ -56,6 +73,20 @@ function App() {
           重新连接
         </button>
       </div>
+
+      {/* 配置表预览 */}
+      {configTables && (
+        <div className="healthcheck-card">
+          <h3>配置表（道具列表）</h3>
+          <ul>
+            {configTables.Tbitem.getDataList().map((item, i) => (
+              <li key={i}>
+                id={item.id} name={item.name} desc={item.desc} price={item.price}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* HealthCheck 结果 */}
       {healthCheckResult && (

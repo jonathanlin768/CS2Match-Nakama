@@ -23,6 +23,13 @@ echo "=== CS2Match Go Plugin Build ==="
 echo "Using: Nakama pluginbuilder 3.30.0"
 echo "Output: ${OUTPUT}"
 
+# 检查配置表是否已生成，如果没有则自动导表
+if [ ! -f "${SCRIPT_DIR}/config/Tables.go" ]; then
+    echo ""
+    echo "Config tables not found, running gen-config first..."
+    bash "${PROJECT_DIR}/scripts/gen-config.sh"
+fi
+
 # 使用 Nakama 官方 pluginbuilder 镜像编译
 # 该镜像包含与 Nakama 3.30.0 完全匹配的 Go 1.24.5 及依赖
 docker run --rm \
@@ -30,7 +37,7 @@ docker run --rm \
   -v "${SCRIPT_DIR}:/app" \
   -w /app \
   registry.heroiclabs.com/heroiclabs/nakama-pluginbuilder:3.30.0 \
-  go build -v -buildmode=plugin -trimpath -o build/backend.so .
+  go build -v -mod=mod -buildmode=plugin -trimpath -o build/backend.so .
 
 echo "=== Build complete: ${OUTPUT} ==="
 echo "Restart Nakama to reload: docker compose restart nakama"

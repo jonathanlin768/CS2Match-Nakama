@@ -1,0 +1,239 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ============================================================
+# gen-config.sh — Luban 导表脚本 (Unix / macOS / Git Bash)
+# 通过 Docker 运行 Luban，生成 Server (Go) 和 Client (TS) 配置
+# ============================================================
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+IMAGE="luban-runner"
+CONF="configs/luban.conf"
+
+# 颜色输出
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+echo "=============================================="
+echo "  Luban 导表工具 (Docker)"
+echo "=============================================="
+
+# 1. 检查 Docker
+echo ""
+echo "[1/4] 检查 Docker..."
+if ! command -v docker &>/dev/null; then
+    echo -e "${RED}[ERROR] 未找到 Docker，请先安装 Docker Desktop${NC}"
+    echo "  下载: https://www.docker.com/products/docker-desktop"
+    exit 1
+fi
+echo -e "${GREEN}[OK] Docker 已就绪${NC}"
+
+# 2. 构建 Luban Docker 镜像
+echo ""
+echo "[2/4] 构建 Luban 镜像..."
+cd "$PROJECT_DIR"
+docker build -t "$IMAGE" tools/luban/ > /dev/null 2>&1
+echo -e "${GREEN}[OK] Luban 镜像已就绪${NC}"
+
+# 3. 清理旧输出（保留手写文件：go.mod、loader.go、index.ts）
+echo ""
+echo "[3/4] 清理旧输出..."
+
+# server/config/ — 保留 go.mod 和 loader.go，删除 Luban 生成的文件
+shopt -s nullglob
+for f in server/config/*; do
+    case "$(basename "$f")" in
+        go.mod|loader.go) ;;  # 手写文件，保留
+        *) rm -rf "$f" ;;
+    esac
+done
+
+# client/src/config/ — 保留 index.ts，删除 Luban 生成的文件
+for f in client/src/config/*; do
+    case "$(basename "$f")" in
+        index.ts) ;;  # 手写文件，保留
+        *) rm -rf "$f" ;;
+    esac
+done
+shopt -u nullglob
+
+# client/public/data/config/ — 全部是 Luban 生成的 JSON，直接删
+rm -rf client/public/data/config 2>/dev/null
+echo -e "${GREEN}[OK] 旧输出已清理${NC}"
+
+# 4. 运行导表
+echo ""
+echo "[4/4] 运行导表..."
+
+# 4a. Server (Go) — 分两步：先生成代码，再生成数据（避免 Luban 清理冲突）
+echo ""
+echo "  --- Server (go-json) ---"
+docker run --rm -v "$(pwd):/workspace" "$IMAGE" \
+    -t all -c go-json \
+    --conf "$CONF" \
+    -x outputCodeDir=server/config \
+    -x go-json.lubanGoModule=windypath.com/cs2match/config
+docker run --rm -v "$(pwd):/workspace" "$IMAGE" \
+    -t all -d json \
+    --conf "$CONF" \
+    -x outputDataDir=server/config/data
+echo -e "${GREEN}[OK] Server 配置生成完成${NC}"
+
+# 4b. Client (TypeScript)
+echo ""
+echo "  --- Client (typescript-json) ---"
+docker run --rm -v "$(pwd):/workspace" "$IMAGE" \
+    -t all -c typescript-json -d json \
+    --conf "$CONF" \
+    -x outputCodeDir=client/src/config \
+    -x outputDataDir=client/public/data/config
+echo -e "${GREEN}[OK] Client 配置生成完成${NC}"
+
+# 补回手写文件（Luban 清空 outputCodeDir 时可能被删）
+if [ ! -f server/config/go.mod ]; then
+  cat > server/config/go.mod << 'MODEOF'
+module windypath.com/cs2match/config
+
+go 1.24.5
+MODEOF
+  echo -e "${YELLOW}[POST] Recreated server/config/go.mod${NC}"
+fi
+
+if [ ! -f server/config/loader.go ]; then
+  cat > server/config/loader.go << 'LOADEREOF'
+package cfg
+
+import (
+	"embed"
+	"encoding/json"
+	"fmt"
+	"strings"
+)
+
+//go:embed data/*.json
+var configData embed.FS
+
+// Global is the singleton config tables instance, available after Init()
+var Global *Tables
+
+// Init loads all config table data. Call from InitModule.
+func Init() error {
+	entries, err := configData.ReadDir("data")
+	if err != nil {
+		return fmt.Errorf("config: failed to read embedded config data: %w", err)
+	}
+
+	dataMap := make(map[string][]map[string]interface{})
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+			continue
+		}
+
+		raw, err := configData.ReadFile("data/" + entry.Name())
+		if err != nil {
+			return fmt.Errorf("config: failed to read %s: %w", entry.Name(), err)
+		}
+
+		var rows []map[string]interface{}
+		if err := json.Unmarshal(raw, &rows); err != nil {
+			return fmt.Errorf("config: failed to parse %s: %w", entry.Name(), err)
+		}
+
+		tableName := strings.TrimSuffix(entry.Name(), ".json")
+		dataMap[tableName] = rows
+	}
+
+	loader := func(tableName string) ([]map[string]interface{}, error) {
+		data, ok := dataMap[tableName]
+		if !ok {
+			return nil, fmt.Errorf("config: table %s not found", tableName)
+		}
+		return data, nil
+	}
+
+	tables, err := NewTables(loader)
+	if err != nil {
+		return fmt.Errorf("config: failed to init tables: %w", err)
+	}
+
+	Global = tables
+	return nil
+}
+
+// TableCount returns the number of loaded tables
+func TableCount() int {
+	count := 0
+	if Global != nil {
+		if Global.Tbitem != nil {
+			count++
+		}
+	}
+	return count
+}
+
+// GetFirstItem returns the first item (for debug logging)
+func GetFirstItem() *item {
+	if Global == nil || Global.Tbitem == nil {
+		return nil
+	}
+	list := Global.Tbitem.GetDataList()
+	if len(list) == 0 {
+		return nil
+	}
+	return list[0]
+}
+LOADEREOF
+  echo -e "${YELLOW}[POST] Recreated server/config/loader.go${NC}"
+fi
+
+if [ ! -f client/src/config/index.ts ]; then
+  cat > client/src/config/index.ts << 'TSEOF'
+/**
+ * Config table loader module
+ * Auto-generated by Luban; do not modify schema.ts manually.
+ */
+
+export { Tables, Tbitem, item } from './schema';
+
+const TABLE_NAMES = ['tbitem'];
+
+export async function loadConfig(): Promise<Tables> {
+  const { Tables } = await import('./schema');
+
+  const dataCache: Record<string, unknown> = {};
+
+  await Promise.all(
+    TABLE_NAMES.map(async (name) => {
+      const resp = await fetch('/data/config/' + name + '.json');
+      if (!resp.ok) {
+        throw new Error('Failed to load config table "' + name + '": ' + resp.status);
+      }
+      dataCache[name] = await resp.json();
+    })
+  );
+
+  const loader = (tableName: string) => {
+    const data = dataCache[tableName];
+    if (!data) throw new Error('Config table "' + tableName + '" not found');
+    return data;
+  };
+
+  return new Tables(loader);
+}
+TSEOF
+  echo -e "${YELLOW}[POST] Recreated client/src/config/index.ts${NC}"
+fi
+
+echo ""
+echo "=============================================="
+echo -e "${GREEN}  导表完成！${NC}"
+echo "=============================================="
+echo ""
+echo "生成产物:"
+echo "  Server 代码: server/config/"
+echo "  Server 数据: server/config/data/"
+echo "  Client 代码: client/src/config/"
+echo "  Client 数据: client/public/data/config/"

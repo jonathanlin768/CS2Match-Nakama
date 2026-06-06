@@ -7,7 +7,7 @@
 | 层级 | 技术 |
 |------|------|
 | 游戏服务器 | Nakama 3.30 |
-| 服务器插件 | Go 1.22+ (编译为 .so) |
+| 服务器插件 | Go 1.24.5 (编译为 .so) |
 | 前端 | React 18 + TypeScript + Vite 5 |
 | 数据库 | PostgreSQL 15 |
 | 容器化 | Docker + Docker Compose |
@@ -90,6 +90,22 @@ cs2-simu-project/
 │   ├── build.sh             # 编译脚本 (Linux/Mac)
 │   ├── build.ps1            # 编译脚本 (Windows WSL2)
 │   └── build/               # 编译产物 (.so)
+│
+├── configs/                 # 策划配表 (Excel) + Luban 配置
+│   ├── luban.conf            # Luban 主配置 (groups/schemaFiles/targets)
+│   ├── Defines/              # 内置类型 XML 扩展
+│   └── Datas/                # 配表数据
+│       ├── __tables__.xlsx   # 表定义
+│       ├── __beans__.xlsx    # 结构定义
+│       ├── __enums__.xlsx    # 枚举定义
+│       └── *.xlsx            # 业务数据表
+│
+├── scripts/                  # 工具脚本
+│   ├── gen-config.sh         # 导表脚本 (Linux/Mac/Git Bash)
+│   └── gen-config.ps1        # 导表脚本 (Windows PowerShell)
+│
+├── tools/luban/              # Luban Docker 镜像
+│   └── Dockerfile
 │
 ├── client/                  # React 前端项目
 │   ├── Dockerfile           # 前端 Docker 多阶段构建
@@ -202,6 +218,48 @@ cd client && npm run dev       # 启动本地 Vite
 # 停止 npm run dev (Ctrl+C)
 docker compose up -d frontend  # 启动 Docker 前端
 ```
+
+---
+
+## 策划配表（Luban）
+
+项目使用 [Luban 4.x](https://github.com/focus-creative-games/luban) 管理游戏配置表，通过 **Docker** 运行，**无需安装 .NET SDK**。
+
+### 导表命令
+
+```bash
+# Windows (PowerShell)
+.\scripts\gen-config.ps1
+
+# Linux / macOS / Git Bash
+bash scripts/gen-config.sh
+```
+
+### 导表流程
+
+```
+configs/Datas/*.xlsx  ──►  Luban (Docker)  ──►  server/config/ (Go 代码 + JSON)
+                                           ──►  client/src/config/ (TS 类型)
+                                           ──►  client/public/data/config/ (JSON)
+```
+
+### 添加新配置表
+
+1. 在 `configs/Datas/` 下创建 Excel 数据表（如 `#skill.xlsx`）
+2. 在 `configs/Datas/__beans__.xlsx` 中定义数据结构
+3. 在 `configs/Datas/__tables__.xlsx` 中注册新表
+4. 运行导表脚本
+5. 在代码中使用 `cfg.Global`（Go）或 `loadConfig()`（TS）访问
+
+### 目录约定
+
+| 目录 | 说明 | Git |
+|------|------|-----|
+| `configs/` | 策划 Excel 源文件 + luban.conf | ✅ 提交 |
+| `server/config/` | Luban 生成的 Go 代码 | ❌ gitignore |
+| `server/config/data/` | Luban 生成的 JSON 数据 (嵌入 .so) | ❌ gitignore |
+| `client/src/config/` | Luban 生成的 TS 类型 | ❌ gitignore |
+| `client/public/data/config/` | Luban 生成的 JSON 数据 | ❌ gitignore |
 
 ---
 

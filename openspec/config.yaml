@@ -5,7 +5,7 @@ context: |
 
   ## 技术栈
   - 后端游戏服务器: Nakama 3.30+ (开源游戏后端，支持多人联机、匹配、聊天、社交)
-  - 后端运行时语言: Go 1.22+ (编写 Nakama 服务器插件 — RPC、Match Handler、Hook)
+  - 后端运行时语言: Go 1.24.5 (编写 Nakama 服务器插件 — RPC、Match Handler、Hook)
   - 前端框架: React 18+ (用户界面与交互层)
   - 前端构建工具: Vite 5+ (快速开发与构建，支持现代 ESM)
   - Nakama 客户端 SDK: @heroiclabs/nakama-js (官方 JavaScript/TypeScript 客户端 SDK)
