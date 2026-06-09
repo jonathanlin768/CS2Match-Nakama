@@ -10,6 +10,7 @@ import LoginPage from './pages/LoginPage'
 import MatchPage from './pages/MatchPage'
 import GachaPage from './pages/GachaPage'
 import RankingPage from './pages/RankingPage'
+import ProfilePage from './pages/ProfilePage'
 
 const router = createBrowserRouter([
   {
@@ -26,6 +27,7 @@ const router = createBrowserRouter([
           { path: 'match', element: <MatchPage /> },
           { path: 'gacha', element: <GachaPage /> },
           { path: 'ranking', element: <RankingPage /> },
+          { path: 'profile', element: <ProfilePage /> },
         ],
       },
     ],
