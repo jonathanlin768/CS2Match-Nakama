@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { Coins, Gem, Bell, Settings, Mail, User, Menu, X } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 const navItems = [
   { label: "首页", href: "/home" },
@@ -15,6 +16,8 @@ const navItems = [
 ];
 
 export function Header() {
+  const { session } = useAuth();
+  const username = session?.username ?? null;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { pathname } = useLocation();
 
@@ -65,11 +68,13 @@ export function Header() {
               <Gem className="w-4 h-4 text-pink-500" />
               <span className="text-xs lg:text-sm font-medium">1,250</span>
             </div>
-            <Link to="/profile" className="hidden md:flex items-center gap-1 hover:opacity-80 transition-opacity">
+            <Link to="/profile/me" className="hidden md:flex items-center gap-1.5 hover:opacity-80 transition-opacity" title="个人中心">
               <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
                 <User className="w-3 h-3 text-white" />
               </div>
-              <span className="text-xs lg:text-sm font-medium">52</span>
+              <span className="text-xs lg:text-sm font-medium max-w-[80px] truncate">
+                {username ?? "玩家"}
+              </span>
             </Link>
           </div>
 
@@ -122,8 +127,16 @@ export function Header() {
             ))}
           </nav>
           
-          {/* Mobile-only icons */}
+          {/* Mobile-only profile link + icons */}
           <div className="sm:hidden flex items-center justify-around py-3 border-t border-border">
+            <Link
+              to="/profile"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <User className="w-5 h-5" />
+              <span className="text-[10px]">我的</span>
+            </Link>
             <button className="p-2 rounded hover:bg-secondary transition-colors">
               <Mail className="w-5 h-5 text-muted-foreground" />
             </button>
