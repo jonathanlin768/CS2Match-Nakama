@@ -1,12 +1,15 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import type { Session, Friend, Notification } from "@heroiclabs/nakama-js";
-import type { Socket } from "@heroiclabs/nakama-js";
-import client from "../nakama";
 import {
   listFriends,
   addFriendsByUsername,
   deleteFriend,
 } from "../api/friends";
+import {
+  useSocket,
+  addSocketListener,
+  removeSocketListener,
+} from "./useSocket";
 
 /**
  * 数据加载状态：
@@ -110,33 +113,24 @@ export function useFriends(session: Session | null): UseFriendsReturn {
     }
   }, [session, load]);
 
-  // --- WebSocket 通知监听：收到好友相关通知时自动刷新 ---
+  // --- 使用共享 WebSocket + 好友通知监听 ---
+  const { status: socketStatus } = useSocket(session);
   const loadRef = useRef(load);
   loadRef.current = load;
 
+  const handleNotification = useRef((_notification: Notification) => {
+    // 收到任何通知都刷新好友列表（好友请求、请求接受等）
+    loadRef.current();
+  }).current;
+
   useEffect(() => {
-    if (!session) return;
+    if (socketStatus !== "connected") return;
 
-    let cancelled = false;
-    const socket: Socket = client.createSocket();
-
-    socket.connect(session, false).then(() => {
-      if (cancelled) {
-        socket.disconnect(false);
-        return;
-      }
-
-      socket.onnotification = (_notification: Notification) => {
-        // 收到任何通知都刷新好友列表（好友请求、请求接受等）
-        loadRef.current();
-      };
-    });
-
+    addSocketListener("onnotification", handleNotification);
     return () => {
-      cancelled = true;
-      socket.disconnect(false);
+      removeSocketListener("onnotification", handleNotification);
     };
-  }, [session]);
+  }, [socketStatus, handleNotification]);
 
   // --- 分组 ---
 
