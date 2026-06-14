@@ -22,6 +22,15 @@
 - Node.js 22+（Vite 8 要求）
 - Go 1.24+ (含 CGO 环境)
 
+### 安装 OpenSpec CLI
+
+项目使用 [OpenSpec](https://github.com/anthropics/openspec) 进行规范驱动开发（SDD），AI 辅助操作依赖 `openspec` 命令行工具。
+
+```bash
+npm install -g openspec-extensions
+openspec --version   # 确认安装成功（当前版本: 1.4.1+）
+```
+
 ---
 
 ## 快速启动
