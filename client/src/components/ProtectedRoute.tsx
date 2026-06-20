@@ -13,10 +13,12 @@ export default function ProtectedRoute() {
   // 正在恢复 Session → 显示加载中
   if (status === "restoring") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-10 h-10 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
-          <p className="text-muted-foreground">正在恢复登录...</p>
+      <div className="flex min-h-screen w-screen items-center justify-center bg-black">
+        <div className="flex h-[900px] w-[1920px] items-center justify-center bg-background">
+          <div className="text-center space-y-4">
+            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-gold/30 border-t-gold" />
+            <p className="text-muted">正在恢复登录...</p>
+          </div>
         </div>
       </div>
     );
