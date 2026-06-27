@@ -1,4 +1,5 @@
 import { Lock, Gamepad2, ChevronRight } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 import { rightModes } from "./data/lobby"
 
 function ModeCard({
@@ -32,6 +33,7 @@ function ModeCard({
 }
 
 export default function RightPanel() {
+  const navigate = useNavigate()
   return (
     <div className="flex h-[500px] w-[450px] shrink-0 flex-col gap-3 p-3">
       {/* Main mission + daily task */}
@@ -67,9 +69,10 @@ export default function RightPanel() {
         <ModeCard title={rightModes[2].title} subtitle={rightModes[2].subtitle} hint={rightModes[2].hint} className="h-[100px]" />
       </div>
 
-      {/* START button */}
+      {/* START button → 比赛匹配界面 */}
       <button
         type="button"
+        onClick={() => navigate("/match")}
         className="group relative flex h-[140px] items-center justify-between overflow-hidden rounded-md bg-gradient-to-r from-[#1d428a] via-accent to-accent px-5 ring-1 ring-white/10 transition hover:brightness-110 active:scale-[0.98]"
       >
         <Gamepad2 size={48} className="text-white/90" />
