@@ -64,6 +64,9 @@ func TableCount() int {
 		if Global.Tbitem != nil {
 			count++
 		}
+		if Global.TbPlayer != nil {
+			count++
+		}
 	}
 	return count
 }
@@ -78,4 +81,12 @@ func GetFirstItem() *item {
 		return nil
 	}
 	return list[0]
+}
+
+// GetPlayer returns a player by id (for debug/testing)
+func GetPlayer(id string) *Player {
+	if Global == nil || Global.TbPlayer == nil {
+		return nil
+	}
+	return Global.TbPlayer.Get(id)
 }

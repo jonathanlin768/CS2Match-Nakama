@@ -8,6 +8,8 @@ import (
 
 	"github.com/heroiclabs/nakama-common/runtime"
 	cfg "windypath.com/cs2match/config"
+	"windypath.com/cs2match/server/internal/framework/matchengine"
+	"windypath.com/cs2match/server/internal/match"
 )
 
 // InitModule 是 Nakama Go Plugin 的入口函数。
@@ -39,6 +41,16 @@ func InitModule(
 		return err
 	}
 	logger.Info("HealthCheck RPC registered")
+
+	// 初始化 match 子系统与战斗引擎
+	engineService := matchengine.NewService(logger)
+	matchService := match.NewService(engineService, logger)
+
+	if err := initializer.RegisterRpc("DebugSimuMatch", match.RPCDebugSimuMatch(matchService)); err != nil {
+		logger.Error("Failed to register DebugSimuMatch RPC: %v", err)
+		return err
+	}
+	logger.Info("DebugSimuMatch RPC registered")
 
 	return nil
 }

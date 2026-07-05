@@ -1,8 +1,34 @@
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { toast } from "sonner"
 import SubPageHeader from "../components/SubPageHeader"
+import { useAuth } from "../context/AuthContext"
+import { debugSimuMatch } from "../api/simu"
+import type { MatchReport } from "../types/match-report"
 
 export default function MatchPage() {
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const [loading, setLoading] = useState(false)
+
+  const handleStartMatch = async () => {
+    if (!session) {
+      toast.error("请先登录")
+      return
+    }
+
+    setLoading(true)
+    try {
+      const report: MatchReport = await debugSimuMatch(session, "de_dust2")
+      // 把战报通过 router state 传递到 BattlePage
+      navigate("/battle", { state: { report } })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      toast.error(`模拟战斗失败，请重试：${message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     // Full viewport wrapper that centers the fixed 1920x900 game frame
@@ -15,10 +41,11 @@ export default function MatchPage() {
         {/* 开始匹配 — pinned to the bottom-right corner */}
         <button
           type="button"
-          onClick={() => navigate("/battle")}
-          className="absolute bottom-[60px] right-[80px] rounded-md bg-gradient-to-r from-gold to-gold/80 px-12 py-4 text-xl font-bold text-background shadow-lg transition-all hover:from-gold/90 hover:to-gold/70 active:scale-[0.98]"
+          onClick={handleStartMatch}
+          disabled={loading}
+          className="absolute bottom-[60px] right-[80px] rounded-md bg-gradient-to-r from-gold to-gold/80 px-12 py-4 text-xl font-bold text-background shadow-lg transition-all hover:from-gold/90 hover:to-gold/70 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          开始匹配
+          {loading ? "匹配中..." : "开始匹配"}
         </button>
       </main>
     </div>

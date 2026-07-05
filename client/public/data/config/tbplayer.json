@@ -1,0 +1,178 @@
+[
+  {
+    "id": "player_niko",
+    "name": "NiKo",
+    "team": "NAVI",
+    "nationality": "BA",
+    "entry": 72,
+    "aim": 70,
+    "trade": 69,
+    "clutch": 63,
+    "firepower": 61,
+    "gamesense": 89,
+    "positions": [
+      "Support"
+    ],
+    "rarity": "S",
+    "portrait": "portraits/player_niko.png"
+  },
+  {
+    "id": "player_s1mple",
+    "name": "s1mple",
+    "team": "G2",
+    "nationality": "BA",
+    "entry": 60,
+    "aim": 68,
+    "trade": 69,
+    "clutch": 87,
+    "firepower": 93,
+    "gamesense": 56,
+    "positions": [
+      "Anchor"
+    ],
+    "rarity": "SS",
+    "portrait": "portraits/player_s1mple.png"
+  },
+  {
+    "id": "player_zywoo",
+    "name": "ZywOo",
+    "team": "Liquid",
+    "nationality": "DK",
+    "entry": 83,
+    "aim": 92,
+    "trade": 72,
+    "clutch": 55,
+    "firepower": 65,
+    "gamesense": 82,
+    "positions": [
+      "IGL",
+      "AWPer"
+    ],
+    "rarity": "B",
+    "portrait": "portraits/player_zywoo.png"
+  },
+  {
+    "id": "player_device",
+    "name": "device",
+    "team": "MOUZ",
+    "nationality": "UA",
+    "entry": 60,
+    "aim": 79,
+    "trade": 61,
+    "clutch": 77,
+    "firepower": 77,
+    "gamesense": 93,
+    "positions": [
+      "Entry",
+      "Lurker"
+    ],
+    "rarity": "SS",
+    "portrait": "portraits/player_device.png"
+  },
+  {
+    "id": "player_ropz",
+    "name": "ropz",
+    "team": "NAVI",
+    "nationality": "FI",
+    "entry": 79,
+    "aim": 60,
+    "trade": 90,
+    "clutch": 73,
+    "firepower": 95,
+    "gamesense": 94,
+    "positions": [
+      "Support",
+      "AWPer"
+    ],
+    "rarity": "C",
+    "portrait": "portraits/player_ropz.png"
+  },
+  {
+    "id": "player_rain",
+    "name": "rain",
+    "team": "G2",
+    "nationality": "US",
+    "entry": 69,
+    "aim": 73,
+    "trade": 60,
+    "clutch": 69,
+    "firepower": 61,
+    "gamesense": 79,
+    "positions": [
+      "Lurker",
+      "IGL"
+    ],
+    "rarity": "B",
+    "portrait": "portraits/player_rain.png"
+  },
+  {
+    "id": "player_apex",
+    "name": "apEX",
+    "team": "MOUZ",
+    "nationality": "NO",
+    "entry": 68,
+    "aim": 72,
+    "trade": 59,
+    "clutch": 93,
+    "firepower": 95,
+    "gamesense": 65,
+    "positions": [
+      "AWPer"
+    ],
+    "rarity": "S",
+    "portrait": "portraits/player_apex.png"
+  },
+  {
+    "id": "player_xyp9x",
+    "name": "Xyp9x",
+    "team": "Liquid",
+    "nationality": "SE",
+    "entry": 95,
+    "aim": 90,
+    "trade": 69,
+    "clutch": 75,
+    "firepower": 58,
+    "gamesense": 69,
+    "positions": [
+      "IGL"
+    ],
+    "rarity": "S",
+    "portrait": "portraits/player_xyp9x.png"
+  },
+  {
+    "id": "player_karrigan",
+    "name": "karrigan",
+    "team": "Astralis",
+    "nationality": "UA",
+    "entry": 68,
+    "aim": 91,
+    "trade": 75,
+    "clutch": 68,
+    "firepower": 86,
+    "gamesense": 80,
+    "positions": [
+      "AWPer",
+      "IGL"
+    ],
+    "rarity": "B",
+    "portrait": "portraits/player_karrigan.png"
+  },
+  {
+    "id": "player_broky",
+    "name": "broky",
+    "team": "FaZe",
+    "nationality": "RU",
+    "entry": 90,
+    "aim": 89,
+    "trade": 71,
+    "clutch": 92,
+    "firepower": 82,
+    "gamesense": 92,
+    "positions": [
+      "IGL",
+      "AWPer"
+    ],
+    "rarity": "B",
+    "portrait": "portraits/player_broky.png"
+  }
+]

@@ -104,10 +104,9 @@ export default function PlayerCard({
           <Shield
             size={15}
             className={player.armor > 0 ? sideStyle.text : "text-white/15"}
-            title={`护甲 ${player.armor}`}
           />
-          <HardHat size={15} className={player.helmet ? sideStyle.text : "text-white/15"} title="头甲" />
-          {player.defuseKit && <Wrench size={15} className="text-sky-300" title="拆弹器" />}
+          <HardHat size={15} className={player.helmet ? sideStyle.text : "text-white/15"} />
+          {player.defuseKit && <Wrench size={15} className="text-sky-300" />}
           <span className="mx-0.5 h-3 w-px bg-white/10" />
           {player.grenades.length > 0 ? (
             player.grenades.map((g, i) => {

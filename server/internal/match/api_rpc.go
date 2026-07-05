@@ -1,0 +1,50 @@
+package match
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"fmt"
+
+	"github.com/heroiclabs/nakama-common/runtime"
+)
+
+// RPCDebugSimuMatch 返回 DebugSimuMatch 的 RPC 处理函数。
+func RPCDebugSimuMatch(service *Service) func(context.Context, runtime.Logger, *sql.DB, runtime.NakamaModule, string) (string, error) {
+	return func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
+		var req DebugSimuMatchRequest
+		if payload != "" {
+			if err := json.Unmarshal([]byte(payload), &req); err != nil {
+				return marshalError(&MatchError{Code: "INVALID_REQUEST", Message: err.Error()})
+			}
+		}
+
+		userID, ok := ctx.Value(runtime.RUNTIME_CTX_USER_ID).(string)
+		if !ok || userID == "" {
+			return marshalError(&MatchError{Code: "UNAUTHORIZED", Message: "missing user id"})
+		}
+
+		resp, err := service.DebugSimuMatch(ctx, userID, req)
+		if err != nil {
+			if me, ok := err.(*MatchError); ok {
+				return marshalError(me)
+			}
+			return marshalError(&MatchError{Code: "SIMULATION_ERROR", Message: err.Error()})
+		}
+
+		bytes, err := json.Marshal(resp)
+		if err != nil {
+			logger.Error("DebugSimuMatch RPC failed to marshal response: %v", err)
+			return "", err
+		}
+		return string(bytes), nil
+	}
+}
+
+func marshalError(me *MatchError) (string, error) {
+	bytes, err := json.Marshal(me)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), fmt.Errorf("%s: %s", me.Code, me.Message)
+}
