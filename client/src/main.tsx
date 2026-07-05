@@ -7,6 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import MatchPage from './pages/MatchPage'
+import BattlePage from './pages/BattlePage'
 
 const router = createBrowserRouter([
   {
@@ -23,6 +24,10 @@ const router = createBrowserRouter([
       {
         path: 'match',
         element: <MatchPage />,
+      },
+      {
+        path: 'battle',
+        element: <BattlePage />,
       },
       {
         path: '*',

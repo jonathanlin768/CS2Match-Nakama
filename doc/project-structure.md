@@ -54,10 +54,11 @@ esports-manager-go/
 │   │   └── model.go
 │   │
 │   ├── match/              # ⚔️ 子系统 9：匹配对战
-│   │   ├── api_rpc.go          # RPC 接口 (如：开始匹配)
-│   │   ├── service.go          # 匹配逻辑、人机对战、事件触发
+│   │   ├── api_rpc.go          # RPC 接口：开始人机对战、PVP匹配、新手引导比赛等
+│   │   ├── service.go          # 比赛业务编排：查阵容、构造Bot、调用matchengine、保存记录、触发事件
+│   │   ├── bot.go              # Bot队伍解析与构造
 │   │   ├── repository.go       # 对战记录 Storage 读写
-│   │   └── model.go
+│   │   └── model.go            # 比赛领域模型、RPC DTO、Storage结构
 │   │
 │   ├── ranking/            # 🏆 子系统 10：排行榜与段位
 │   │   ├── api_rpc.go          # RPC 接口 (如：获取排行榜)
@@ -86,9 +87,12 @@ esports-manager-go/
 │   │   │   ├── mail.go           # 邮件系统
 │   │   │   └── notification.go   # 通知/公告
 │   │   │
-│   │   └── matchengine/          # 模拟比赛引擎
-│   │       ├── fsm.go            # 状态机
-│   │       └── combat.go         # 对战推演
+│   │   └── matchengine/          # 模拟比赛引擎（框架能力层，无RPC）
+│   │       ├── service.go        # 引擎入口：每场比赛创建并执行 MatchEngine
+│   │       ├── engine.go         # MatchEngine：每场比赛一个实例，推演完由GC回收
+│   │       ├── fsm.go            # 比赛状态机
+│   │       ├── combat.go         # 对战推演
+│   │       └── model.go          # MatchInput / MatchResult / Team / Round 等引擎数据结构
 │   │
 │   └── shared/                 # ⚙️ 公共依赖模块（跨子系统复用的纯工具）
 │       ├── constants.go        # 全局枚举
@@ -491,3 +495,333 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 4. **`model.go` 区分三类模型**：领域模型、RPC DTO、Storage 结构，视情况可合并。
 5. **错误统一处理**：service 返回 Go error，RPC 层转换为前端友好的响应结构。
 6. **依赖注入在 InitModule**：避免全局变量，方便单元测试。
+
+## 跨子系统调用约定
+
+不同业务子系统之间需要互相调用时，**不应通过 `api_rpc.go`**。`api_rpc.go` 只负责把客户端的 Nakama RPC 请求转给 `service.go`，子系统内部调用应直接走 `service.go` 暴露的公共方法。
+
+### 推荐调用路径
+
+```plaintext
+子系统 A 的 service.go
+    ↓ 直接方法调用
+子系统 B 的 service.go
+    ↓
+子系统 B 的 repository.go
+```
+
+例如 `club` 子系统需要扣款时，应持有 `economy.Service` 的引用并直接调用：
+
+```go
+// internal/club/service.go
+type Service struct {
+    repo    *Repository
+    economy *economy.Service
+    logger  runtime.Logger
+}
+
+func (s *Service) DoSomething(ctx context.Context, userID string) error {
+    if err := s.economy.Deduct(ctx, userID, 100); err != nil {
+        return err
+    }
+    // ...
+}
+```
+
+### 不应做的事
+
+- ❌ 在 `service.go` 里通过 `nk.Rpc(...)` 调用同进程内的其他 RPC。
+- ❌ 一个子系统的 `api_rpc.go` 直接调用另一个子系统的 `api_rpc.go`。
+- ❌ 子系统之间直接读写对方的 Storage collection（应通过对方的 `repository` 抽象，最好是通过对方的 `service`）。
+
+## 框架能力层与业务子系统的关系（以 matchengine 为例）
+
+`framework/matchengine` 是**框架能力层**，不是业务子系统。它的定位是：
+
+> 纯净的比赛状态机推演。
+
+因此：
+
+- **框架能力层不提供 `api_rpc.go`**。
+- 框架能力层只暴露干净的 Go API，供业务子系统的 `service.go` 调用。
+- 客户端永远不应该直接调用 `matchengine`。
+
+### 分层示例
+
+```plaintext
+客户端
+  ↓ RPC
+internal/match/api_rpc.go        # 业务 RPC 入口：StartMatch、StartBotMatch 等
+  ↓
+internal/match/service.go        # 业务编排：查阵容、构造 Bot、保存记录、触发事件
+  ↓ 方法调用
+internal/framework/matchengine   # 纯净推演：Simulate(MatchInput) -> MatchResult
+```
+
+### `match` 子系统的 service 持有 `matchengine.Service`
+
+```go
+// internal/match/service.go
+package match
+
+import "windypath.com/cs2match/server/internal/framework/matchengine"
+
+type Service struct {
+    repo        *Repository
+    engine      *matchengine.Service
+    clubService *club.Service
+    logger      runtime.Logger
+}
+
+func (s *Service) StartBotMatch(
+    ctx context.Context,
+    userID string,
+    req StartBotMatchRequest,
+) (*StartMatchResponse, error) {
+    roster, err := s.clubService.GetRoster(ctx, userID)
+    if err != nil {
+        return nil, err
+    }
+
+    input := &matchengine.MatchInput{
+        TeamA: roster.ToEngineTeam(),
+        TeamB: s.botResolver.Resolve(req.BotID),
+        MapID: req.MapID,
+        Seed:  s.generateSeed(),
+    }
+
+    result, err := s.engine.Simulate(ctx, input)
+    if err != nil {
+        return nil, err
+    }
+
+    // 保存对战记录、触发 match.completed 事件、发放奖励等
+    // ...
+
+    return &StartMatchResponse{MatchID: result.MatchID}, nil
+}
+```
+
+### 每场比赛一个 `MatchEngine` 实例
+
+`matchengine` 内部推荐采用**每场比赛新建一个 `MatchEngine` 对象**的模式：接收到推演请求时创建实例，调用 `StartMatch` 完成整局推演，返回结果后对象自然由 Go GC 回收。
+
+这种设计的好处：
+
+- **状态隔离**：每场比赛拥有独立的 FSM、随机源、tick 计数器，不存在共享可变状态。
+- **并发安全**：多个比赛同时推演时互不干扰，不需要额外加锁。
+- **可回放**：通过固定的 `Seed` 可以复现同一场比赛。
+- **可测试性**：单个 `MatchEngine` 可以独立构造、独立推演、独立断言。
+
+```go
+// internal/framework/matchengine/engine.go
+package matchengine
+
+import (
+    "context"
+    "math/rand"
+)
+
+type MatchEngine struct {
+    input *MatchInput
+    state *MatchState
+    rng   *rand.Rand
+    tick  int
+}
+
+func NewMatchEngine(input *MatchInput) *MatchEngine {
+    return &MatchEngine{
+        input: input,
+        state: initialState(input),
+        rng:   rand.New(rand.NewSource(input.Seed)),
+        tick:  0,
+    }
+}
+
+// StartMatch 执行完整推演，返回结果
+func (e *MatchEngine) StartMatch(ctx context.Context) (*MatchResult, error) {
+    for !e.isFinished() {
+        if err := e.tickOnce(); err != nil {
+            return nil, err
+        }
+    }
+    return e.buildResult(), nil
+}
+```
+
+`matchengine.Service` 作为工厂和调用入口：
+
+```go
+// internal/framework/matchengine/service.go
+package matchengine
+
+type Service struct {
+    logger runtime.Logger
+}
+
+func NewService(logger runtime.Logger) *Service {
+    return &Service{logger: logger}
+}
+
+func (s *Service) Simulate(ctx context.Context, input *MatchInput) (*MatchResult, error) {
+    engine := NewMatchEngine(input)
+    return engine.StartMatch(ctx)
+}
+```
+
+`match.Service` 仍然只依赖 `matchengine.Service`，不直接构造 `MatchEngine`：
+
+```go
+// internal/match/service.go
+result, err := s.engine.Simulate(ctx, input) // ✅
+// engine := matchengine.NewMatchEngine(input) // ❌ 不推荐
+```
+
+### `MatchEngine` 的注意事项
+
+1. **不要依赖业务子系统**：`MatchEngine` 只操作 `MatchInput` 和 `MatchResult`，不查询玩家阵容、不发奖励、不写 Storage。
+2. **随机源必须基于 `Seed`**：每个实例使用独立种子，避免共享全局随机源导致并发问题和不可回放。
+3. **支持两种生命周期**：
+   - 人机对战/离线推演：`Service.Simulate()` 内部创建 `MatchEngine`，一次调用完成整局推演。
+   - Nakama Match Handler 实时 1v1：Match Handler 持有同一个 `MatchEngine` 实例，在 `MatchLoop` 的每个 tick 中调用 `TickOnce()`，直到比赛结束。
+
+### 依赖方向
+
+业务子系统可以依赖框架能力层，**框架能力层不能反向依赖业务子系统**。
+
+```plaintext
+match → matchengine   ✅
+matchengine → match   ❌
+```
+
+## RPC 请求/响应 DTO 的放置
+
+**RPC 请求/响应 DTO 应放在发起该 RPC 的子系统的 `model.go` 中**，不要全局统一注册。
+
+### 为什么不分全局注册
+
+- 每个 DTO 只属于暴露该 RPC 的子系统。
+- 全局注册会增加无关模块之间的耦合。
+- 违反“本模块的 `model.go` 只定义本模块关心的结构”的约定。
+
+### 示例
+
+`match` 子系统暴露 `StartBotMatch` RPC，则其 DTO 放在 `internal/match/model.go`：
+
+```go
+// internal/match/model.go
+package match
+
+type StartBotMatchRequest struct {
+    BotID int64 `json:"bot_id"`
+    MapID int64 `json:"map_id"`
+}
+
+type StartBotMatchResponse struct {
+    MatchID string `json:"match_id"`
+}
+```
+
+框架能力层 `matchengine` 的入参/出参也放在自己的 `model.go` 中：
+
+```go
+// internal/framework/matchengine/model.go
+package matchengine
+
+type MatchInput struct {
+    TeamA *Team
+    TeamB *Team
+    MapID int64
+    Seed  int64
+}
+
+type MatchResult struct {
+    Winner    int
+    Rounds    []Round
+    Stats     *MatchStats
+    ReplayKey string
+}
+```
+
+### 不要把业务 RPC DTO 放到框架能力层
+
+`StartBotMatchRequest` 属于 `match` 子系统的 RPC 契约，不应放到 `matchengine/model.go`。引擎不应该知道“BotID 是哪位冠军”、“玩家从大厅选择了什么”等业务概念。
+
+## 多入口业务发起与调用路径
+
+当其他业务需要“临时打一场比赛”时，入口选择取决于这场比赛是否需要走完整业务生命周期。
+
+### 需要产生真实对局记录 → 走 `match.Service`
+
+如果这场比赛需要：
+
+- 查询玩家真实阵容
+- 保存对战记录到 Storage
+- 触发 `match.completed` 事件
+- 影响任务、成就、排行榜、活动
+- 发放奖励
+
+入口应统一在 `match.Service`：
+
+```go
+// internal/match/service.go
+func (s *Service) StartBotMatch(ctx context.Context, userID string, req StartBotMatchRequest) (*StartMatchResponse, error)
+func (s *Service) StartTutorialMatch(ctx context.Context, userID string, req StartTutorialMatchRequest) (*StartMatchResponse, error)
+func (s *Service) StartPvPMatch(ctx context.Context, userID string, req StartPvPMatchRequest) (*StartMatchResponse, error)
+```
+
+这样 `quest`、`activity`、`ranking` 等子系统只需监听 `match.completed` 事件，无需关心比赛如何发起。
+
+### 只需要纯推演结果 → 可直接调 `matchengine.Service`
+
+如果某个场景只是需要引擎算一下结果，不产生业务副作用，例如：
+
+- 后台平衡性测试工具
+- AI 训练/蒙特卡洛模拟
+- 管理后台的“模拟对阵”预览
+
+可以直接调用 `matchengine.Service`：
+
+```go
+// internal/admin/balancetool/service.go
+input := &matchengine.MatchInput{TeamA: teamA, TeamB: teamB, MapID: 1}
+result, err := s.engine.Simulate(ctx, input)
+```
+
+但注意：这种调用方通常不是面向玩家的业务子系统，而是工具/管理/批处理模块。
+
+### 不应该做的事
+
+❌ 不要让 `club`、`quest`、`gacha` 等业务子系统直接持有 `matchengine.Service` 来发起玩家相关的比赛。否则会产生“幽灵比赛”——任务系统认为比赛已完成，但 `match` 子系统中没有任何记录，排行榜、活动、回放都会出问题。
+
+## 业务请求与引擎输入的分层
+
+`match` 子系统的 RPC 请求和 `matchengine` 的引擎输入是两套结构，不要合并。
+
+| 结构 | 所在位置 | 含义 |
+|---|---|---|
+| `StartBotMatchRequest` | `internal/match/model.go` | 客户端业务请求：打哪个 Bot、哪张图 |
+| `MatchInput` | `internal/framework/matchengine/model.go` | 引擎推演输入：两支队伍、地图、随机种子 |
+
+### 字段对比示例
+
+| 字段 | `match.StartBotMatchRequest` | `matchengine.MatchInput` |
+|---|---|---|
+| `TeamA` | ❌ 没有 | ✅ `*Team`（玩家阵容） |
+| `TeamB` | ❌ 没有 | ✅ `*Team`（Bot 队伍） |
+| `BotID` | ✅ `int64` | ❌ 引擎不需要 |
+| `MapID` | ✅ `int64` | ✅ `int64` |
+| `Seed` | ❌ 没有 | ✅ `int64`（服务端生成） |
+
+`match.Service` 负责把业务请求翻译成引擎输入：
+
+```go
+input := &matchengine.MatchInput{
+    TeamA: roster.ToEngineTeam(),
+    TeamB: s.botResolver.Resolve(req.BotID),
+    MapID: req.MapID,
+    Seed:  s.generateSeed(),
+}
+```
+
+这不是重复定义，而是不同抽象层的数据结构，类似于 Web 开发中的 HTTP Request DTO、Service Input DTO 和 Database Entity 之分。

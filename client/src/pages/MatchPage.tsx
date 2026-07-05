@@ -1,6 +1,9 @@
+import { useNavigate } from "react-router-dom"
 import SubPageHeader from "../components/SubPageHeader"
 
 export default function MatchPage() {
+  const navigate = useNavigate()
+
   return (
     // Full viewport wrapper that centers the fixed 1920x900 game frame
     <div className="flex min-h-screen w-screen items-center justify-center overflow-hidden bg-black">
@@ -12,6 +15,7 @@ export default function MatchPage() {
         {/* 开始匹配 — pinned to the bottom-right corner */}
         <button
           type="button"
+          onClick={() => navigate("/battle")}
           className="absolute bottom-[60px] right-[80px] rounded-md bg-gradient-to-r from-gold to-gold/80 px-12 py-4 text-xl font-bold text-background shadow-lg transition-all hover:from-gold/90 hover:to-gold/70 active:scale-[0.98]"
         >
           开始匹配
