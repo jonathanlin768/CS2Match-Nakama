@@ -24,18 +24,24 @@ func InitModule(
 	logger.Info("CS2Match Go plugin loaded successfully")
 
 	// 初始化配置表
-	if err := cfg.Init(); err != nil {
-		logger.Error("Failed to init config: %v", err)
+	err := cfgInit(logger)
+	if err != nil {
 		return err
 	}
-	logger.Info("Config tables loaded, count=%d", cfg.TableCount())
 
 	// 打印示例道具
-	if item := cfg.GetFirstItem(); item != nil {
-		logger.Info("Sample item: id=%d name=%s desc=%s price=%d",
-			item.Id, item.Name, item.Desc, item.Price)
+	testItemCfg(logger)
+
+	//注册RPC事件
+	err = registerRpcFunc(initializer, logger)
+	if err != nil {
+		return err
 	}
 
+	return nil
+}
+
+func registerRpcFunc(initializer runtime.Initializer, logger runtime.Logger) error {
 	if err := initializer.RegisterRpc("HealthCheck", healthCheckRPC); err != nil {
 		logger.Error("Failed to register HealthCheck RPC: %v", err)
 		return err
@@ -51,7 +57,22 @@ func InitModule(
 		return err
 	}
 	logger.Info("DebugSimuMatch RPC registered")
+	return nil
+}
 
+func testItemCfg(logger runtime.Logger) {
+	if item := cfg.GetFirstItem(); item != nil {
+		logger.Info("Sample item: id=%d name=%s desc=%s price=%d",
+			item.Id, item.Name, item.Desc, item.Price)
+	}
+}
+
+func cfgInit(logger runtime.Logger) error {
+	if err := cfg.Init(); err != nil {
+		logger.Error("Failed to init config: %v", err)
+		return err
+	}
+	logger.Info("Config tables loaded, count=%d", cfg.TableCount())
 	return nil
 }
 

@@ -5,13 +5,14 @@ TBD - created by archiving change simumatch-mvp-mvp. Update Purpose after archiv
 ## Requirements
 ### Requirement: Server reuses Luban TbPlayer config
 
-战斗引擎 SHALL 通过 `windypath.com/cs2match/config` 子模块读取 `TbPlayer` 选手属性，而不是自行解析 JSON 文件。
+`match.Service` SHALL 通过 `windypath.com/cs2match/config` 子模块读取 `TbPlayer` 选手属性，并显式构造为 `matchengine.Combatant` 传入引擎；`matchengine` 不直接依赖 `config` 包，只消费自包含的 `MatchInput`。
 
-#### Scenario: Engine loads player attributes from config
+#### Scenario: Service loads player attributes from config
 
 - **GIVEN** `TbPlayer` 已随 `cfg.Init()` 加载到内存
 - **WHEN** `match.Service` 构造引擎队伍时传入选手 ID
-- **THEN** 引擎从 `cfg.Global.TbPlayer.Get(id)` 读取 `Entry`、`Aim`、`Firepower` 等属性
+- **THEN** `match.Service` 从 `cfg.Global.TbPlayer.Get(id)` 读取 `Entry`、`Aim`、`Firepower` 等属性
+- **AND** 将其填充到 `matchengine.Combatant` 后作为 `MatchInput` 的一部分传给引擎
 - **AND** 若选手 ID 不存在，返回 `INVALID_LINEUP` 错误
 
 ### Requirement: Player config structure is shared between server and client

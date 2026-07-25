@@ -17,6 +17,9 @@ build/
 go.work
 go.work.sum
 
+# Local Go module cache; should live outside the repository.
+/server/config/pkg/
+
 # Claude Code (local settings)
 .claude/settings.local.json
 
