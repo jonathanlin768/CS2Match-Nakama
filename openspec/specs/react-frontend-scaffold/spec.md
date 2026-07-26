@@ -6,7 +6,7 @@ React + Vite + TypeScript 前端项目骨架规格 — 项目初始化、Nakama 
 
 ### Requirement: Vite + React + TypeScript 项目骨架
 
-前端项目 SHALL 位于 `client/` 目录，使用 Vite 作为构建工具，React 18+ 作为 UI 框架，TypeScript 作为开发语言。项目 SHALL 引入 Tailwind CSS 4 作为样式框架，react-router-dom v7 管理路由，shadcn/ui 作为组件库。
+前端项目 SHALL 位于 `client/` 目录，使用 Vite 8 作为构建工具，React 19 作为 UI 框架，TypeScript 作为开发语言。项目 SHALL 引入 Tailwind CSS 4 作为样式框架，react-router-dom v7 管理路由，shadcn/ui 作为组件库。
 
 #### Scenario: 项目初始化
 

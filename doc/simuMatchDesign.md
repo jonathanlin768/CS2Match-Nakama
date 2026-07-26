@@ -8,10 +8,12 @@
 
 系统不做真实 CS 空间仿真，不模拟逐帧移动、弹道、完整寻路和连续视野传播。地图、视野、转点、下包作为场景标签和数值修正项参与结算。
 
-回合主流程按战术模板和遭遇战推进：
+整场对局由 `MatchInput` 驱动。`MatchInput` 可以只要求推演一小局，也可以要求连续推演多小局。每小局会派生出一个 `RoundInput`，再按战术模板和遭遇战推进：
 
 ```text
-RoundInput
+MatchInput
+  -> InitializeMatchState
+  -> BuildRoundInput
   -> SelectStrategyTemplate
   -> AssignRoles
   -> ResolveOpeningEncounter
@@ -19,9 +21,11 @@ RoundInput
   -> ResolveSiteEncounter
   -> ResolveBombPhase
   -> GenerateExplainableReport
+  -> UpdateMatchMemory
+  -> MatchResult
 ```
 
-玩家输入仅为阵容。服务端根据阵容、选手属性、地图配置、局势状态自动完成推演，并输出结构化战报。
+模拟器输入应由调用方显式传入阵容、选手属性、角色标签、武器配置、地图配置版本、随机种子和规则集。服务端可以在业务层根据玩家拥有的选手或默认配置帮助构造这些入参，但 `matchengine` 不直接读取选手表；它只消费自包含的输入快照，并输出结构化战报。
 
 核心原则：
 
@@ -38,9 +42,9 @@ RoundInput
 |---|---|
 | 地图 | 仅支持 `Dust2`，使用战术语义模板 |
 | 决策 | 全自动 AI 决策 |
-| 玩家输入 | 阵容 |
-| 推演方式 | 服务端一次性算完整回合 |
-| 输出 | 第一版展示击杀；关键事件保留原因字段 |
+| 玩家输入 | 阵容、选手属性、角色标签、武器配置、规则参数或规则集引用 |
+| 推演方式 | 服务端一次性算完整回合；可由同一 `MatchInput` 连续推演多回合 |
+| 输出 | 第一版展示击杀；后端完整输出事件、时间戳、原因、状态、比分、炸弹和控制权快照 |
 | 实时操作 | 不支持 |
 | Match Handler | 第一版不使用 |
 | 配置方式 | `Scenario`、`Encounter`、`RouteTemplate`、参数表驱动 |
@@ -56,10 +60,15 @@ EncounterContext  遭遇战上下文
 MapTag            地图语义标签
 PlayerProfile     选手静态属性
 PlayerState       选手回合状态
+MatchInput        整场模拟入参快照
+RoundInput        单回合模拟入参快照
+MatchState        跨回合状态、比分、半场、战术记忆
 RoundPlan         回合计划
 RoundState        回合状态
+StrategyMemory    跨回合战术倾向与反制记忆
 EncounterResolver 遭遇战结算
 BombResolver      下包/拆包结算
+MatchResult       整场结构化战报
 ExplainableReport 可解释战报
 EventReason       事件原因
 
@@ -334,7 +343,20 @@ AI 决策只能读取本方 `KnownControl`，不能直接读取 `ActualControl`�
 | `MaxEncounterPulses` | `Combat` | `Int` | `count` | 单次遭遇战最大脉冲数 |
 | `CombatScale` | `Combat` | `Float` | `score` | 战斗分差转概率缩放 |
 | `BaseNoise` | `Decision` | `Float` | `score` | 随机扰动基础值 |
+| `MaxRandomNoise` | `Decision` | `Float` | `score` | 随机扰动绝对上限 |
+| `CloseScoreGap` | `Decision` | `Float` | `score` | 近似同分阈值 |
+| `DecisiveScoreGap` | `Decision` | `Float` | `score` | 明显优势阈值 |
+| `StrategyRepeatWindow` | `Decision` | `Int` | `round` | 战术重复统计窗口 |
+| `RepeatFreeCount` | `Decision` | `Int` | `round` | 允许无惩罚连续使用同战术次数 |
+| `StrategyRepeatPenalty` | `Decision` | `Float` | `score` | 同路线/模板连续使用惩罚 |
+| `SuccessBonusPerRound` | `Decision` | `Float` | `score` | 最近同战术成功奖励 |
+| `MaxPreviousSuccessBonus` | `Clamp` | `Float` | `score` | 最近成功奖励上限 |
+| `CounterMemoryBonus` | `Decision` | `Float` | `score` | CT 针对重复战术的反制加成 |
+| `MinStrategyWeight` | `Clamp` | `Float` | `score` | 战术候选权重下限 |
+| `MaxStrategyWeight` | `Clamp` | `Float` | `score` | 战术候选权重上限 |
 | `ControlIntelTTL` | `Intel` | `Int` | `s` | 控制权情报有效时间 |
+| `MinAttribute` | `Clamp` | `Int` | `score` | 输入属性下限 |
+| `MaxAttribute` | `Clamp` | `Int` | `score` | 输入属性上限 |
 | `MinHP` | `Clamp` | `Int` | `score` | HP 下限 |
 | `MaxHP` | `Clamp` | `Int` | `score` | HP 上限 |
 | `MinStamina` | `Clamp` | `Int` | `score` | 体能下限 |
@@ -348,6 +370,8 @@ AI 决策只能读取本方 `KnownControl`，不能直接读取 `ActualControl`�
 | `MaxPlantTime` | `Clamp` | `Int` | `s` | 下包时间上限 |
 | `MinDefuseTime` | `Clamp` | `Int` | `s` | 拆包时间下限 |
 | `MaxDefuseTime` | `Clamp` | `Int` | `s` | 拆包时间上限 |
+| `MinMoveTime` | `Clamp` | `Int` | `s` | 移动耗时下限 |
+| `MaxMoveTime` | `Clamp` | `Int` | `s` | 移动耗时上限 |
 
 ### 2.3 回合资源模型
 
@@ -462,6 +486,37 @@ MaxKillChance = 0.85
 | `Anchor` | 守点、防守稳定性 |
 | `Support` | 团队修正、执行质量 |
 
+#### 属性来源
+
+作为模拟器，选手数值应以 `MatchInput` 中的 `PlayerProfile` 为准，而不是由 `matchengine` 在运行时读取 `TbPlayer`。
+
+推荐职责边界：
+
+| 层 | 职责 |
+|---|---|
+| 前端 / 调用方 | 允许用户输入或选择选手属性、角色标签、武器配置 |
+| `match.Service` | 可从 Luban 表、玩家存档或默认模板构造 `MatchInput`，并负责校验 |
+| `matchengine` | 不依赖 `config` 包，不查询选手表，只消费入参快照 |
+| Luban `TbPlayer` | 作为默认选手库、展示数据和快速构造入参的来源，不是模拟时的隐式依赖 |
+
+这样做的好处：
+
+| 目标 | 说明 |
+|---|---|
+| 可测试 | 单测可以直接构造属性，不需要加载完整配置表 |
+| 可回放 | 同一 `MatchInput + config_version + seed` 能复现结果 |
+| 可调参 | 前端可以做自定义阵容、极端属性、A/B 标定 |
+| 解耦 | 以后接玩家养成、临时 buff、伤病、疲劳时不需要改引擎读取逻辑 |
+
+约束：
+
+```text
+PlayerProfile in MatchInput is authoritative.
+PlayerID can reference config/default roster.
+Engine never mutates PlayerProfile.
+Runtime state changes only happen on PlayerState.
+```
+
 #### Utility 作用边界
 
 `Utility` 是道具执行能力，不是全局战力光环。
@@ -573,6 +628,52 @@ EncounterScore =
   + TimePressureModifier
   + RandomNoise
 ```
+
+第一版默认公式冻结为可测试的线性组合，所有权重来自 `CombatConst` 或 `EncounterModifier`，但代码中的计算顺序固定。
+
+```text
+WeightedPlayerScore =
+    Aim * W_Aim
+  + Reaction * W_Reaction
+  + Positioning * W_Positioning
+  + Awareness * W_Awareness
+  + Teamplay * W_Teamplay
+  + Utility * W_Utility
+  + Composure * W_Composure
+  + Mobility * W_Mobility
+  + Endurance * W_Endurance
+  + Discipline * W_Discipline
+
+PlayerCombatScore =
+    WeightedPlayerScore
+  + RoleTagModifier
+  + WeaponModifier
+  + PostureModifier
+  + VisibilityModifier
+  + TeamSupportModifier
+  - StaminaPenalty
+  - DamagePenalty
+  - SuppressionPenalty
+```
+
+推荐第一版基础权重：
+
+| 场景族 | Aim | Reaction | Positioning | Awareness | Teamplay | Utility | Composure | Mobility | Endurance | Discipline |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `OpeningDuel` | 0.28 | 0.24 | 0.18 | 0.08 | 0.08 | 0.06 | 0.04 | 0.02 | 0.01 | 0.01 |
+| `FastExecute` / `SiteEntry` | 0.20 | 0.18 | 0.10 | 0.06 | 0.18 | 0.16 | 0.06 | 0.03 | 0.01 | 0.02 |
+| `SlowDefault` / `MidControl` | 0.16 | 0.12 | 0.14 | 0.22 | 0.12 | 0.08 | 0.06 | 0.03 | 0.02 | 0.05 |
+| `Retake` / `PostPlant` | 0.18 | 0.16 | 0.14 | 0.14 | 0.14 | 0.08 | 0.12 | 0.01 | 0.01 | 0.02 |
+
+权重规则：
+
+| 规则 | 说明 |
+|---|---|
+| 权重和 | 每个场景族基础属性权重之和必须为 `1.0` |
+| 属性范围 | 输入属性建议 `0..100`，加载时 clamp 到 `MinAttribute..MaxAttribute` |
+| 修正项范围 | 单个 modifier 建议不超过 `±25`，团队总修正建议 clamp 到 `-60..60` |
+| 随机扰动 | `RandomNoise` 绝对值不得超过 `MaxRandomNoise` |
+| 明显优势保护 | 若去掉随机后的分差 `abs(delta) >= DecisiveScoreGap`，随机只影响事件细节，不反转胜负趋势 |
 
 场景标签直接决定哪些属性重要：
 
@@ -746,6 +847,18 @@ HitChance = sigmoid((CombatScore - TargetSurvivalScore) / Scale)
 KillChance = HitChance * DamagePotential * ExposureModifier
 ```
 
+第一版概率公式必须显式 clamp：
+
+```text
+RawHitChance = sigmoid((CombatScore - TargetSurvivalScore) / CombatScale)
+HitChance = clamp(RawHitChance, MinHitChance, MaxHitChance)
+
+RawKillChance = HitChance * DamagePotential * ExposureModifier
+KillChance = clamp(RawKillChance, 0, MaxKillChance)
+```
+
+`DamagePotential` 与武器配置绑定，取值建议 `0.20..1.20`；`ExposureModifier` 由姿态、掩体和移动状态决定，取值建议 `0.50..1.50`。公式单测必须覆盖最小命中、最大命中、最大击杀率和极端分差不会产生 `0%` 或 `100%` 必然结果。
+
 `TargetSurvivalScore`：
 
 ```text
@@ -857,10 +970,92 @@ DecisionScore =
     SituationScore
   + PlayerRoleBias
   + TacticalContextScore
+  + MatchMemoryModifier
   + RandomNoise
 ```
 
 `RandomNoise` 受 `Discipline`、`IGL`、`Awareness` 约束。纪律越高，随机波动越小。
+
+#### 跨回合战术记忆
+
+多回合模拟需要保留“战术连续性”和“对手适应”，但不应该让引擎变成脚本系统。第一版建议把跨回合逻辑只接入战术选择评分，不直接改写团战结算公式。
+
+`MatchState` 维护最近若干小局的摘要：
+
+```go
+type StrategyMemory struct {
+    RecentRounds []RoundMemory
+    TeamStats    map[string]TeamRoundStats
+}
+
+type RoundMemory struct {
+    RoundNumber        int
+    SideTTeamID        string
+    StrategyTemplateID string
+    RouteTemplateID    string
+    TargetSite         string
+    Tempo              string
+    Winner             string
+    WinReason          string
+    OpeningKillsT      int
+    OpeningKillsCT     int
+    Planted            bool
+}
+
+type TeamRoundStats struct {
+    RecentRouteUse     map[string]int
+    RecentTemplateUse  map[string]int
+    RecentTargetSiteUse map[string]int
+    RecentWinsByTemplate map[string]int
+}
+```
+
+战术选择时增加记忆修正：
+
+```text
+StrategyScore =
+    TemplateBaseWeight
+  + LineupFitScore
+  + CurrentScorePressure
+  + PreviousSuccessBonus
+  - RepeatPenalty
+  - CounterReadRisk
+  + RandomNoise
+```
+
+| 修正项 | 计算建议 |
+|---|---|
+| `PreviousSuccessBonus` | 最近 `StrategyRepeatWindow` 内同模板胜利次数 * `SuccessBonusPerRound`，上限 `MaxPreviousSuccessBonus` |
+| `RepeatPenalty` | 同队连续使用同 `RouteTemplateID` 次数超过 `RepeatFreeCount` 后累加 |
+| `CounterReadRisk` | 对手最近被同路线攻击次数 * `CounterMemoryBonus`，受对手 `Awareness/IGL` 影响 |
+| `CurrentScorePressure` | 落后方更愿意选择高方差模板，领先方更偏向稳定模板 |
+| `LineupFitScore` | 模板关键角色与当前阵容匹配度 |
+
+例子：T 方连续 5 个小局都执行 `B_Tunnel_Explode`：
+
+```text
+Round 1-2:
+  B_Tunnel_Explode 获得正常模板权重，若成功可获得少量 PreviousSuccessBonus
+
+Round 3-5:
+  RepeatPenalty 开始累加，CT 的 CounterReadRisk 同时上升
+
+Round 6:
+  若 B 连续成功但分差仍明显，AI 仍可能继续打 B
+  若 B 成功率下降、首杀劣势或 CT 重防 B，A_Short_Split / Fake_A_Go_B / Default_Pick 的评分应超过 B_Tunnel_Explode
+```
+
+这不是强制“第 6 局必须换战术”，而是让换战术成为评分自然结果。这样既能出现“头铁继续 RushB”的风格，也能让高 `Awareness/Discipline/IGL` 的队伍更早调整。
+
+跨回合记忆边界：
+
+| 边界 | 规则 |
+|---|---|
+| 影响范围 | 只影响 `SelectStrategyTemplate`、CT 开局防守倾向、补防初始权重 |
+| 不影响 | 不直接修改 `Aim/Reaction` 等选手基础属性 |
+| 半场切换 | 角色互换后清空或衰减阵营相关记忆，保留队伍风格记忆 |
+| 可回放 | `StrategyMemory` 来自前序 `RoundResult`，同一 `MatchInput + seed` 必须稳定 |
+| 前端解释 | 当记忆修正影响战术选择时，输出 `STRATEGY_ADJUSTED` 或在 `ROUND_START.Reason` 中标注 |
 
 #### 信息模型
 
@@ -1179,7 +1374,35 @@ Planting 边界：同秒下包完成在 RoundTimer 归零前接受
 
 ## 3. 数据/逻辑流转
 
-### 3.1 回合推演流程
+### 3.1 整场推演流程
+
+`MatchInput` 是对局级入口。单回合模拟只是 `MaxRounds = 1` 的特例。
+
+```mermaid
+flowchart TD
+    A["MatchInput"] --> B["Validate Input Snapshot"]
+    B --> C["Load Map Config By Version"]
+    C --> D["Initialize MatchState"]
+    D --> E{"Need Next Round?"}
+    E -->|Yes| F["Build RoundInput"]
+    F --> G["SimulateRound"]
+    G --> H["Append RoundResult"]
+    H --> I["Update Score / Side / StrategyMemory"]
+    I --> E
+    E -->|No| J["Build MatchResult"]
+```
+
+整场状态只做三件事：
+
+| 职责 | 说明 |
+|---|---|
+| 比分推进 | 维护 `ScoreT/ScoreCT`、回合号、半场和胜利条件 |
+| 战术记忆 | 根据前序小局生成 `StrategyMemory`，影响下一局战术权重 |
+| 汇总输出 | 聚合每局事件、最终选手统计和整场解释 |
+
+第一版可以先支持 `RoundCount = 1` 和固定多回合数量；后续再扩展为完整 `MR12/MR15`、加时和经济系统。
+
+### 3.2 回合推演流程
 
 ```mermaid
 flowchart TD
@@ -1203,7 +1426,7 @@ flowchart TD
 
 第一版不要求状态机通过完整寻路发现冲突。AI 先选择 `StrategyTemplate`，再按模板生成 `Encounter` 序列。时间、伤亡、情报和炸弹状态会影响中期是否转点、强攻或进入下包阶段。
 
-### 3.2 状态机执行模型
+### 3.3 状态机执行模型
 
 第一版使用离散事件状态机，不使用固定 tick。
 
@@ -1653,7 +1876,7 @@ AI 决策会产生下一批行动：继续推进、转点、补防、牵制、�
 
 这种设计下，“第一轮冲突、第一轮转点、第二轮冲突”是战报表现层的描述；引擎内部是事件队列和状态重评估。
 
-### 3.3 阶段状态机
+### 3.4 阶段状态机
 
 | 阶段 | 说明 | 退出条件 |
 |---|---|---|
@@ -1666,7 +1889,37 @@ AI 决策会产生下一批行动：继续推进、转点、补防、牵制、�
 | `PostPlant` | 最终冲突和拆包判定 | 拆包、爆炸、全灭 |
 | `RoundEnd` | 回合结束 | 生成战报 |
 
-### 3.4 核心数据结构
+### 3.5 核心数据结构
+
+```go
+type MatchState struct {
+    MatchID      string
+    MapID        string
+    ConfigVersion string
+    RuleSetID    string
+
+    RoundNumber int
+    ScoreT      int
+    ScoreCT     int
+    SideByTeam  map[string]string
+
+    StrategyMemory StrategyMemory
+    PlayerStats    map[string]PlayerMatchStats
+    Rounds         []RoundResult
+}
+```
+
+`MatchState` 是运行时状态，不直接返回给前端。前端消费的是 `MatchResult` 和每局 `RoundResult` 中经过整理的事件、比分、玩家状态、炸弹状态和控制权快照。
+
+```go
+type MatchScore struct {
+    RoundNumber int
+    ScoreT      int
+    ScoreCT     int
+    TeamTID     string
+    TeamCTID    string
+}
+```
 
 ```go
 type RoundPlan struct {
@@ -1759,8 +2012,12 @@ type BombState struct {
 
 ```go
 type RoundEvent struct {
+    EventID   string
+    MatchID   string
+    RoundNumber int
     Timestamp int
     Type      string
+    Phase     string
 
     ActorID   string
     TargetID  string
@@ -1769,6 +2026,7 @@ type RoundEvent struct {
 
     Message   string
     Reason    EventReason
+    State     EventStateSnapshot
     Metadata  map[string]any
 }
 ```
@@ -1778,8 +2036,22 @@ type EventReason struct {
     MainFactor string
     Modifiers  []string
     ScoreDelta int
+    Formula    string
+    Inputs     map[string]float64
 }
 ```
+
+```go
+type EventStateSnapshot struct {
+    ScoreT   int
+    ScoreCT  int
+    Players  []PlayerPublicState
+    Bomb     BombPublicState
+    Controls []NodeControlState
+}
+```
+
+`State` 是给前端回放用的可选快照。第一版至少在 `ROUND_START`、`BOMB_PLANT`、`BOMB_DEFUSE`、`BOMB_EXPLODE`、`ROUND_END` 输出完整快照；`KILL` 事件必须至少输出受影响玩家和比分/炸弹摘要。若带宽或响应体过大，可以在 RPC 层裁剪，但引擎结果必须保留。
 
 ```go
 type ExplainableReport struct {
@@ -1790,10 +2062,12 @@ type ExplainableReport struct {
 }
 ```
 
-### 3.5 事件类型
+### 3.6 事件类型
 
 | Type | 第一版展示 | 说明 |
 |---|---:|---|
+| `ROUND_START` | 否 | 回合开始、战术选择 |
+| `STRATEGY_ADJUSTED` | 否 | 跨回合记忆导致战术权重变化 |
 | `KILL` | 是 | 击杀 |
 | `ROTATE` | 否 | 转点 |
 | `REINFORCE` | 否 | CT 补防 |
@@ -1806,6 +2080,19 @@ type ExplainableReport struct {
 | `ROUND_END` | 否 | 回合结束 |
 
 第一版前端只消费 `KILL`。后端完整输出所有事件。
+
+输出给前端的字段边界：
+
+| 字段 | 是否返回 | 说明 |
+|---|---:|---|
+| 事件类型 | 是 | `Type` 使用稳定枚举 |
+| 时间戳 | 是 | `Timestamp` 为回合内秒数，整场展示可由 `RoundNumber + Timestamp` 组合 |
+| 原因解释 | 是 | `Reason.MainFactor`、`Modifiers`、`ScoreDelta` 必须保留 |
+| 玩家状态 | 是 | 至少包含存活、HP、当前位置、击杀、死亡、伤害 |
+| 比分 | 是 | 每个关键事件快照或 `ROUND_END` 中必须包含 |
+| 炸弹状态 | 是 | `Carried/Dropped/Planted/Exploded/Defused`、携带者或位置、包点、爆炸时间 |
+| 位置控制权 | 是 | 返回 `FinalControls`；关键 `CONTROL_GAINED` 事件可返回变化快照 |
+| 内部真实信息 | 否 | 不返回敌方未暴露意图、完整真实路径、未观察到的精确位置 |
 
 #### 战报解释规则
 
@@ -1835,8 +2122,10 @@ server/internal/match/
   repository.go       对局记录持久化，第一版可占位
 
 server/internal/framework/matchengine/
-  engine.go           回合推演入口
+  engine.go           整场/回合推演入口
+  match_state.go      跨回合状态、比分和战术记忆
   round_state.go      回合状态
+  ruleset.go          规则集和输入参数校验
   route_template.go   Dust2 战术模板
   scenario.go         场景标签和修正
   round_plan.go       回合计划生成
@@ -1845,6 +2134,7 @@ server/internal/framework/matchengine/
   transition.go       阶段切换规则
   map_graph.go        地图辅助结构，非第一版核心
   decision.go         AI 决策
+  match_memory.go     跨回合战术重复、反制和风格修正
   encounter.go        遭遇战结算
   combat.go           脉冲级击杀/伤害结算
   bomb.go             炸弹逻辑
@@ -1858,36 +2148,243 @@ server/internal/framework/matchengine/
 
 ```go
 type MatchEngine interface {
+    Simulate(ctx context.Context, input *MatchInput) (*MatchResult, error)
     SimulateRound(ctx context.Context, input *RoundInput) (*RoundResult, error)
 }
 ```
 
+`Simulate` 是正式入口。`SimulateRound` 只用于单测、调试和批量标定；业务 RPC 不应绕过 `MatchInput`。
+
+#### 输入模型冻结
+
+```go
+type MatchInput struct {
+    MatchID       string
+    MapID         string
+    MapVersion    string
+    Seed          int64
+    RuleSet       RuleSet
+    RoundCount    int
+    StartRound    int
+    InitialScoreT int
+    InitialScoreCT int
+
+    TeamA TeamInput
+    TeamB TeamInput
+
+    InitialSideByTeam map[string]string // team_id -> T / CT
+}
+```
+
+```go
+type TeamInput struct {
+    TeamID   string
+    Name     string
+    Players  []PlayerProfile
+    TeamTags []string // Aggressive / Structured / UtilityHeavy / Clutch 等
+}
+```
+
+```go
+type PlayerProfile struct {
+    PlayerID   string
+    DisplayName string
+    RoleTags   []string
+    Attributes PlayerAttributes
+    Weapon     WeaponLoadout
+}
+```
+
+```go
+type PlayerAttributes struct {
+    Aim         int
+    Reaction    int
+    Positioning int
+    Awareness   int
+    Teamplay    int
+    Utility     int
+    Composure   int
+    Mobility    int
+    Endurance   int
+    Discipline  int
+}
+```
+
+```go
+type WeaponLoadout struct {
+    Primary   string // AK47 / M4A1 / AWP / Galil / Famas 等
+    Secondary string
+    Armor     bool
+    Helmet    bool
+    HasKit    bool
+    Grenades  []string // Smoke / Flash / HE / Molotov
+}
+```
+
+```go
+type RuleSet struct {
+    RuleSetID          string
+    FreezeTime         int
+    RoundTimeLimit     int
+    BombExplodeTime    int
+    BasePlantTime      int
+    BaseDefuseTime     int
+    OvertimeEnabled    bool
+    SideSwitchRound    int
+    WinRounds          int
+    MaxRoundTimeline   int
+    MaxDecisionCount   int
+    MaxEncounterPulses int
+}
+```
+
+`RuleSet` 可以由配置表构造默认值，但传给引擎时必须是完整快照。引擎校验缺失或越界字段，返回 `INVALID_MATCH_INPUT` 或更具体的错误码。
+
+`RoundInput` 是由 `MatchInput + MatchState` 派生的单局快照：
+
 ```go
 type RoundInput struct {
-    MatchID string
-    MapID   string
-    Seed    int64
+    MatchID       string
+    RoundNumber   int
+    MapID         string
+    MapVersion    string
+    Seed          int64
+    RuleSet       RuleSet
 
-    TeamT  []*PlayerProfile
-    TeamCT []*PlayerProfile
+    TeamT TeamInput
+    TeamCT TeamInput
+
+    ScoreT int
+    ScoreCT int
+    StrategyMemory StrategyMemory
+}
+```
+
+输入校验规则：
+
+| 字段 | 规则 |
+|---|---|
+| `TeamInput.Players` | 每队必须正好 5 人，`PlayerID` 全局唯一 |
+| `RoleTags` | 可以为空，但非法标签拒绝；角色缺口通过评分自然体现 |
+| `Attributes` | 所有属性 clamp 到 `MinAttribute..MaxAttribute`，默认建议 `0..100` |
+| `WeaponLoadout` | 武器 ID 必须存在于允许列表；非法武器拒绝 |
+| `MapID/MapVersion` | 必须能定位到唯一地图配置版本 |
+| `Seed` | 必须固定；若调用方未传，业务层生成后写回响应，不由引擎隐式生成 |
+| `RuleSet` | 时间、脉冲、决策上限必须大于 0 且不超过配置最大值 |
+
+#### 输出模型冻结
+
+```go
+type MatchResult struct {
+    MatchID    string
+    MapID      string
+    MapVersion string
+    Seed       int64
+    RuleSetID  string
+
+    TotalRounds int
+    FinalScoreT int
+    FinalScoreCT int
+    WinnerTeamID string
+
+    Rounds     []RoundResult
+    FinalStats []PlayerMatchStats
+    Report     ExplainableReport
 }
 ```
 
 ```go
 type RoundResult struct {
     RoundNumber int
+    Seed        int64
+    TeamTID     string
+    TeamCTID    string
+
     Winner      string
+    WinnerTeamID string
     WinReason   string
 
     ScoreT  int
     ScoreCT int
 
-    Events       []RoundEvent
-    PlayerStates []PlayerState
-    FinalControls []NodeControlState
-    Report       ExplainableReport
+    RouteMain          string
+    StrategyTemplateID string
+    Events            []RoundEvent
+    PlayerStates      []PlayerPublicState
+    Bomb              BombPublicState
+    FinalControls     []NodeControlState
+    Report            ExplainableReport
 }
 ```
+
+```go
+type PlayerPublicState struct {
+    PlayerID    string
+    DisplayName string
+    TeamID      string
+    Side        string
+    Alive       bool
+    HP          int
+    Stamina     int
+    Focus       int
+    CurrentNode string
+    HasBomb     bool
+    Kills       int
+    Deaths      int
+    Damage      int
+    RoleTags    []string
+    Weapon      WeaponLoadout
+}
+```
+
+```go
+type BombPublicState struct {
+    Status      string
+    CarrierID   string
+    NodeID      string
+    Site        string
+    PlantedAt   int
+    ExplodeAt   int
+    DroppedAt   int
+}
+```
+
+```go
+type NodeControlState struct {
+    NodeID      string
+    Status      string // Unknown / TControlled / CTControlled / Contested / EmptyKnown
+    KnownByT    bool
+    KnownByCT   bool
+    UpdatedAt   int
+}
+```
+
+```go
+type PlayerMatchStats struct {
+    PlayerID string
+    TeamID   string
+    Kills    int
+    Deaths   int
+    Damage   int
+    ADR      float64
+    FK       int
+    MK       int
+    Plants   int
+    Defuses  int
+}
+```
+
+输出约束：
+
+| 输出 | 规则 |
+|---|---|
+| 事件顺序 | `Timestamp ASC`，同秒按优先级和稳定排序键 |
+| 时间戳 | 回合内秒数，必须单调不下降 |
+| 原因解释 | 关键事件必须有 `Reason.MainFactor` 和可复现的 `ScoreDelta` |
+| 玩家状态 | `RoundResult.PlayerStates` 返回回合结束快照；关键事件可带增量快照 |
+| 比分 | `RoundResult.ScoreT/ScoreCT` 是该回合结束后的比分 |
+| 炸弹状态 | `RoundResult.Bomb` 返回最终炸弹状态；炸弹事件带当时快照 |
+| 控制权 | `FinalControls` 返回给前端；内部 `ActualControl` 不直接泄漏未观察信息 |
 
 ### 4.3 配置加载
 
@@ -1906,7 +2403,7 @@ configs/Datas
   #CombatConst.xlsx
 ```
 
-服务端启动时加载：
+服务端启动时加载地图、战术、场景和常量配置：
 
 ```go
 cfg.Init()
@@ -1915,6 +2412,8 @@ engine := matchengine.NewService(mapConfig, logger)
 ```
 
 运行时不得硬编码战术模板、场景修正、点位、路线、视野关系。允许在第一版只配置 `de_dust2`。
+
+选手表是例外：`TbPlayer` 可以用于构造默认 `MatchInput`，但不属于 `matchengine` 的运行时依赖。进入引擎后，选手属性、角色和武器以 `MatchInput` 快照为准。
 
 #### 配置校验
 
@@ -1974,6 +2473,8 @@ type DecisionEngine interface {
 ```go
 type DecisionContext struct {
     RoundState *RoundState
+    MatchScore MatchScore
+    StrategyMemory StrategyMemory
     Templates  []RouteTemplate
     Scenarios  []Scenario
     MapTags    MapSemanticTags
@@ -2055,7 +2556,7 @@ Bomb.ExplodeAt = Timeline + BombExplodeTime
 
 ### 4.7 随机性与可回放
 
-所有随机数来自单场 Seed。
+所有随机数来自单场 Seed。整场入口使用 `MatchInput.Seed`，单回合测试入口使用 `RoundInput.Seed`。
 
 ```go
 rng := rand.New(rand.NewSource(input.Seed))
@@ -2102,15 +2603,84 @@ NoiseLimit = BaseNoise * (1 - DisciplineFactor)
 不同子系统使用派生随机源，避免调用顺序变化导致全局结果漂移。
 
 ```text
-RoundSeed = Hash(MatchSeed, RoundNumber)
+RoundSeed = Hash(MatchSeed, MapVersion, RuleSetID, RoundNumber)
 DecisionSeed = Hash(RoundSeed, "decision", Phase, Timeline)
 EncounterSeed = Hash(RoundSeed, "encounter", EncounterID, PulseIndex)
 BombSeed = Hash(RoundSeed, "bomb", Bomb.Status, Timeline)
+MemorySeed = Hash(RoundSeed, "match_memory", StrategyTemplateID)
 ```
 
 同一输入、同一 Seed、同一配置版本必须输出相同事件列表。
 
-### 4.8 模拟标定指标
+### 4.8 可测试算法规则
+
+Go 实现必须把算法方向落实成可单测的规则。测试不只验证“能跑”，还要验证公式边界和确定性。
+
+#### 评分公式规则
+
+| 规则 | 验证方式 |
+|---|---|
+| 属性权重和为 `1.0` | 加载配置时校验；单测覆盖每个场景族 |
+| `PlayerCombatScore` 计算顺序固定 | golden case 输入固定属性和修正项，断言输出分数 |
+| 团队修正可解释 | 每个 `TeamModifier` 必须生成 reason code 或 debug key |
+| 同样输入不依赖 map 遍历顺序 | 多次运行同一 seed，事件列表完全一致 |
+| 明显优势不被噪声反转 | 构造 `delta >= DecisiveScoreGap` 用例，断言胜负趋势稳定 |
+
+#### Clamp 边界规则
+
+| 字段 | 测试边界 |
+|---|---|
+| `HP` | 小于 0 变 0；大于 100 变 100；0 必须死亡 |
+| `Stamina/Focus` | 不允许负数；不得超过上限 |
+| `Momentum` | clamp 到 `-100..100` |
+| `HitChance` | clamp 到 `MinHitChance..MaxHitChance` |
+| `KillChance` | clamp 到 `0..MaxKillChance` |
+| `PlantTime/DefuseTime/MoveTime` | 修正后仍在最小/最大耗时内 |
+| `StrategyScore` | clamp 到 `MinStrategyWeight..MaxStrategyWeight` 后再参与随机选择 |
+
+#### 平局和随机扰动规则
+
+| 场景 | 规则 |
+|---|---|
+| 完全同分 | 先稳定排序，再使用派生 seed 做有界随机 |
+| 近似同分 | `abs(delta) < CloseScoreGap` 时允许随机影响胜负 |
+| 明显分差 | `abs(delta) >= DecisiveScoreGap` 时随机不能反转主要结果 |
+| 多候选战术同分 | 按模板优先级、最近使用惩罚、稳定排序键处理 |
+| 多事件同秒 | 按 `ResolveAt/Priority/ActionType/MinActorID/ActionID` |
+
+#### 回合阶段优先级规则
+
+| 阶段 | 优先胜负检查 |
+|---|---|
+| `OpeningDeploy` | 不产生胜负，只生成初始行动 |
+| `Advance` / `Clash` | 先检查全灭，再检查时间压力和转点 |
+| `SiteContest` | 先处理击杀和控制权，再判断是否可下包 |
+| `Planting` | 同秒击杀下包者优先于下包完成 |
+| `PostPlant` | `Bomb result > elimination`，但同秒拆包完成优先于爆炸 |
+| `RoundEnd` | 只汇总，不再生成新行动 |
+
+#### 行动冲突规则
+
+| 冲突 | 结果 |
+|---|---|
+| 同一玩家同时移动和交火 | 交火打断移动，进入 `Engaged` |
+| 同一玩家下包时被击杀 | 下包失败，若携带炸弹则 `BOMB_DROP` |
+| 同一玩家拆包时被击杀 | 拆包失败，继续检查爆炸时间 |
+| 转点途中触发拦截 | 插入 `Intercept`，原移动 action 进入版本校验 |
+| 旧 action 版本过期 | 静默丢弃，不产生事件 |
+| 双方都无有效行动 | 触发 `NoOp` 兜底 |
+
+#### 跨回合规则
+
+| 场景 | 期望 |
+|---|---|
+| 连续 5 局同路线 | 第 6 局同路线 `RepeatPenalty` 和对手 `CounterReadRisk` 明显上升 |
+| 连续成功同战术 | `PreviousSuccessBonus` 可抵消部分重复惩罚，但不得无限叠加 |
+| 半场换边 | 阵营相关记忆清空或衰减，队伍风格记忆保留 |
+| 单回合模拟 | `StrategyMemory` 为空时不得影响战术选择 |
+| 同 seed 多回合 | 所有回合、事件、比分和最终统计完全一致 |
+
+### 4.9 模拟标定指标
 
 战斗公式以目标分布为约束，禁止只靠主观手感不断叠加修正项。
 
@@ -2154,7 +2724,7 @@ BombSeed = Hash(RoundSeed, "bomb", Bomb.Status, Timeline)
 | `Plant/Defuse` 时间 | 下包率、拆包率、爆炸率 |
 | `IntelTTL/confidence` | 转点质量、补防质量 |
 
-### 4.9 第一版实现顺序
+### 4.10 第一版实现顺序
 
 | 阶段 | 内容 |
 |---|---|
@@ -2165,11 +2735,11 @@ BombSeed = Hash(RoundSeed, "bomb", Bomb.Status, Timeline)
 | 5 | 实现 `MidRoundDecision`，支持继续打、转点、强攻 |
 | 6 | 实现 `BombResolver`，覆盖下包、掉包、捡包、拆包、爆炸 |
 | 7 | 实现 `ExplainableReport`，前端先展示 `KILL` |
-| 8 | 实现批量模拟和 `4.8` 标定指标统计 |
+| 8 | 实现批量模拟和 `4.9` 标定指标统计 |
 | 9 | 补充 `MapNode / MapEdge / Visibility` 用于坐标、耗时和可选拦截 |
 | 10 | 根据标定结果调整配置表，不优先修改公式 |
 
-### 4.10 非目标
+### 4.11 非目标
 
 | 项目 | 说明 |
 |---|---|

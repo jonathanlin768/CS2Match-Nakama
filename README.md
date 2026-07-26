@@ -8,7 +8,7 @@
 |------|------|
 | 游戏服务器 | Nakama 3.30 |
 | 服务器插件 | Go 1.24.5 (编译为 .so) |
-| 前端 | React 18 + TypeScript + Vite 5 |
+| 前端 | React 19 + TypeScript + Vite 8 |
 | 数据库 | PostgreSQL 15 |
 | 容器化 | Docker + Docker Compose |
 

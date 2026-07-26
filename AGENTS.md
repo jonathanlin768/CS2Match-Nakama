@@ -11,6 +11,6 @@
 
 - Go 1.24.5（Nakama 插件编译为 .so）
 - Nakama 3.30.0
-- React 18 + TypeScript + Vite 5
+- React 19 + TypeScript + Vite 8
 - Docker + Docker Compose
 - Luban 4.5.0（策划配表工具）

@@ -155,7 +155,7 @@ index.html
     └── <script type="module" src="/src/main.tsx">
             │
             ├── createBrowserRouter([...])   ← React Router 路由树
-            ├── createRoot(#root)            ← React 18 渲染入口
+            ├── createRoot(#root)            ← React 19 渲染入口
             └── <AuthProvider>               ← 包裹整个应用
                 └── <RouterProvider>
 ```
