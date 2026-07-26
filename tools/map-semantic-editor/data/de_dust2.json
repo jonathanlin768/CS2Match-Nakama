@@ -1,0 +1,491 @@
+{
+  "schema_version": 1,
+  "map_id": "de_dust2",
+  "name": "Dust2",
+  "version": "v1",
+  "radar_image": "/csmaps/de_dust2_radar_trans.webp",
+  "coordinate_normalization": {
+    "min_x": 0,
+    "max_x": 1,
+    "min_y": 0,
+    "max_y": 1
+  },
+  "layers": {
+    "nodes": {
+      "visible": true,
+      "locked": false,
+      "color": "#1f9dff"
+    },
+    "ranges": {
+      "visible": true,
+      "locked": false,
+      "color": "#39c77f"
+    },
+    "edges": {
+      "visible": true,
+      "locked": false,
+      "color": "#f0a62b"
+    },
+    "visibility": {
+      "visible": true,
+      "locked": false,
+      "color": "#9a6dff"
+    },
+    "routes": {
+      "visible": true,
+      "locked": false,
+      "color": "#f24f6a"
+    }
+  },
+  "viewport": {
+    "zoom": 1,
+    "offset_x": 0,
+    "offset_y": 0,
+    "snap": true
+  },
+  "nodes": [
+    {
+      "id": "T_SPAWN",
+      "map_id": "de_dust2",
+      "name": "T Spawn",
+      "zone": "Mid",
+      "site": "None",
+      "node_type": "Spawn",
+      "default_side": "T",
+      "x": 0.4788,
+      "y": 0.9284,
+      "floor": "Ground",
+      "area_usages": [],
+      "shape": "None",
+      "radius": null,
+      "points": []
+    },
+    {
+      "id": "LONG_DOOR",
+      "map_id": "de_dust2",
+      "name": "Long Door",
+      "zone": "A Area",
+      "site": "A",
+      "node_type": "Connector",
+      "default_side": "Both",
+      "x": 0.6667,
+      "y": 0.6535,
+      "floor": "Ground",
+      "area_usages": [],
+      "shape": "None",
+      "radius": null,
+      "points": []
+    },
+    {
+      "id": "A_LONG",
+      "map_id": "de_dust2",
+      "name": "A Long",
+      "zone": "A Area",
+      "site": "A",
+      "node_type": "Lane",
+      "default_side": "Both",
+      "x": 0.8467,
+      "y": 0.5421,
+      "floor": "Ground",
+      "area_usages": [],
+      "shape": "None",
+      "radius": null,
+      "points": []
+    },
+    {
+      "id": "A_SITE",
+      "map_id": "de_dust2",
+      "name": "A Site",
+      "zone": "A Area",
+      "site": "A",
+      "node_type": "Site",
+      "default_side": "CT",
+      "x": 0.7799,
+      "y": 0.1549,
+      "floor": "Ground",
+      "area_usages": [
+        "KillSample",
+        "Plant",
+        "Control"
+      ],
+      "shape": "Polygon",
+      "radius": null,
+      "points": [
+        {
+          "x": 0.61,
+          "y": 0.21
+        },
+        {
+          "x": 0.72,
+          "y": 0.2
+        },
+        {
+          "x": 0.76,
+          "y": 0.3
+        },
+        {
+          "x": 0.66,
+          "y": 0.35
+        },
+        {
+          "x": 0.59,
+          "y": 0.3
+        }
+      ]
+    },
+    {
+      "id": "A_LONG_CROSS",
+      "map_id": "de_dust2",
+      "name": "A Long Cross",
+      "zone": "A Area",
+      "site": "A",
+      "node_type": "Cover",
+      "default_side": "Both",
+      "x": 0.7965,
+      "y": 0.47,
+      "floor": "Ground",
+      "area_usages": [
+        "Risk"
+      ],
+      "shape": "Circle",
+      "radius": 0.035,
+      "points": []
+    },
+    {
+      "id": "CATWALK",
+      "map_id": "de_dust2",
+      "name": "Catwalk",
+      "zone": "A Area",
+      "site": "A",
+      "node_type": "Lane",
+      "default_side": "Both",
+      "x": 0.4953,
+      "y": 0.4028,
+      "floor": "Ground",
+      "area_usages": [],
+      "shape": "None",
+      "radius": null,
+      "points": []
+    },
+    {
+      "id": "B_TUNNEL",
+      "map_id": "de_dust2",
+      "name": "B Tunnel",
+      "zone": "B Area",
+      "site": "B",
+      "node_type": "Lane",
+      "default_side": "T",
+      "x": 0.1535,
+      "y": 0.5204,
+      "floor": "Ground",
+      "area_usages": [],
+      "shape": "None",
+      "radius": null,
+      "points": []
+    },
+    {
+      "id": "B_SITE",
+      "map_id": "de_dust2",
+      "name": "B Site",
+      "zone": "B Area",
+      "site": "B",
+      "node_type": "Site",
+      "default_side": "CT",
+      "x": 0.1875,
+      "y": 0.1182,
+      "floor": "Ground",
+      "area_usages": [
+        "KillSample",
+        "Plant"
+      ],
+      "shape": "Circle",
+      "radius": 0.055,
+      "points": []
+    },
+    {
+      "id": "RISK_POINT",
+      "map_id": "de_dust2",
+      "name": "RISK_POINT",
+      "zone": "未分区",
+      "site": "None",
+      "node_type": "Cover",
+      "default_side": "None",
+      "x": 0.2213,
+      "y": 0.2133,
+      "floor": "Ground",
+      "area_usages": [
+        "Risk"
+      ],
+      "shape": "Circle",
+      "radius": 0.025,
+      "points": []
+    },
+    {
+      "id": "RISK_POINT_2",
+      "map_id": "de_dust2",
+      "name": "RISK_POINT_2",
+      "zone": "未分区",
+      "site": "None",
+      "node_type": "Cover",
+      "default_side": "None",
+      "x": 0.8115,
+      "y": 0.2344,
+      "floor": "Ground",
+      "area_usages": [
+        "Risk"
+      ],
+      "shape": "Circle",
+      "radius": 0.025,
+      "points": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "EDGE_T_LONG",
+      "from": "T_SPAWN",
+      "to": "LONG_DOOR",
+      "base_time": 8,
+      "stamina_cost": 5,
+      "risk": 22,
+      "noise": 12,
+      "risk_points": [
+        "A_LONG_CROSS"
+      ],
+      "intercept_nodes": [],
+      "bidirectional": true
+    },
+    {
+      "id": "EDGE_LONG_A",
+      "from": "LONG_DOOR",
+      "to": "A_LONG",
+      "base_time": 8,
+      "stamina_cost": 5,
+      "risk": 22,
+      "noise": 12,
+      "risk_points": [
+        "A_LONG_CROSS"
+      ],
+      "intercept_nodes": [],
+      "bidirectional": true
+    },
+    {
+      "id": "EDGE_A_SITE",
+      "from": "A_LONG",
+      "to": "A_SITE",
+      "base_time": 8,
+      "stamina_cost": 5,
+      "risk": 10,
+      "noise": 12,
+      "risk_points": [],
+      "intercept_nodes": [],
+      "bidirectional": true
+    },
+    {
+      "id": "EDGE_T_CAT",
+      "from": "T_SPAWN",
+      "to": "CATWALK",
+      "base_time": 8,
+      "stamina_cost": 5,
+      "risk": 10,
+      "noise": 12,
+      "risk_points": [],
+      "intercept_nodes": [],
+      "bidirectional": true
+    },
+    {
+      "id": "EDGE_CAT_A",
+      "from": "CATWALK",
+      "to": "A_SITE",
+      "base_time": 8,
+      "stamina_cost": 5,
+      "risk": 10,
+      "noise": 12,
+      "risk_points": [],
+      "intercept_nodes": [],
+      "bidirectional": true
+    },
+    {
+      "id": "EDGE_T_B",
+      "from": "T_SPAWN",
+      "to": "B_TUNNEL",
+      "base_time": 8,
+      "stamina_cost": 5,
+      "risk": 10,
+      "noise": 12,
+      "risk_points": [],
+      "intercept_nodes": [],
+      "bidirectional": true
+    },
+    {
+      "id": "EDGE_B_SITE",
+      "from": "B_TUNNEL",
+      "to": "B_SITE",
+      "base_time": 8,
+      "stamina_cost": 5,
+      "risk": 10,
+      "noise": 12,
+      "risk_points": [],
+      "intercept_nodes": [],
+      "bidirectional": true
+    }
+  ],
+  "visibility": [
+    {
+      "id": "VIS_CAT_A",
+      "from": "CATWALK",
+      "to": "A_SITE",
+      "visible": true,
+      "range": "Mid",
+      "angle_advantage": "T",
+      "elevation": "HighToLow",
+      "cover_modifier": -8,
+      "exposure_modifier": 12
+    }
+  ],
+  "routes": [
+    {
+      "id": "D2_A_LONG",
+      "name": "A Long Execute",
+      "side": "T",
+      "target_site": "A",
+      "nodes": [
+        "T_SPAWN",
+        "LONG_DOOR",
+        "A_LONG",
+        "A_SITE"
+      ],
+      "min_players": 2,
+      "max_players": 5,
+      "style_tags": [
+        "LongRange",
+        "SiteEntry"
+      ]
+    }
+  ],
+  "route_templates": [
+    {
+      "id": "TPL_A_LONG_DEFAULT",
+      "map_id": "de_dust2",
+      "target_site": "A",
+      "tempo": "Default",
+      "recommended_min": 2,
+      "recommended_max": 5,
+      "required_roles": [
+        "Entry"
+      ],
+      "key_attributes": "entry=10;aim=6",
+      "scenario_ids": [
+        "SCN_A_LONG_ENTRY"
+      ],
+      "map_tag_ids": [
+        "D2_A_LONG_RANGE"
+      ],
+      "success_next_phase": "SiteEntry",
+      "failure_fallbacks": [
+        "D2_CAT_SPLIT"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "SCN_A_LONG_ENTRY",
+      "route": "A_Long",
+      "phase": "SiteEntry",
+      "range": "Long",
+      "site": "A",
+      "tempo": "SlowDefault",
+      "posture": "T_Executing",
+      "utility_context": "Even",
+      "map_tag_ids": [
+        "D2_A_LONG_RANGE"
+      ],
+      "base_time_cost": 12,
+      "base_weight": 10
+    }
+  ],
+  "map_tags": [
+    {
+      "id": "D2_A_LONG_RANGE",
+      "map_id": "de_dust2",
+      "category": "Range",
+      "value": "LongRange",
+      "side": "Both",
+      "weight": 12,
+      "reason_code": "long_range_duel",
+      "description": "A Long long-range duel pressure."
+    }
+  ],
+  "encounter_modifiers": [
+    {
+      "id": "MOD_A_LONG_AIM",
+      "scenario_id": "SCN_A_LONG_ENTRY",
+      "factor": "LongRange",
+      "side": "Both",
+      "attribute": "aim",
+      "weight": 8,
+      "reason_code": "aim_long_range"
+    }
+  ],
+  "combat_consts": [
+    {
+      "key": "RoundTimeLimit",
+      "category": "Time",
+      "value_type": "Int",
+      "value": "115",
+      "min_value": "",
+      "max_value": "",
+      "unit": "s",
+      "description": "Round time limit."
+    },
+    {
+      "key": "BombExplodeTime",
+      "category": "Bomb",
+      "value_type": "Int",
+      "value": "40",
+      "min_value": "",
+      "max_value": "",
+      "unit": "s",
+      "description": "Bomb explosion countdown."
+    },
+    {
+      "key": "BasePlantTime",
+      "category": "Bomb",
+      "value_type": "Int",
+      "value": "4",
+      "min_value": "",
+      "max_value": "",
+      "unit": "s",
+      "description": "Base plant time."
+    },
+    {
+      "key": "BaseDefuseTime",
+      "category": "Bomb",
+      "value_type": "Int",
+      "value": "10",
+      "min_value": "",
+      "max_value": "",
+      "unit": "s",
+      "description": "Base defuse time."
+    },
+    {
+      "key": "MaxEncounterPulses",
+      "category": "Combat",
+      "value_type": "Int",
+      "value": "3",
+      "min_value": "",
+      "max_value": "",
+      "unit": "count",
+      "description": "Maximum encounter pulses."
+    },
+    {
+      "key": "CombatScale",
+      "category": "Combat",
+      "value_type": "Float",
+      "value": "12",
+      "min_value": "",
+      "max_value": "",
+      "unit": "score",
+      "description": "Combat score scale."
+    }
+  ]
+}

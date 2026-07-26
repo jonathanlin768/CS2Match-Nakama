@@ -1,0 +1,62 @@
+[
+  {
+    "key": "RoundTimeLimit",
+    "category": "Time",
+    "value_type": "Int",
+    "value": "115",
+    "min_value": "",
+    "max_value": "",
+    "unit": "s",
+    "description": "Round time limit."
+  },
+  {
+    "key": "BombExplodeTime",
+    "category": "Bomb",
+    "value_type": "Int",
+    "value": "40",
+    "min_value": "",
+    "max_value": "",
+    "unit": "s",
+    "description": "Bomb explosion countdown."
+  },
+  {
+    "key": "BasePlantTime",
+    "category": "Bomb",
+    "value_type": "Int",
+    "value": "4",
+    "min_value": "",
+    "max_value": "",
+    "unit": "s",
+    "description": "Base plant time."
+  },
+  {
+    "key": "BaseDefuseTime",
+    "category": "Bomb",
+    "value_type": "Int",
+    "value": "10",
+    "min_value": "",
+    "max_value": "",
+    "unit": "s",
+    "description": "Base defuse time."
+  },
+  {
+    "key": "MaxEncounterPulses",
+    "category": "Combat",
+    "value_type": "Int",
+    "value": "3",
+    "min_value": "",
+    "max_value": "",
+    "unit": "count",
+    "description": "Maximum encounter pulses."
+  },
+  {
+    "key": "CombatScale",
+    "category": "Combat",
+    "value_type": "Float",
+    "value": "12",
+    "min_value": "",
+    "max_value": "",
+    "unit": "score",
+    "description": "Combat score scale."
+  }
+]

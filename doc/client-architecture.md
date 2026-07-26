@@ -336,7 +336,7 @@ registerWithEmail(email, password)
 └───────────────────────────────────────────────┘
 ```
 
-- **数据转换**：`SimPlayerState` → `TeamRoster` 格式、`SimKillEvent` → `RoundEvents` 格式、像素坐标 → 百分比坐标
+- **数据转换**：`SimPlayerState` → `TeamRoster` 格式、`SimKillEvent` → `RoundEvents` 格式、地图事件坐标统一使用 `0..1` 归一化比例坐标
 - **地图**：Dust2（MAP_W=1024, MAP_H=984）
 
 ### 6.4 GachaPage（抽卡）

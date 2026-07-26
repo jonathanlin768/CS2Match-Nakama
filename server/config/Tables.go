@@ -12,8 +12,17 @@ package cfg;
 type JsonLoader func(string) ([]map[string]interface{}, error)
 
 type Tables struct {
+    TbCombatConst *TbCombatConst
+    TbEncounterModifier *TbEncounterModifier
     Tbitem *Tbitem
+    TbMapEdge *TbMapEdge
+    TbMapNode *TbMapNode
+    TbMapTag *TbMapTag
     TbPlayer *TbPlayer
+    TbRoute *TbRoute
+    TbRouteTemplate *TbRouteTemplate
+    TbScenario *TbScenario
+    TbVisibility *TbVisibility
 }
 
 func NewTables(loader JsonLoader) (*Tables, error) {
@@ -21,16 +30,70 @@ func NewTables(loader JsonLoader) (*Tables, error) {
     var buf []map[string]interface{}
 
     tables := &Tables{}
+    if buf, err = loader("tbcombatconst") ; err != nil {
+        return nil, err
+    }
+    if tables.TbCombatConst, err = NewTbCombatConst(buf) ; err != nil {
+        return nil, err
+    }
+    if buf, err = loader("tbencountermodifier") ; err != nil {
+        return nil, err
+    }
+    if tables.TbEncounterModifier, err = NewTbEncounterModifier(buf) ; err != nil {
+        return nil, err
+    }
     if buf, err = loader("tbitem") ; err != nil {
         return nil, err
     }
     if tables.Tbitem, err = NewTbitem(buf) ; err != nil {
         return nil, err
     }
+    if buf, err = loader("tbmapedge") ; err != nil {
+        return nil, err
+    }
+    if tables.TbMapEdge, err = NewTbMapEdge(buf) ; err != nil {
+        return nil, err
+    }
+    if buf, err = loader("tbmapnode") ; err != nil {
+        return nil, err
+    }
+    if tables.TbMapNode, err = NewTbMapNode(buf) ; err != nil {
+        return nil, err
+    }
+    if buf, err = loader("tbmaptag") ; err != nil {
+        return nil, err
+    }
+    if tables.TbMapTag, err = NewTbMapTag(buf) ; err != nil {
+        return nil, err
+    }
     if buf, err = loader("tbplayer") ; err != nil {
         return nil, err
     }
     if tables.TbPlayer, err = NewTbPlayer(buf) ; err != nil {
+        return nil, err
+    }
+    if buf, err = loader("tbroute") ; err != nil {
+        return nil, err
+    }
+    if tables.TbRoute, err = NewTbRoute(buf) ; err != nil {
+        return nil, err
+    }
+    if buf, err = loader("tbroutetemplate") ; err != nil {
+        return nil, err
+    }
+    if tables.TbRouteTemplate, err = NewTbRouteTemplate(buf) ; err != nil {
+        return nil, err
+    }
+    if buf, err = loader("tbscenario") ; err != nil {
+        return nil, err
+    }
+    if tables.TbScenario, err = NewTbScenario(buf) ; err != nil {
+        return nil, err
+    }
+    if buf, err = loader("tbvisibility") ; err != nil {
+        return nil, err
+    }
+    if tables.TbVisibility, err = NewTbVisibility(buf) ; err != nil {
         return nil, err
     }
     return tables, nil

@@ -1,0 +1,12 @@
+[
+  {
+    "id": "D2_A_LONG_RANGE",
+    "map_id": "de_dust2",
+    "category": "Range",
+    "value": "LongRange",
+    "side": "Both",
+    "weight": 12,
+    "reason_code": "long_range_duel",
+    "description": "A Long long-range duel pressure."
+  }
+]

@@ -4,6 +4,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 )
 
@@ -59,16 +60,25 @@ func Init() error {
 
 // TableCount returns the number of loaded tables
 func TableCount() int {
+	if Global == nil {
+		return 0
+	}
+	value := reflect.ValueOf(Global).Elem()
 	count := 0
-	if Global != nil {
-		if Global.Tbitem != nil {
-			count++
-		}
-		if Global.TbPlayer != nil {
+	for index := 0; index < value.NumField(); index++ {
+		if !value.Field(index).IsNil() {
 			count++
 		}
 	}
 	return count
+}
+
+// GetPlayer returns a player config by id.
+func GetPlayer(id string) *Player {
+	if Global == nil || Global.TbPlayer == nil {
+		return nil
+	}
+	return Global.TbPlayer.Get(id)
 }
 
 // GetFirstItem returns the first item (for debug logging)
@@ -81,12 +91,4 @@ func GetFirstItem() *item {
 		return nil
 	}
 	return list[0]
-}
-
-// GetPlayer returns a player by id (for debug/testing)
-func GetPlayer(id string) *Player {
-	if Global == nil || Global.TbPlayer == nil {
-		return nil
-	}
-	return Global.TbPlayer.Get(id)
 }

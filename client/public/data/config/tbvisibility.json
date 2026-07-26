@@ -1,0 +1,13 @@
+[
+  {
+    "id": "VIS_CAT_A",
+    "from_node": "CATWALK",
+    "to_node": "A_SITE",
+    "visible": true,
+    "range": "Mid",
+    "angle_advantage": "T",
+    "elevation": "HighToLow",
+    "cover_modifier": -8,
+    "exposure_modifier": 12
+  }
+]

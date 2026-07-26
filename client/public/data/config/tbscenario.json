@@ -1,0 +1,17 @@
+[
+  {
+    "id": "SCN_A_LONG_ENTRY",
+    "route": "A_Long",
+    "phase": "SiteEntry",
+    "range": "Long",
+    "site": "A",
+    "tempo": "SlowDefault",
+    "posture": "T_Executing",
+    "utility_context": "Even",
+    "map_tag_ids": [
+      "D2_A_LONG_RANGE"
+    ],
+    "base_time_cost": 12,
+    "base_weight": 10
+  }
+]

@@ -1,0 +1,9 @@
+{
+  "name": "cs2match-nakama-workspace",
+  "private": true,
+  "scripts": {
+    "map-editor": "npm --prefix tools/map-semantic-editor run dev",
+    "map-editor:build": "npm --prefix tools/map-semantic-editor run build",
+    "map-editor:test": "npm --prefix tools/map-semantic-editor run test"
+  }
+}

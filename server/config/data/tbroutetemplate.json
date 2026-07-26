@@ -1,0 +1,24 @@
+[
+  {
+    "id": "TPL_A_LONG_DEFAULT",
+    "map_id": "de_dust2",
+    "target_site": "A",
+    "tempo": "Default",
+    "recommended_min": 2,
+    "recommended_max": 5,
+    "required_roles": [
+      "Entry"
+    ],
+    "key_attributes": "entry=10;aim=6",
+    "scenario_ids": [
+      "SCN_A_LONG_ENTRY"
+    ],
+    "map_tag_ids": [
+      "D2_A_LONG_RANGE"
+    ],
+    "success_next_phase": "SiteEntry",
+    "failure_fallbacks": [
+      "D2_CAT_SPLIT"
+    ]
+  }
+]

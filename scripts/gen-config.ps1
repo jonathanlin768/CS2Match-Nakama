@@ -3,11 +3,16 @@
 # Run Luban via Docker, generate Server (Go) and Client (TS) configs
 # ============================================================
 
+param(
+    [switch]$RebuildImage
+)
+
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectDir = Split-Path -Parent $ScriptDir
 $Image = "luban-runner"
 $Conf = "configs/luban.conf"
+$DefinesDir = Join-Path $ProjectDir "configs/Defines"
 
 Write-Host "=============================================="
 Write-Host "  Luban Config Export (Docker)"
@@ -26,22 +31,36 @@ Write-Host "[OK] Docker ready" -ForegroundColor Green
 
 # 2. Build Luban Docker image
 Write-Host ""
-Write-Host "[2/4] Building Luban image..."
+Write-Host "[2/4] Preparing Luban image..."
 Set-Location $ProjectDir
-docker build -t $Image tools/luban/ | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "[ERROR] Luban image build failed" -ForegroundColor Red
-    exit 1
+if (-not (Test-Path $DefinesDir)) {
+    New-Item -ItemType Directory -Path $DefinesDir | Out-Null
+    Write-Host "[OK] Created empty configs/Defines compatibility directory" -ForegroundColor Green
 }
-Write-Host "[OK] Luban image ready" -ForegroundColor Green
+$imageExists = $false
+docker image inspect $Image *> $null
+if ($LASTEXITCODE -eq 0) {
+    $imageExists = $true
+}
+
+if ($RebuildImage -or -not $imageExists) {
+    docker build -t $Image tools/luban/ | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[ERROR] Luban image build failed" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "[OK] Luban image built" -ForegroundColor Green
+} else {
+    Write-Host "[OK] Luban image exists; skip build" -ForegroundColor Green
+}
 
 # 3. Clean old output (keep hand-written files)
 Write-Host ""
 Write-Host "[3/4] Cleaning old output..."
 
-# server/config/ - keep go.mod, loader.go; delete the rest
+# server/config/ - keep hand-written module files and tests; delete generated code/data
 Get-ChildItem server/config -ErrorAction SilentlyContinue |
-    Where-Object { $_.Name -ne 'go.mod' -and $_.Name -ne 'loader.go' } |
+    Where-Object { $_.Name -ne 'go.mod' -and $_.Name -ne 'loader.go' -and $_.Name -ne 'config_test.go' } |
     Remove-Item -Recurse -Force
 
 # client/src/config/ - keep index.ts; delete the rest
@@ -121,6 +140,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 )
 
@@ -176,13 +196,25 @@ func Init() error {
 
 // TableCount returns the number of loaded tables
 func TableCount() int {
+	if Global == nil {
+		return 0
+	}
+	value := reflect.ValueOf(Global).Elem()
 	count := 0
-	if Global != nil {
-		if Global.Tbitem != nil {
+	for index := 0; index < value.NumField(); index++ {
+		if !value.Field(index).IsNil() {
 			count++
 		}
 	}
 	return count
+}
+
+// GetPlayer returns a player config by id.
+func GetPlayer(id string) *Player {
+	if Global == nil || Global.TbPlayer == nil {
+		return nil
+	}
+	return Global.TbPlayer.Get(id)
 }
 
 // GetFirstItem returns the first item (for debug logging)
@@ -198,6 +230,50 @@ func GetFirstItem() *item {
 }
 '@
     Write-Host "[POST] Recreated server/config/loader.go" -ForegroundColor Yellow
+}
+
+if (-not (Test-Path server/config/config_test.go)) {
+    Set-Content -Path server/config/config_test.go -Value @'
+package cfg
+
+import (
+	"testing"
+)
+
+func TestConfigLoad(t *testing.T) {
+	if err := Init(); err != nil {
+		t.Fatalf("Init failed: %v", err)
+	}
+	if Global == nil {
+		t.Fatal("Global is nil")
+	}
+	if Global.Tbitem == nil {
+		t.Fatal("Tbitem not loaded")
+	}
+	if Global.TbPlayer == nil {
+		t.Fatal("TbPlayer not loaded")
+	}
+	if Global.TbMapNode == nil {
+		t.Fatal("TbMapNode not loaded")
+	}
+	if TableCount() < 11 {
+		t.Fatalf("expected at least 11 tables, got %d", TableCount())
+	}
+	players := Global.TbPlayer.GetDataList()
+	if len(players) != 10 {
+		t.Fatalf("expected 10 players, got %d", len(players))
+	}
+	p := GetPlayer("player_niko")
+	if p == nil {
+		t.Fatal("player_niko not found")
+	}
+	if p.Name != "NiKo" {
+		t.Fatalf("expected NiKo, got %s", p.Name)
+	}
+	t.Logf("Loaded %d tables and %d players, first: %s (entry=%d)", TableCount(), len(players), p.Name, p.Entry)
+}
+'@
+    Write-Host "[POST] Recreated server/config/config_test.go" -ForegroundColor Yellow
 }
 
 if (-not (Test-Path client/src/config/index.ts)) {

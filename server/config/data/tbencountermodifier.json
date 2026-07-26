@@ -1,0 +1,11 @@
+[
+  {
+    "id": "MOD_A_LONG_AIM",
+    "scenario_id": "SCN_A_LONG_ENTRY",
+    "factor": "LongRange",
+    "side": "Both",
+    "attribute": "aim",
+    "weight": 8,
+    "reason_code": "aim_long_range"
+  }
+]

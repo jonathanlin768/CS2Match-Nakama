@@ -17,8 +17,11 @@ func TestConfigLoad(t *testing.T) {
 	if Global.TbPlayer == nil {
 		t.Fatal("TbPlayer not loaded")
 	}
-	if TableCount() != 2 {
-		t.Fatalf("expected 2 tables, got %d", TableCount())
+	if Global.TbMapNode == nil {
+		t.Fatal("TbMapNode not loaded")
+	}
+	if TableCount() < 11 {
+		t.Fatalf("expected at least 11 tables, got %d", TableCount())
 	}
 	players := Global.TbPlayer.GetDataList()
 	if len(players) != 10 {
@@ -31,5 +34,5 @@ func TestConfigLoad(t *testing.T) {
 	if p.Name != "NiKo" {
 		t.Fatalf("expected NiKo, got %s", p.Name)
 	}
-	t.Logf("Loaded %d players, first: %s (entry=%d)", len(players), p.Name, p.Entry)
+	t.Logf("Loaded %d tables and %d players, first: %s (entry=%d)", TableCount(), len(players), p.Name, p.Entry)
 }

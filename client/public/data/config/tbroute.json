@@ -1,0 +1,20 @@
+[
+  {
+    "id": "D2_A_LONG",
+    "name": "A Long Execute",
+    "side": "T",
+    "target_site": "A",
+    "nodes": [
+      "T_SPAWN",
+      "LONG_DOOR",
+      "A_LONG",
+      "A_SITE"
+    ],
+    "min_players": 2,
+    "max_players": 5,
+    "style_tags": [
+      "LongRange",
+      "SiteEntry"
+    ]
+  }
+]

@@ -14,6 +14,134 @@
 
 
 
+export class CombatConst {
+
+    constructor(_json_: any) {
+        if (_json_.key === undefined) { throw new Error() }
+        this.key = _json_.key
+        if (_json_.category === undefined) { throw new Error() }
+        this.category = _json_.category
+        if (_json_.value_type === undefined) { throw new Error() }
+        this.valueType = _json_.value_type
+        if (_json_.value === undefined) { throw new Error() }
+        this.value = _json_.value
+        if (_json_.min_value === undefined) { throw new Error() }
+        this.minValue = _json_.min_value
+        if (_json_.max_value === undefined) { throw new Error() }
+        this.maxValue = _json_.max_value
+        if (_json_.unit === undefined) { throw new Error() }
+        this.unit = _json_.unit
+        if (_json_.description === undefined) { throw new Error() }
+        this.description = _json_.description
+    }
+
+    /**
+     * 常量�?     */
+    readonly key: string
+    /**
+     * 类别
+     */
+    readonly category: string
+    /**
+     * 值类�?     */
+    readonly valueType: string
+    /**
+     * 原始�?     */
+    readonly value: string
+    /**
+     * 下限
+     */
+    readonly minValue: string
+    /**
+     * 上限
+     */
+    readonly maxValue: string
+    /**
+     * 单位
+     */
+    readonly unit: string
+    /**
+     * 说明
+     */
+    readonly description: string
+
+    resolve(tables:Tables) {
+        
+        
+        
+        
+        
+        
+        
+        
+    }
+}
+
+
+
+
+
+export class EncounterModifier {
+
+    constructor(_json_: any) {
+        if (_json_.id === undefined) { throw new Error() }
+        this.id = _json_.id
+        if (_json_.scenario_id === undefined) { throw new Error() }
+        this.scenarioId = _json_.scenario_id
+        if (_json_.factor === undefined) { throw new Error() }
+        this.factor = _json_.factor
+        if (_json_.side === undefined) { throw new Error() }
+        this.side = _json_.side
+        if (_json_.attribute === undefined) { throw new Error() }
+        this.attribute = _json_.attribute
+        if (_json_.weight === undefined) { throw new Error() }
+        this.weight = _json_.weight
+        if (_json_.reason_code === undefined) { throw new Error() }
+        this.reasonCode = _json_.reason_code
+    }
+
+    /**
+     * 修正ID
+     */
+    readonly id: string
+    /**
+     * 场景ID
+     */
+    readonly scenarioId: string
+    /**
+     * 修正因子
+     */
+    readonly factor: string
+    /**
+     * 阵营
+     */
+    readonly side: string
+    /**
+     * 关联属�?     */
+    readonly attribute: string
+    /**
+     * 权重
+     */
+    readonly weight: number
+    /**
+     * 原因�?     */
+    readonly reasonCode: string
+
+    resolve(tables:Tables) {
+        
+        
+        
+        
+        
+        
+        
+    }
+}
+
+
+
+
+
 export class item {
 
     constructor(_json_: any) {
@@ -45,6 +173,267 @@ export class item {
     readonly price: number
 
     resolve(tables:Tables) {
+        
+        
+        
+        
+    }
+}
+
+
+
+
+
+export class MapEdge {
+
+    constructor(_json_: any) {
+        if (_json_.id === undefined) { throw new Error() }
+        this.id = _json_.id
+        if (_json_.from_node === undefined) { throw new Error() }
+        this.fromNode = _json_.from_node
+        if (_json_.to_node === undefined) { throw new Error() }
+        this.toNode = _json_.to_node
+        if (_json_.base_time === undefined) { throw new Error() }
+        this.baseTime = _json_.base_time
+        if (_json_.stamina_cost === undefined) { throw new Error() }
+        this.staminaCost = _json_.stamina_cost
+        if (_json_.risk === undefined) { throw new Error() }
+        this.risk = _json_.risk
+        if (_json_.noise === undefined) { throw new Error() }
+        this.noise = _json_.noise
+        if (_json_.risk_points === undefined) { throw new Error() }
+        { this.riskPoints = []; for(let _ele0 of _json_.risk_points) { let _e0; _e0 = _ele0; this.riskPoints.push(_e0);}}
+        if (_json_.intercept_nodes === undefined) { throw new Error() }
+        { this.interceptNodes = []; for(let _ele0 of _json_.intercept_nodes) { let _e0; _e0 = _ele0; this.interceptNodes.push(_e0);}}
+        if (_json_.bidirectional === undefined) { throw new Error() }
+        this.bidirectional = _json_.bidirectional
+    }
+
+    /**
+     * 路径ID
+     */
+    readonly id: string
+    /**
+     * 起点
+     */
+    readonly fromNode: string
+    /**
+     * 终点
+     */
+    readonly toNode: string
+    /**
+     * 基础移动时间
+     */
+    readonly baseTime: number
+    /**
+     * 体能消�?     */
+    readonly staminaCost: number
+    /**
+     * 转移风险
+     */
+    readonly risk: number
+    /**
+     * 暴露概率
+     */
+    readonly noise: number
+    /**
+     * 风险热点
+     */
+    readonly riskPoints: string[]
+    /**
+     * 拦截候选点
+     */
+    readonly interceptNodes: string[]
+    /**
+     * 是否双向
+     */
+    readonly bidirectional: boolean
+
+    resolve(tables:Tables) {
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    }
+}
+
+
+
+
+
+export class MapNode {
+
+    constructor(_json_: any) {
+        if (_json_.id === undefined) { throw new Error() }
+        this.id = _json_.id
+        if (_json_.map_id === undefined) { throw new Error() }
+        this.mapId = _json_.map_id
+        if (_json_.name === undefined) { throw new Error() }
+        this.name = _json_.name
+        if (_json_.zone === undefined) { throw new Error() }
+        this.zone = _json_.zone
+        if (_json_.site === undefined) { throw new Error() }
+        this.site = _json_.site
+        if (_json_.node_type === undefined) { throw new Error() }
+        this.nodeType = _json_.node_type
+        if (_json_.default_side === undefined) { throw new Error() }
+        this.defaultSide = _json_.default_side
+        if (_json_.x === undefined) { throw new Error() }
+        this.x = _json_.x
+        if (_json_.y === undefined) { throw new Error() }
+        this.y = _json_.y
+        if (_json_.floor === undefined) { throw new Error() }
+        this.floor = _json_.floor
+        if (_json_.area_usages === undefined) { throw new Error() }
+        { this.areaUsages = []; for(let _ele0 of _json_.area_usages) { let _e0; _e0 = _ele0; this.areaUsages.push(_e0);}}
+        if (_json_.shape === undefined) { throw new Error() }
+        this.shape = _json_.shape
+        if (_json_.radius === undefined) { throw new Error() }
+        this.radius = _json_.radius
+        if (_json_.points === undefined) { throw new Error() }
+        this.points = _json_.points
+    }
+
+    /**
+     * 节点ID
+     */
+    readonly id: string
+    /**
+     * 地图ID
+     */
+    readonly mapId: string
+    /**
+     * 显示名称
+     */
+    readonly name: string
+    /**
+     * 宏观区域
+     */
+    readonly zone: string
+    /**
+     * 包点
+     */
+    readonly site: string
+    /**
+     * 节点类型
+     */
+    readonly nodeType: string
+    /**
+     * 默认优势�?     */
+    readonly defaultSide: string
+    /**
+     * 归一化X
+     */
+    readonly x: number
+    /**
+     * 归一化Y
+     */
+    readonly y: number
+    /**
+     * 楼层
+     */
+    readonly floor: string
+    /**
+     * 节点范围用�?     */
+    readonly areaUsages: string[]
+    /**
+     * 节点范围形状
+     */
+    readonly shape: string
+    /**
+     * 圆形半径
+     */
+    readonly radius: number
+    /**
+     * 多边形顶�?x1,y1;x2,y2
+     */
+    readonly points: string
+
+    resolve(tables:Tables) {
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    }
+}
+
+
+
+
+
+export class MapTag {
+
+    constructor(_json_: any) {
+        if (_json_.id === undefined) { throw new Error() }
+        this.id = _json_.id
+        if (_json_.map_id === undefined) { throw new Error() }
+        this.mapId = _json_.map_id
+        if (_json_.category === undefined) { throw new Error() }
+        this.category = _json_.category
+        if (_json_.value === undefined) { throw new Error() }
+        this.value = _json_.value
+        if (_json_.side === undefined) { throw new Error() }
+        this.side = _json_.side
+        if (_json_.weight === undefined) { throw new Error() }
+        this.weight = _json_.weight
+        if (_json_.reason_code === undefined) { throw new Error() }
+        this.reasonCode = _json_.reason_code
+        if (_json_.description === undefined) { throw new Error() }
+        this.description = _json_.description
+    }
+
+    /**
+     * 标签ID
+     */
+    readonly id: string
+    /**
+     * 地图ID
+     */
+    readonly mapId: string
+    /**
+     * 类别
+     */
+    readonly category: string
+    /**
+     * 标签�?     */
+    readonly value: string
+    /**
+     * 阵营
+     */
+    readonly side: string
+    /**
+     * 权重
+     */
+    readonly weight: number
+    /**
+     * 原因�?     */
+    readonly reasonCode: string
+    /**
+     * 说明
+     */
+    readonly description: string
+
+    resolve(tables:Tables) {
+        
+        
+        
+        
         
         
         
@@ -160,6 +549,393 @@ export class Player {
 
 
 
+export class Route {
+
+    constructor(_json_: any) {
+        if (_json_.id === undefined) { throw new Error() }
+        this.id = _json_.id
+        if (_json_.name === undefined) { throw new Error() }
+        this.name = _json_.name
+        if (_json_.side === undefined) { throw new Error() }
+        this.side = _json_.side
+        if (_json_.target_site === undefined) { throw new Error() }
+        this.targetSite = _json_.target_site
+        if (_json_.nodes === undefined) { throw new Error() }
+        { this.nodes = []; for(let _ele0 of _json_.nodes) { let _e0; _e0 = _ele0; this.nodes.push(_e0);}}
+        if (_json_.min_players === undefined) { throw new Error() }
+        this.minPlayers = _json_.min_players
+        if (_json_.max_players === undefined) { throw new Error() }
+        this.maxPlayers = _json_.max_players
+        if (_json_.style_tags === undefined) { throw new Error() }
+        { this.styleTags = []; for(let _ele0 of _json_.style_tags) { let _e0; _e0 = _ele0; this.styleTags.push(_e0);}}
+    }
+
+    /**
+     * 路线ID
+     */
+    readonly id: string
+    /**
+     * 显示名称
+     */
+    readonly name: string
+    /**
+     * 阵营
+     */
+    readonly side: string
+    /**
+     * 目标包点
+     */
+    readonly targetSite: string
+    /**
+     * 节点序列
+     */
+    readonly nodes: string[]
+    /**
+     * 最少人�?     */
+    readonly minPlayers: number
+    /**
+     * 最多人�?     */
+    readonly maxPlayers: number
+    /**
+     * 路线标签
+     */
+    readonly styleTags: string[]
+
+    resolve(tables:Tables) {
+        
+        
+        
+        
+        
+        
+        
+        
+    }
+}
+
+
+
+
+
+export class RouteTemplate {
+
+    constructor(_json_: any) {
+        if (_json_.id === undefined) { throw new Error() }
+        this.id = _json_.id
+        if (_json_.map_id === undefined) { throw new Error() }
+        this.mapId = _json_.map_id
+        if (_json_.target_site === undefined) { throw new Error() }
+        this.targetSite = _json_.target_site
+        if (_json_.tempo === undefined) { throw new Error() }
+        this.tempo = _json_.tempo
+        if (_json_.recommended_min === undefined) { throw new Error() }
+        this.recommendedMin = _json_.recommended_min
+        if (_json_.recommended_max === undefined) { throw new Error() }
+        this.recommendedMax = _json_.recommended_max
+        if (_json_.required_roles === undefined) { throw new Error() }
+        { this.requiredRoles = []; for(let _ele0 of _json_.required_roles) { let _e0; _e0 = _ele0; this.requiredRoles.push(_e0);}}
+        if (_json_.key_attributes === undefined) { throw new Error() }
+        this.keyAttributes = _json_.key_attributes
+        if (_json_.scenario_ids === undefined) { throw new Error() }
+        { this.scenarioIds = []; for(let _ele0 of _json_.scenario_ids) { let _e0; _e0 = _ele0; this.scenarioIds.push(_e0);}}
+        if (_json_.map_tag_ids === undefined) { throw new Error() }
+        { this.mapTagIds = []; for(let _ele0 of _json_.map_tag_ids) { let _e0; _e0 = _ele0; this.mapTagIds.push(_e0);}}
+        if (_json_.success_next_phase === undefined) { throw new Error() }
+        this.successNextPhase = _json_.success_next_phase
+        if (_json_.failure_fallbacks === undefined) { throw new Error() }
+        { this.failureFallbacks = []; for(let _ele0 of _json_.failure_fallbacks) { let _e0; _e0 = _ele0; this.failureFallbacks.push(_e0);}}
+    }
+
+    /**
+     * 模板ID
+     */
+    readonly id: string
+    /**
+     * 地图ID
+     */
+    readonly mapId: string
+    /**
+     * 目标包点
+     */
+    readonly targetSite: string
+    /**
+     * 节奏
+     */
+    readonly tempo: string
+    /**
+     * 推荐最少人�?     */
+    readonly recommendedMin: number
+    /**
+     * 推荐最多人�?     */
+    readonly recommendedMax: number
+    /**
+     * 关键角色
+     */
+    readonly requiredRoles: string[]
+    /**
+     * 属性权�?     */
+    readonly keyAttributes: string
+    /**
+     * 可生成场�?     */
+    readonly scenarioIds: string[]
+    /**
+     * 地图标签
+     */
+    readonly mapTagIds: string[]
+    /**
+     * 成功后阶�?     */
+    readonly successNextPhase: string
+    /**
+     * 失败候选策�?     */
+    readonly failureFallbacks: string[]
+
+    resolve(tables:Tables) {
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    }
+}
+
+
+
+
+
+export class Scenario {
+
+    constructor(_json_: any) {
+        if (_json_.id === undefined) { throw new Error() }
+        this.id = _json_.id
+        if (_json_.route === undefined) { throw new Error() }
+        this.route = _json_.route
+        if (_json_.phase === undefined) { throw new Error() }
+        this.phase = _json_.phase
+        if (_json_.range === undefined) { throw new Error() }
+        this.range = _json_.range
+        if (_json_.site === undefined) { throw new Error() }
+        this.site = _json_.site
+        if (_json_.tempo === undefined) { throw new Error() }
+        this.tempo = _json_.tempo
+        if (_json_.posture === undefined) { throw new Error() }
+        this.posture = _json_.posture
+        if (_json_.utility_context === undefined) { throw new Error() }
+        this.utilityContext = _json_.utility_context
+        if (_json_.map_tag_ids === undefined) { throw new Error() }
+        { this.mapTagIds = []; for(let _ele0 of _json_.map_tag_ids) { let _e0; _e0 = _ele0; this.mapTagIds.push(_e0);}}
+        if (_json_.base_time_cost === undefined) { throw new Error() }
+        this.baseTimeCost = _json_.base_time_cost
+        if (_json_.base_weight === undefined) { throw new Error() }
+        this.baseWeight = _json_.base_weight
+    }
+
+    /**
+     * 场景ID
+     */
+    readonly id: string
+    /**
+     * 路线类型
+     */
+    readonly route: string
+    /**
+     * 阶段
+     */
+    readonly phase: string
+    /**
+     * 距离
+     */
+    readonly range: string
+    /**
+     * 包点
+     */
+    readonly site: string
+    /**
+     * 节奏
+     */
+    readonly tempo: string
+    /**
+     * 姿�?     */
+    readonly posture: string
+    /**
+     * 道具上下�?     */
+    readonly utilityContext: string
+    /**
+     * 地图标签
+     */
+    readonly mapTagIds: string[]
+    /**
+     * 基础耗时
+     */
+    readonly baseTimeCost: number
+    /**
+     * 基础权重
+     */
+    readonly baseWeight: number
+
+    resolve(tables:Tables) {
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    }
+}
+
+
+
+
+
+export class Visibility {
+
+    constructor(_json_: any) {
+        if (_json_.id === undefined) { throw new Error() }
+        this.id = _json_.id
+        if (_json_.from_node === undefined) { throw new Error() }
+        this.fromNode = _json_.from_node
+        if (_json_.to_node === undefined) { throw new Error() }
+        this.toNode = _json_.to_node
+        if (_json_.visible === undefined) { throw new Error() }
+        this.visible = _json_.visible
+        if (_json_.range === undefined) { throw new Error() }
+        this.range = _json_.range
+        if (_json_.angle_advantage === undefined) { throw new Error() }
+        this.angleAdvantage = _json_.angle_advantage
+        if (_json_.elevation === undefined) { throw new Error() }
+        this.elevation = _json_.elevation
+        if (_json_.cover_modifier === undefined) { throw new Error() }
+        this.coverModifier = _json_.cover_modifier
+        if (_json_.exposure_modifier === undefined) { throw new Error() }
+        this.exposureModifier = _json_.exposure_modifier
+    }
+
+    /**
+     * 视野ID
+     */
+    readonly id: string
+    /**
+     * 观察�?     */
+    readonly fromNode: string
+    /**
+     * 被观察点
+     */
+    readonly toNode: string
+    /**
+     * 是否可见
+     */
+    readonly visible: boolean
+    /**
+     * 距离
+     */
+    readonly range: string
+    /**
+     * 角度优势
+     */
+    readonly angleAdvantage: string
+    /**
+     * 高低关系
+     */
+    readonly elevation: string
+    /**
+     * 掩体修正
+     */
+    readonly coverModifier: number
+    /**
+     * 暴露修正
+     */
+    readonly exposureModifier: number
+
+    resolve(tables:Tables) {
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    }
+}
+
+
+
+
+
+
+export class TbCombatConst {
+    private _dataMap: Map<string, CombatConst>
+    private _dataList: CombatConst[]
+    constructor(_json_: any) {
+        this._dataMap = new Map<string, CombatConst>()
+        this._dataList = []
+        for(var _json2_ of _json_) {
+            let _v: CombatConst
+            _v = new CombatConst(_json2_)
+            this._dataList.push(_v)
+            this._dataMap.set(_v.key, _v)
+        }
+    }
+
+    getDataMap(): Map<string, CombatConst> { return this._dataMap; }
+    getDataList(): CombatConst[] { return this._dataList; }
+
+    get(key: string): CombatConst | undefined { return this._dataMap.get(key); }
+
+    resolve(tables:Tables) {
+        for(let  data of this._dataList)
+        {
+            data.resolve(tables)
+        }
+    }
+
+}
+
+
+
+
+export class TbEncounterModifier {
+    private _dataMap: Map<string, EncounterModifier>
+    private _dataList: EncounterModifier[]
+    constructor(_json_: any) {
+        this._dataMap = new Map<string, EncounterModifier>()
+        this._dataList = []
+        for(var _json2_ of _json_) {
+            let _v: EncounterModifier
+            _v = new EncounterModifier(_json2_)
+            this._dataList.push(_v)
+            this._dataMap.set(_v.id, _v)
+        }
+    }
+
+    getDataMap(): Map<string, EncounterModifier> { return this._dataMap; }
+    getDataList(): EncounterModifier[] { return this._dataList; }
+
+    get(key: string): EncounterModifier | undefined { return this._dataMap.get(key); }
+
+    resolve(tables:Tables) {
+        for(let  data of this._dataList)
+        {
+            data.resolve(tables)
+        }
+    }
+
+}
+
+
+
 
 export class Tbitem {
     private _dataMap: Map<number, item>
@@ -179,6 +955,99 @@ export class Tbitem {
     getDataList(): item[] { return this._dataList; }
 
     get(key: number): item | undefined { return this._dataMap.get(key); }
+
+    resolve(tables:Tables) {
+        for(let  data of this._dataList)
+        {
+            data.resolve(tables)
+        }
+    }
+
+}
+
+
+
+
+export class TbMapEdge {
+    private _dataMap: Map<string, MapEdge>
+    private _dataList: MapEdge[]
+    constructor(_json_: any) {
+        this._dataMap = new Map<string, MapEdge>()
+        this._dataList = []
+        for(var _json2_ of _json_) {
+            let _v: MapEdge
+            _v = new MapEdge(_json2_)
+            this._dataList.push(_v)
+            this._dataMap.set(_v.id, _v)
+        }
+    }
+
+    getDataMap(): Map<string, MapEdge> { return this._dataMap; }
+    getDataList(): MapEdge[] { return this._dataList; }
+
+    get(key: string): MapEdge | undefined { return this._dataMap.get(key); }
+
+    resolve(tables:Tables) {
+        for(let  data of this._dataList)
+        {
+            data.resolve(tables)
+        }
+    }
+
+}
+
+
+
+
+export class TbMapNode {
+    private _dataMap: Map<string, MapNode>
+    private _dataList: MapNode[]
+    constructor(_json_: any) {
+        this._dataMap = new Map<string, MapNode>()
+        this._dataList = []
+        for(var _json2_ of _json_) {
+            let _v: MapNode
+            _v = new MapNode(_json2_)
+            this._dataList.push(_v)
+            this._dataMap.set(_v.id, _v)
+        }
+    }
+
+    getDataMap(): Map<string, MapNode> { return this._dataMap; }
+    getDataList(): MapNode[] { return this._dataList; }
+
+    get(key: string): MapNode | undefined { return this._dataMap.get(key); }
+
+    resolve(tables:Tables) {
+        for(let  data of this._dataList)
+        {
+            data.resolve(tables)
+        }
+    }
+
+}
+
+
+
+
+export class TbMapTag {
+    private _dataMap: Map<string, MapTag>
+    private _dataList: MapTag[]
+    constructor(_json_: any) {
+        this._dataMap = new Map<string, MapTag>()
+        this._dataList = []
+        for(var _json2_ of _json_) {
+            let _v: MapTag
+            _v = new MapTag(_json2_)
+            this._dataList.push(_v)
+            this._dataMap.set(_v.id, _v)
+        }
+    }
+
+    getDataMap(): Map<string, MapTag> { return this._dataMap; }
+    getDataList(): MapTag[] { return this._dataList; }
+
+    get(key: string): MapTag | undefined { return this._dataMap.get(key); }
 
     resolve(tables:Tables) {
         for(let  data of this._dataList)
@@ -223,20 +1092,180 @@ export class TbPlayer {
 
 
 
+export class TbRoute {
+    private _dataMap: Map<string, Route>
+    private _dataList: Route[]
+    constructor(_json_: any) {
+        this._dataMap = new Map<string, Route>()
+        this._dataList = []
+        for(var _json2_ of _json_) {
+            let _v: Route
+            _v = new Route(_json2_)
+            this._dataList.push(_v)
+            this._dataMap.set(_v.id, _v)
+        }
+    }
+
+    getDataMap(): Map<string, Route> { return this._dataMap; }
+    getDataList(): Route[] { return this._dataList; }
+
+    get(key: string): Route | undefined { return this._dataMap.get(key); }
+
+    resolve(tables:Tables) {
+        for(let  data of this._dataList)
+        {
+            data.resolve(tables)
+        }
+    }
+
+}
+
+
+
+
+export class TbRouteTemplate {
+    private _dataMap: Map<string, RouteTemplate>
+    private _dataList: RouteTemplate[]
+    constructor(_json_: any) {
+        this._dataMap = new Map<string, RouteTemplate>()
+        this._dataList = []
+        for(var _json2_ of _json_) {
+            let _v: RouteTemplate
+            _v = new RouteTemplate(_json2_)
+            this._dataList.push(_v)
+            this._dataMap.set(_v.id, _v)
+        }
+    }
+
+    getDataMap(): Map<string, RouteTemplate> { return this._dataMap; }
+    getDataList(): RouteTemplate[] { return this._dataList; }
+
+    get(key: string): RouteTemplate | undefined { return this._dataMap.get(key); }
+
+    resolve(tables:Tables) {
+        for(let  data of this._dataList)
+        {
+            data.resolve(tables)
+        }
+    }
+
+}
+
+
+
+
+export class TbScenario {
+    private _dataMap: Map<string, Scenario>
+    private _dataList: Scenario[]
+    constructor(_json_: any) {
+        this._dataMap = new Map<string, Scenario>()
+        this._dataList = []
+        for(var _json2_ of _json_) {
+            let _v: Scenario
+            _v = new Scenario(_json2_)
+            this._dataList.push(_v)
+            this._dataMap.set(_v.id, _v)
+        }
+    }
+
+    getDataMap(): Map<string, Scenario> { return this._dataMap; }
+    getDataList(): Scenario[] { return this._dataList; }
+
+    get(key: string): Scenario | undefined { return this._dataMap.get(key); }
+
+    resolve(tables:Tables) {
+        for(let  data of this._dataList)
+        {
+            data.resolve(tables)
+        }
+    }
+
+}
+
+
+
+
+export class TbVisibility {
+    private _dataMap: Map<string, Visibility>
+    private _dataList: Visibility[]
+    constructor(_json_: any) {
+        this._dataMap = new Map<string, Visibility>()
+        this._dataList = []
+        for(var _json2_ of _json_) {
+            let _v: Visibility
+            _v = new Visibility(_json2_)
+            this._dataList.push(_v)
+            this._dataMap.set(_v.id, _v)
+        }
+    }
+
+    getDataMap(): Map<string, Visibility> { return this._dataMap; }
+    getDataList(): Visibility[] { return this._dataList; }
+
+    get(key: string): Visibility | undefined { return this._dataMap.get(key); }
+
+    resolve(tables:Tables) {
+        for(let  data of this._dataList)
+        {
+            data.resolve(tables)
+        }
+    }
+
+}
+
+
+
+
 type JsonLoader = (file: string) => any
 
 export class Tables {
+    private _TbCombatConst: TbCombatConst
+    get TbCombatConst(): TbCombatConst  { return this._TbCombatConst;}
+    private _TbEncounterModifier: TbEncounterModifier
+    get TbEncounterModifier(): TbEncounterModifier  { return this._TbEncounterModifier;}
     private _Tbitem: Tbitem
     get Tbitem(): Tbitem  { return this._Tbitem;}
+    private _TbMapEdge: TbMapEdge
+    get TbMapEdge(): TbMapEdge  { return this._TbMapEdge;}
+    private _TbMapNode: TbMapNode
+    get TbMapNode(): TbMapNode  { return this._TbMapNode;}
+    private _TbMapTag: TbMapTag
+    get TbMapTag(): TbMapTag  { return this._TbMapTag;}
     private _TbPlayer: TbPlayer
     get TbPlayer(): TbPlayer  { return this._TbPlayer;}
+    private _TbRoute: TbRoute
+    get TbRoute(): TbRoute  { return this._TbRoute;}
+    private _TbRouteTemplate: TbRouteTemplate
+    get TbRouteTemplate(): TbRouteTemplate  { return this._TbRouteTemplate;}
+    private _TbScenario: TbScenario
+    get TbScenario(): TbScenario  { return this._TbScenario;}
+    private _TbVisibility: TbVisibility
+    get TbVisibility(): TbVisibility  { return this._TbVisibility;}
 
     constructor(loader: JsonLoader) {
+        this._TbCombatConst = new TbCombatConst(loader('tbcombatconst'))
+        this._TbEncounterModifier = new TbEncounterModifier(loader('tbencountermodifier'))
         this._Tbitem = new Tbitem(loader('tbitem'))
+        this._TbMapEdge = new TbMapEdge(loader('tbmapedge'))
+        this._TbMapNode = new TbMapNode(loader('tbmapnode'))
+        this._TbMapTag = new TbMapTag(loader('tbmaptag'))
         this._TbPlayer = new TbPlayer(loader('tbplayer'))
+        this._TbRoute = new TbRoute(loader('tbroute'))
+        this._TbRouteTemplate = new TbRouteTemplate(loader('tbroutetemplate'))
+        this._TbScenario = new TbScenario(loader('tbscenario'))
+        this._TbVisibility = new TbVisibility(loader('tbvisibility'))
 
+        this._TbCombatConst.resolve(this)
+        this._TbEncounterModifier.resolve(this)
         this._Tbitem.resolve(this)
+        this._TbMapEdge.resolve(this)
+        this._TbMapNode.resolve(this)
+        this._TbMapTag.resolve(this)
         this._TbPlayer.resolve(this)
+        this._TbRoute.resolve(this)
+        this._TbRouteTemplate.resolve(this)
+        this._TbScenario.resolve(this)
+        this._TbVisibility.resolve(this)
     }
 }
 

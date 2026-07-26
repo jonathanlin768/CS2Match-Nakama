@@ -72,8 +72,8 @@ MatchResult       整场结构化战报
 ExplainableReport 可解释战报
 EventReason       事件原因
 
-MapNode           可选点位标记，用于展示和高级扩展
-MapEdge           可选路径标记，用于耗时和拦截标签
+MapNode           可选地图节点，用于展示、路线图关系、击杀点采样、包点、控制权和交火范围
+MapEdge           可选路径标记，用于耗时、风险热点权重和拦截候选标签
 Visibility        可选视野标记，用于场景修正
 ```
 
@@ -93,11 +93,11 @@ Visibility        可选视野标记，用于场景修正
 | `Scenario` | 定义每次结算的场景标签 | 主模型 |
 | `Encounter` | 定义参战人员、阶段、权重和输出 | 主模型 |
 | `MapTag` | 定义距离、角度、风险、包点等地图语义 | 主模型 |
-| `MapNode` | 提供战报位置、包点、区域标签 | 辅助模型 |
-| `MapEdge` | 提供转点耗时、风险点、拦截标签 | 辅助模型 |
+| `MapNode` | 提供战报位置、路线锚点、可选采样范围、包点和控制区语义 | 辅助模型 |
+| `MapEdge` | 提供转点耗时、风险热点权重、拦截候选标签 | 辅助模型 |
 | `Visibility` | 提供架点、距离、暴露关系修正 | 辅助模型 |
 
-`A大`、`A小`、`B二楼` 是宏观进攻路线。点位图只服务于战报坐标、行动耗时和高级冲突修正，不作为第一版主要结算入口。
+`A大`、`A小`、`B二楼` 是宏观进攻路线。点位图只服务于战报坐标、行动耗时、风险热点权重和高级冲突修正，不作为第一版主要结算入口。
 
 #### 战术模板
 
@@ -229,6 +229,7 @@ AI 决策只能读取本方 `KnownControl`，不能直接读取 `ActualControl`�
 |---|---|
 | `tb_map_tag` | 定义可复用地图语义，如长距离、强架点、包点压力、转点风险 |
 | `tb_scenario` | 组合场景标签，引用 `map_tag_ids` |
+| `tb_map_node` | 定义地图语义节点，提供默认展示坐标、图关系引用和可选二维区域范围 |
 | `tb_visibility` | 仅描述点位之间的可见关系，第一版可选 |
 | `tb_encounter_modifier` | 定义某个场景下标签和属性如何转成分数 |
 
@@ -265,36 +266,78 @@ AI 决策只能读取本方 `KnownControl`，不能直接读取 `ActualControl`�
 
 #### `tb_map_node`
 
+`MapNode` 是地图语义节点。它同时承载默认锚点坐标和可选二维区域范围：`x/y` 是路线、路径、视野和默认展示使用的锚点坐标；当节点配置了 `shape` 时，事件显示坐标可以在该节点自身的区域范围内采样。第一版只使用这一张地图节点表表达点、范围和地点语义，避免“点位”和“区域”在配置心智上分裂。
+
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `id` | string | 点位 ID |
+| `id` | string | 节点 ID |
+| `map_id` | string | 地图 ID |
 | `name` | string | 显示名称 |
-| `area` | string | 所属区域 |
+| `zone` | string | 宏观区域名，例如 `A区` / `B区` / `中路`，不是独立表引用 |
 | `site` | enum | `A` / `B` / `None` |
 | `node_type` | enum | `Spawn` / `Lane` / `Cover` / `Site` / `Connector` |
-| `default_side` | enum | 初始优势方 |
-| `x` / `y` | float | 雷达图坐标 |
+| `default_side` | enum | 初始优势方：`T` / `CT` / `Both` / `None` |
+| `x` / `y` | float | 雷达图归一化锚点坐标 |
+| `floor` | enum | `Ground` / `Upper` / `Ramp` / `Unknown` |
+| `area_usages` | string[] | 可选区域用途：`KillSample` / `Plant` / `Control` / `Encounter` / `Sound` / `Risk`；其中 `Risk` 表示赛前配置的风险热点 |
+| `shape` | enum | `None` / `Circle` / `Polygon` |
+| `radius` | float | 圆形区域半径，雷达图归一化单位；仅 `shape = Circle` 时生效 |
+| `points` | string | 多边形顶点列表，格式由导表层统一约定；仅 `shape = Polygon` 时生效 |
+
+规则：
+
+| 场景 | 处理 |
+|---|---|
+| `shape = None` | 节点只作为路线、路径、视野和默认事件展示锚点使用 |
+| `shape = Circle` | 事件显示坐标可在以 `x/y` 为中心、`radius` 为半径的圆形范围内采样 |
+| `shape = Polygon` | 事件显示坐标可在 `points` 定义的多边形内部采样；`x/y` 仍作为默认展示中心 |
+| `area_usages` 包含 `KillSample` | `KILL` 事件优先从该节点自身区域范围内采样 |
+| `area_usages` 不包含 `KillSample` 或区域几何为空 | `KILL` 事件使用 `MapNode.x/y`，允许极小半径偏移 |
+| 节点只用于路线/图关系 | `shape` 可以为 `None`，`area_usages` 可以为空 |
+
+采样规则：
+
+```text
+if shape == Circle:
+    sample point inside circle centered at MapNode.x/y
+
+if shape == Polygon:
+    sample point inside polygon
+
+if shape == None:
+    use MapNode.x/y with tiny jitter
+```
+
+采样必须使用派生 Seed，保证同一输入、同一回合、同一事件生成相同展示坐标。
+
+```text
+LocationSeed = Hash(RoundSeed, "event_location", EventID, MapNodeID)
+```
+
+`MapNode` 的区域几何不参与真实空间仿真。它只提供“这个事件在雷达图上应该自然落在哪个范围里”的展示语义，以及包点、控制区、交火区、声音区、风险区等可复用地图语义。
+
+`area_usages` 包含 `Risk` 的节点表示赛前配置的风险热点：设计者基于长期观赛、地图经验和玩法调参，预先标记常见交火、过点、转点受压或暴露位置。风险热点是模拟输入，用于影响概率、权重、AI 决策和事件位置采样候选分布；它不表示某场对局中已经发生的临时事故位置，也不直接强制决定运行时死亡、掉包或拦截坐标。
 
 #### `tb_map_edge`
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `from` | string | 起点 |
-| `to` | string | 终点 |
+| `from_node` | string | 起点，引用 `tb_map_node.id` |
+| `to_node` | string | 终点，引用 `tb_map_node.id` |
 | `base_time` | int | 基础移动时间 |
 | `stamina_cost` | int | 体能消耗 |
 | `risk` | int | 转移风险 |
 | `noise` | int | 暴露概率 |
-| `risk_points` | string[] | 边上的离散风险点 |
-| `intercept_nodes` | string[] | 可触发中途交火的位置 |
+| `risk_points` | string[] | 路径关联的预定义风险热点，引用 `tb_map_node.id`，通常要求节点 `area_usages` 包含 `Risk`；用于风险、暴露、交火概率和事件位置采样权重，不直接决定运行时死亡或掉包坐标 |
+| `intercept_nodes` | string[] | 可触发中途拦截检查的候选锚点，引用 `tb_map_node.id`；最终事件位置由运行时上下文生成 |
 | `bidirectional` | bool | 是否双向 |
 
 #### `tb_visibility`
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `from` | string | 观察点 |
-| `to` | string | 被观察点 |
+| `from_node` | string | 观察点，引用 `tb_map_node.id` |
+| `to_node` | string | 被观察点，引用 `tb_map_node.id` |
 | `visible` | bool | 是否可见 |
 | `range` | enum | `Close` / `Mid` / `Long` |
 | `angle_advantage` | enum | `T` / `CT` / `None` |
@@ -595,7 +638,7 @@ AND Scenario 允许本阶段发生交火
 | `defenders` | 当前局部 CT 选手 |
 | `scenario` | `Route + Phase + Range + Site + Tempo + Posture + UtilityContext` |
 | `routeTemplate` | 当前战术模板 |
-| `mapTags` | 距离、包点、架点、风险点等 Dust2 标签 |
+| `mapTags` | 距离、包点、架点、风险热点等 Dust2 标签 |
 | `control` | 当前区域控制结果或认知 |
 | `roundState` | 当前时间、炸弹、局势 |
 
@@ -1644,7 +1687,7 @@ AND 无事件产出
 
 #### 移动中的拦截
 
-移动不是无风险传送。每条 `MapEdge` 可配置 `risk_points` 和 `intercept_nodes`。第一版不引入连续坐标，所有中途冲突离散化到这些配置点。
+移动不是无风险传送。每条 `MapEdge` 可配置 `risk_points` 和 `intercept_nodes`。第一版不引入完整连续空间寻路，但也不把运行时事件强行钉死在配置点上：`risk_points` 和 `intercept_nodes` 是赛前语义锚点，用于提高某些路径上发生暴露、交火或拦截的概率；当事件真正发生时，状态机会根据移动进度、可见关系、参与者状态、路径端点和附近风险热点生成本局的 `OnEdgeLocation`。
 
 ```text
 A_LONG -> MID -> CATWALK
@@ -1669,13 +1712,15 @@ type OnEdgeLocation struct {
     EdgeID       string
     FromNode     string
     ToNode       string
-    RiskPointID  string
+    AnchorNodeID string
     Progress     float64
     DisplayName  string
     X            float64
     Y            float64
 }
 ```
+
+`AnchorNodeID` 是可选解释锚点，可来自附近风险热点、拦截候选点或路径端点。它用于解释和采样权重，不表示最终坐标被配置节点强制决定。
 
 运行时位置：
 
@@ -1688,21 +1733,21 @@ OR CurrentEdgeLocation != nil
 
 | 场景 | 处理 |
 |---|---|
-| 选手在边上死亡 | `CurrentEdgeLocation` 作为死亡位置 |
-| 炸弹在边上掉落 | `Bomb.Location` 保存 `OnEdgeLocation` |
+| 选手在边上死亡 | 使用运行时生成的 `CurrentEdgeLocation` 作为死亡位置 |
+| 炸弹在边上掉落 | `Bomb.Location` 保存运行时生成的 `OnEdgeLocation` |
 | 前端地图标记 | 使用 `OnEdgeLocation.X/Y` |
 | 战报位置 | 使用 `DisplayName`，如 `A大过点`、`中路转点` |
 | 中途撤退 | 默认回最近安全节点；若被压制，回 `FromNode` |
-| 继续前进 | 从 `RiskPointID` 继续剩余路径 |
+| 继续前进 | 从当前 `OnEdgeLocation.Progress` 继续计算剩余路径 |
 
-`MapEdge.risk_points` 应包含显示名和坐标：
+`MapEdge.risk_points` 引用的 `MapNode` 应包含显示名和坐标，通常还会带有用于采样候选的几何范围：
 
 ```text
 LONG_DOOR_TO_A_LONG:
   risk_points = [A_LONG_CROSS, A_LONG_CORNER]
 ```
 
-这样能表达“死在过点路上”“包掉在 A 大门外”，同时不需要引入真实连续移动系统。
+这表示该路径经过常见高风险热点。它会影响移动中暴露、交火和拦截的概率，以及运行时事件位置采样的候选权重；但如果本局真的发生死亡或掉包，最终坐标仍由运行时根据当时条件生成，可以靠近这些热点，也可以落在路径上更合理的位置。
 
 #### 伪代码
 
@@ -2023,11 +2068,23 @@ type RoundEvent struct {
     TargetID  string
     NodeID    string
     Site      string
+    Location  EventLocation
 
     Message   string
     Reason    EventReason
     State     EventStateSnapshot
     Metadata  map[string]any
+}
+```
+
+```go
+type EventLocation struct {
+    SourceType string // Node / Area / RiskHotspot / OnEdge
+    SourceID   string
+    Name       string
+    X          float64
+    Y          float64
+    Floor      string
 }
 ```
 
@@ -2080,6 +2137,35 @@ type ExplainableReport struct {
 | `ROUND_END` | 否 | 回合结束 |
 
 第一版前端只消费 `KILL`。后端完整输出所有事件。
+
+#### 事件位置生成规则
+
+事件位置用于前端雷达图展示，不用于反推战斗结果。战斗结算先确定事件发生的语义来源，再生成展示坐标。配置风险热点只提供候选分布、概率权重和解释原因，不应绕过战斗、移动或拦截流程直接决定事件坐标。
+
+`KILL` 事件位置优先级：
+
+| 来源 | 处理 |
+|---|---|
+| 选手处于 `CurrentEdgeLocation` | 使用运行时生成的 `OnEdgeLocation.X/Y`，表示死在转点或过点途中 |
+| 事件语义来源是配置风险热点 | 将风险热点的 `MapNode.x/y` 或几何范围作为采样候选之一，并结合当时移动进度、视野、交火双方状态和路径端点生成最终坐标 |
+| 事件发生在 `MapNode` 且 `area_usages` 包含 `KillSample` 且区域几何有效 | 从该 `MapNode` 自身范围内采样 |
+| 事件发生在 `MapNode` 但没有可用采样范围 | 使用 `MapNode.x/y`，允许极小半径偏移 |
+| 无法定位 | 使用当前路线或场景的 fallback 坐标，并输出配置告警 |
+
+采样后的坐标写入 `RoundEvent.Location`：
+
+```text
+Location = {
+  SourceType,
+  SourceID,
+  Name,
+  X,
+  Y,
+  Floor
+}
+```
+
+同一个 `EventID` 在同一 `RoundSeed` 下必须生成相同 `Location`。前端只使用 `Location.X/Y` 展示标记，不自行生成随机偏移。
 
 输出给前端的字段边界：
 
@@ -2432,10 +2518,16 @@ engine := matchengine.NewService(mapConfig, logger)
 | `EncounterModifier.scenario_id` 不存在 | `CONFIG_BAD_ENCOUNTER_MODIFIER` | 拒绝加载 |
 | `EncounterModifier.reason_code` 不存在 | `CONFIG_BAD_REASON_CODE` | 拒绝加载 |
 | `MapNode.id` 重复 | `CONFIG_DUP_NODE` | 拒绝加载 |
-| `MapEdge.from/to` 不存在 | `CONFIG_BAD_EDGE_NODE` | 拒绝加载 |
-| `MapEdge.risk_points` 缺少坐标 | `CONFIG_BAD_RISK_POINT` | 拒绝加载 |
+| `MapNode.map_id/site/node_type/default_side/floor` 非法 | `CONFIG_BAD_NODE_ENUM` | 拒绝加载 |
+| `MapNode.x/y` 越界或缺失 | `CONFIG_BAD_NODE_COORD` | 拒绝加载 |
+| `MapNode.shape` 非法 | `CONFIG_BAD_NODE_SHAPE` | 拒绝加载 |
+| `MapNode.shape = Circle` 但缺少合法 `radius` | `CONFIG_BAD_NODE_CIRCLE` | 拒绝加载 |
+| `MapNode.shape = Polygon` 但顶点少于 3 个或格式非法 | `CONFIG_BAD_NODE_POLYGON` | 拒绝加载 |
+| 关键 `MapNode` 缺少 `KillSample` 区域几何 | `CONFIG_MISSING_KILL_SAMPLE` | 允许加载但输出告警，运行时回退 `x/y` |
+| `MapEdge.from_node/to_node` 不存在 | `CONFIG_BAD_EDGE_NODE` | 拒绝加载 |
+| `MapEdge.risk_points` 风险热点引用不存在或对应 `MapNode` 缺少坐标 | `CONFIG_BAD_RISK_POINT` | 拒绝加载 |
 | `MapEdge.intercept_nodes` 不存在 | `CONFIG_BAD_INTERCEPT_NODE` | 拒绝加载 |
-| `Visibility.from/to` 不存在 | `CONFIG_BAD_VISIBILITY_NODE` | 拒绝加载 |
+| `Visibility.from_node/to_node` 不存在 | `CONFIG_BAD_VISIBILITY_NODE` | 拒绝加载 |
 | `Route.nodes` 引用不存在 | `CONFIG_BAD_ROUTE_NODE` | 拒绝加载 |
 | `Route.nodes` 不连通 | `CONFIG_ROUTE_NOT_CONNECTED` | 拒绝加载 |
 | `Route.min_players > max_players` | `CONFIG_BAD_ROUTE_LIMIT` | 拒绝加载 |
@@ -2608,6 +2700,7 @@ DecisionSeed = Hash(RoundSeed, "decision", Phase, Timeline)
 EncounterSeed = Hash(RoundSeed, "encounter", EncounterID, PulseIndex)
 BombSeed = Hash(RoundSeed, "bomb", Bomb.Status, Timeline)
 MemorySeed = Hash(RoundSeed, "match_memory", StrategyTemplateID)
+LocationSeed = Hash(RoundSeed, "event_location", EventID, SourceObjectID)
 ```
 
 同一输入、同一 Seed、同一配置版本必须输出相同事件列表。
@@ -2736,7 +2829,7 @@ Go 实现必须把算法方向落实成可单测的规则。测试不只验证�
 | 6 | 实现 `BombResolver`，覆盖下包、掉包、捡包、拆包、爆炸 |
 | 7 | 实现 `ExplainableReport`，前端先展示 `KILL` |
 | 8 | 实现批量模拟和 `4.9` 标定指标统计 |
-| 9 | 补充 `MapNode / MapEdge / Visibility` 用于坐标、耗时和可选拦截 |
+| 9 | 补充 `MapNode / MapEdge / Visibility` 用于坐标采样、耗时和可选拦截 |
 | 10 | 根据标定结果调整配置表，不优先修改公式 |
 
 ### 4.11 非目标
@@ -2748,7 +2841,7 @@ Go 实现必须把算法方向落实成可单测的规则。测试不只验证�
 | 玩家回合内下指令 | 不支持 |
 | 完整 pathfinding | 第一版不做，转点由模板耗时和可选路径标签表达 |
 | 复杂 visibility 传播 | 不做链式视野合并，只作为场景修正或高级扩展 |
-| 细粒度中途拦截 | 第一版用 `risk_points` / 场景风险标签抽象 |
+| 细粒度中途拦截 | 第一版用风险热点 `risk_points` / 场景风险标签抽象 |
 | 类实时 Action 调度器 | 第一版只保留离散事件能力，不做实时行动生命周期深挖 |
 | 过细 HP/压制模拟 | 保留数值状态，但前端先展示击杀和关键原因 |
 | 完整经济系统 | 暂不接入 |
