@@ -55,8 +55,8 @@
     "site": "A",
     "node_type": "Site",
     "default_side": "CT",
-    "x": 0.7799,
-    "y": 0.1549,
+    "x": 0.7774,
+    "y": 0.1476,
     "floor": "Ground",
     "area_usages": [
       "KillSample",
@@ -125,8 +125,8 @@
     "site": "B",
     "node_type": "Site",
     "default_side": "CT",
-    "x": 0.1558,
-    "y": 0.114,
+    "x": 0.1875,
+    "y": 0.1182,
     "floor": "Ground",
     "area_usages": [
       "KillSample",

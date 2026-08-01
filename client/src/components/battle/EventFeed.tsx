@@ -9,15 +9,18 @@ import {
 } from "../../legacy/components/ui/dialog"
 import { Button } from "../../legacy/components/ui/button"
 import type { GameEvent } from "../../types/match-report"
+import type { FinalStats } from "../../types/match-report"
 import type { BattleTeam } from "./data/battle"
 
 interface EventFeedProps {
   events: GameEvent[]
   teamA: BattleTeam
   teamB: BattleTeam
+  finalStats?: FinalStats
 }
 
-function StatsTable({ team }: { team: BattleTeam }) {
+function StatsTable({ team, finalStats }: { team: BattleTeam; finalStats?: FinalStats }) {
+  const rows = finalStats?.player_stats.filter((p) => team.players.some((player) => player.id === p.player_name)) ?? []
   return (
     <div className="rounded-md bg-panel/60 ring-1 ring-white/10">
       <div className="border-b border-white/10 px-3 py-2 text-sm font-semibold text-foreground">
@@ -33,17 +36,21 @@ function StatsTable({ team }: { team: BattleTeam }) {
           </tr>
         </thead>
         <tbody>
-          {team.players.map((p) => (
+          {(rows.length > 0 ? rows : team.players).map((p) => {
+            const playerName = "player_name" in p ? p.player_name : p.id
+            const alive = "alive" in p ? p.alive : true
+            return (
             <tr
-              key={p.id}
-              className={`border-t border-white/5 ${p.alive ? "text-foreground" : "text-foreground/40"}`}
+              key={playerName}
+              className={`border-t border-white/5 ${alive ? "text-foreground" : "text-foreground/40"}`}
             >
-              <td className="px-3 py-1.5">{p.id}</td>
+              <td className="px-3 py-1.5">{playerName}</td>
               <td className="px-2 py-1.5 text-center tabular-nums">{p.kills}</td>
               <td className="px-2 py-1.5 text-center tabular-nums">{p.deaths}</td>
-              <td className="px-2 py-1.5 text-center tabular-nums">{p.assists}</td>
+              <td className="px-2 py-1.5 text-center tabular-nums">{"adr" in p ? p.adr.toFixed(1) : p.assists}</td>
             </tr>
-          ))}
+            )
+          })}
         </tbody>
       </table>
     </div>
@@ -54,7 +61,7 @@ function StatsTable({ team }: { team: BattleTeam }) {
  * 服务器战报事件流：按时间顺序逐条展示 HLTV 风格事件。
  * 父组件通过控制传入的 events 长度实现“每 1 秒显示一条”的播放效果。
  */
-export default function EventFeed({ events, teamA, teamB }: EventFeedProps) {
+export default function EventFeed({ events, teamA, teamB, finalStats }: EventFeedProps) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -78,8 +85,8 @@ export default function EventFeed({ events, teamA, teamB }: EventFeedProps) {
               <DialogTitle className="text-base">数据统计</DialogTitle>
             </DialogHeader>
             <div className="max-h-[70vh] space-y-4 overflow-y-auto px-5 pb-5">
-              <StatsTable team={teamA} />
-              <StatsTable team={teamB} />
+              <StatsTable team={teamA} finalStats={finalStats} />
+              <StatsTable team={teamB} finalStats={finalStats} />
             </div>
           </DialogContent>
         </Dialog>

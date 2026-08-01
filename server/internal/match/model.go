@@ -9,14 +9,13 @@ import (
 // DebugSimuMatchRequest 是测试 RPC 请求体。
 type DebugSimuMatchRequest struct {
 	MapID string `json:"map_id"`
+	Seed  int64  `json:"seed,omitempty"`
 }
 
-// DebugSimuMatchResponse 是测试 RPC 响应体。
+// DebugSimuMatchResponse 在框架战报外附加业务层调试配置。
 type DebugSimuMatchResponse struct {
-	MatchInfo  *matchengine.MatchInfo     `json:"match_info"`
-	Rounds     []*matchengine.RoundResult `json:"rounds"`
-	FinalStats *matchengine.FinalStats    `json:"final_stats"`
-	Winner     string                     `json:"winner"`
+	*matchengine.MatchResult
+	DebugEnabled bool `json:"debug_enabled"`
 }
 
 // MatchError 是统一的错误响应结构。

@@ -1,8 +1,8 @@
 [
   {
-    "id": "player_niko",
-    "name": "NiKo",
-    "team": "NAVI",
+    "id": "player_apex",
+    "name": "豆豆",
+    "team": "Vitality",
     "nationality": "BA",
     "entry": 72,
     "aim": 70,
@@ -11,15 +11,15 @@
     "firepower": 61,
     "gamesense": 89,
     "positions": [
-      "Support"
+      "IGL"
     ],
     "rarity": "S",
-    "portrait": "portraits/player_niko.png"
+    "portrait": "portraits/player_apex.jpg"
   },
   {
-    "id": "player_s1mple",
-    "name": "s1mple",
-    "team": "G2",
+    "id": "player_flamez",
+    "name": "火仔",
+    "team": "Vitality",
     "nationality": "BA",
     "entry": 60,
     "aim": 68,
@@ -31,12 +31,12 @@
       "Anchor"
     ],
     "rarity": "SS",
-    "portrait": "portraits/player_s1mple.png"
+    "portrait": "portraits/player_flamez.jpg"
   },
   {
     "id": "player_zywoo",
-    "name": "ZywOo",
-    "team": "Liquid",
+    "name": "载物",
+    "team": "Vitality",
     "nationality": "DK",
     "entry": 83,
     "aim": 92,
@@ -45,16 +45,15 @@
     "firepower": 65,
     "gamesense": 82,
     "positions": [
-      "IGL",
       "AWPer"
     ],
     "rarity": "B",
-    "portrait": "portraits/player_zywoo.png"
+    "portrait": "portraits/player_zywoo.jpg"
   },
   {
-    "id": "player_device",
-    "name": "device",
-    "team": "MOUZ",
+    "id": "player_mezii",
+    "name": "妹子",
+    "team": "Vitality",
     "nationality": "UA",
     "entry": 60,
     "aim": 79,
@@ -67,12 +66,12 @@
       "Lurker"
     ],
     "rarity": "SS",
-    "portrait": "portraits/player_device.png"
+    "portrait": "portraits/player_mezii.jpg"
   },
   {
     "id": "player_ropz",
-    "name": "ropz",
-    "team": "NAVI",
+    "name": "车主",
+    "team": "Vitality",
     "nationality": "FI",
     "entry": 79,
     "aim": 60,
@@ -85,12 +84,12 @@
       "AWPer"
     ],
     "rarity": "C",
-    "portrait": "portraits/player_ropz.png"
+    "portrait": "portraits/player_ropz.jpg"
   },
   {
-    "id": "player_rain",
-    "name": "rain",
-    "team": "G2",
+    "id": "player_kyousuke",
+    "name": "京介",
+    "team": "Falcons",
     "nationality": "US",
     "entry": 69,
     "aim": 73,
@@ -103,12 +102,12 @@
       "IGL"
     ],
     "rarity": "B",
-    "portrait": "portraits/player_rain.png"
+    "portrait": "portraits/player_kyousuke.jpg"
   },
   {
-    "id": "player_apex",
-    "name": "apEX",
-    "team": "MOUZ",
+    "id": "player_kyxsan",
+    "name": "K3",
+    "team": "Falcons",
     "nationality": "NO",
     "entry": 68,
     "aim": 72,
@@ -117,15 +116,15 @@
     "firepower": 95,
     "gamesense": 65,
     "positions": [
-      "AWPer"
+      "IGL"
     ],
     "rarity": "S",
-    "portrait": "portraits/player_apex.png"
+    "portrait": "portraits/player_kyxsan.jpg"
   },
   {
-    "id": "player_xyp9x",
-    "name": "Xyp9x",
-    "team": "Liquid",
+    "id": "player_monesy",
+    "name": "孩神",
+    "team": "Falcons",
     "nationality": "SE",
     "entry": 95,
     "aim": 90,
@@ -134,15 +133,15 @@
     "firepower": 58,
     "gamesense": 69,
     "positions": [
-      "IGL"
+      "AWPer"
     ],
     "rarity": "S",
-    "portrait": "portraits/player_xyp9x.png"
+    "portrait": "portraits/player_monesy.jpg"
   },
   {
-    "id": "player_karrigan",
-    "name": "karrigan",
-    "team": "Astralis",
+    "id": "player_niko",
+    "name": "老尼",
+    "team": "Falcons",
     "nationality": "UA",
     "entry": 68,
     "aim": 91,
@@ -155,12 +154,12 @@
       "IGL"
     ],
     "rarity": "B",
-    "portrait": "portraits/player_karrigan.png"
+    "portrait": "portraits/player_niko.jpg"
   },
   {
-    "id": "player_broky",
-    "name": "broky",
-    "team": "FaZe",
+    "id": "player_teses",
+    "name": "龙哥",
+    "team": "Falcons",
     "nationality": "RU",
     "entry": 90,
     "aim": 89,
@@ -173,6 +172,6 @@
       "AWPer"
     ],
     "rarity": "B",
-    "portrait": "portraits/player_broky.png"
+    "portrait": "portraits/player_teses.jpg"
   }
 ]

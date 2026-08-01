@@ -71,6 +71,10 @@ export default function PlayerCard({
         <img
           src={player.avatar}
           alt={player.id}
+          onError={(event) => {
+            event.currentTarget.onerror = null
+            event.currentTarget.src = "/images/star-player.png"
+          }}
           className={`h-full w-full scale-125 object-cover object-top ${dead ? "grayscale" : ""}`}
         />
         {dead && (

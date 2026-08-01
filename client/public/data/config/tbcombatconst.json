@@ -4,8 +4,8 @@
     "category": "Time",
     "value_type": "Int",
     "value": "115",
-    "min_value": "",
-    "max_value": "",
+    "min_value": "1",
+    "max_value": "180",
     "unit": "s",
     "description": "Round time limit."
   },
@@ -14,8 +14,8 @@
     "category": "Bomb",
     "value_type": "Int",
     "value": "40",
-    "min_value": "",
-    "max_value": "",
+    "min_value": "10",
+    "max_value": "60",
     "unit": "s",
     "description": "Bomb explosion countdown."
   },
@@ -24,8 +24,8 @@
     "category": "Bomb",
     "value_type": "Int",
     "value": "4",
-    "min_value": "",
-    "max_value": "",
+    "min_value": "1",
+    "max_value": "10",
     "unit": "s",
     "description": "Base plant time."
   },
@@ -34,18 +34,48 @@
     "category": "Bomb",
     "value_type": "Int",
     "value": "10",
-    "min_value": "",
-    "max_value": "",
+    "min_value": "1",
+    "max_value": "15",
     "unit": "s",
     "description": "Base defuse time."
+  },
+  {
+    "key": "BasePickupTime",
+    "category": "Bomb",
+    "value_type": "Int",
+    "value": "2",
+    "min_value": "1",
+    "max_value": "5",
+    "unit": "s",
+    "description": "Base bomb pickup time."
+  },
+  {
+    "key": "ForceExecuteThreshold",
+    "category": "Decision",
+    "value_type": "Int",
+    "value": "20",
+    "min_value": "1",
+    "max_value": "60",
+    "unit": "s",
+    "description": "Low-time execute threshold."
+  },
+  {
+    "key": "MaxDecisionCount",
+    "category": "Decision",
+    "value_type": "Int",
+    "value": "3",
+    "min_value": "1",
+    "max_value": "8",
+    "unit": "count",
+    "description": "Maximum round decisions."
   },
   {
     "key": "MaxEncounterPulses",
     "category": "Combat",
     "value_type": "Int",
     "value": "3",
-    "min_value": "",
-    "max_value": "",
+    "min_value": "1",
+    "max_value": "8",
     "unit": "count",
     "description": "Maximum encounter pulses."
   },
@@ -54,9 +84,319 @@
     "category": "Combat",
     "value_type": "Float",
     "value": "12",
-    "min_value": "",
-    "max_value": "",
+    "min_value": "1",
+    "max_value": "50",
     "unit": "score",
     "description": "Combat score scale."
+  },
+  {
+    "key": "BaseNoise",
+    "category": "Decision",
+    "value_type": "Float",
+    "value": "4",
+    "min_value": "0",
+    "max_value": "20",
+    "unit": "score",
+    "description": "Base random noise."
+  },
+  {
+    "key": "MaxRandomNoise",
+    "category": "Decision",
+    "value_type": "Float",
+    "value": "8",
+    "min_value": "0",
+    "max_value": "30",
+    "unit": "score",
+    "description": "Maximum bounded random noise."
+  },
+  {
+    "key": "CloseScoreGap",
+    "category": "Decision",
+    "value_type": "Float",
+    "value": "6",
+    "min_value": "0",
+    "max_value": "30",
+    "unit": "score",
+    "description": "Close score gap threshold."
+  },
+  {
+    "key": "DecisiveScoreGap",
+    "category": "Decision",
+    "value_type": "Float",
+    "value": "18",
+    "min_value": "1",
+    "max_value": "60",
+    "unit": "score",
+    "description": "Decisive score gap threshold."
+  },
+  {
+    "key": "StrategyRepeatWindow",
+    "category": "Decision",
+    "value_type": "Int",
+    "value": "5",
+    "min_value": "1",
+    "max_value": "12",
+    "unit": "round",
+    "description": "Strategy memory window."
+  },
+  {
+    "key": "RepeatFreeCount",
+    "category": "Decision",
+    "value_type": "Int",
+    "value": "2",
+    "min_value": "0",
+    "max_value": "8",
+    "unit": "round",
+    "description": "Repeat count before penalty."
+  },
+  {
+    "key": "StrategyRepeatPenalty",
+    "category": "Decision",
+    "value_type": "Float",
+    "value": "3",
+    "min_value": "0",
+    "max_value": "20",
+    "unit": "score",
+    "description": "Repeat strategy penalty."
+  },
+  {
+    "key": "SuccessBonusPerRound",
+    "category": "Decision",
+    "value_type": "Float",
+    "value": "1.5",
+    "min_value": "0",
+    "max_value": "10",
+    "unit": "score",
+    "description": "Recent success bonus."
+  },
+  {
+    "key": "MaxPreviousSuccessBonus",
+    "category": "Clamp",
+    "value_type": "Float",
+    "value": "6",
+    "min_value": "0",
+    "max_value": "20",
+    "unit": "score",
+    "description": "Maximum previous success bonus."
+  },
+  {
+    "key": "CounterMemoryBonus",
+    "category": "Decision",
+    "value_type": "Float",
+    "value": "3",
+    "min_value": "0",
+    "max_value": "20",
+    "unit": "score",
+    "description": "Counter memory bonus."
+  },
+  {
+    "key": "MinStrategyWeight",
+    "category": "Clamp",
+    "value_type": "Float",
+    "value": "1",
+    "min_value": "0",
+    "max_value": "10",
+    "unit": "score",
+    "description": "Minimum strategy candidate weight."
+  },
+  {
+    "key": "MaxStrategyWeight",
+    "category": "Clamp",
+    "value_type": "Float",
+    "value": "100",
+    "min_value": "10",
+    "max_value": "200",
+    "unit": "score",
+    "description": "Maximum strategy candidate weight."
+  },
+  {
+    "key": "ControlIntelTTL",
+    "category": "Intel",
+    "value_type": "Int",
+    "value": "12",
+    "min_value": "1",
+    "max_value": "60",
+    "unit": "s",
+    "description": "Control intel TTL."
+  },
+  {
+    "key": "MinAttribute",
+    "category": "Clamp",
+    "value_type": "Int",
+    "value": "0",
+    "min_value": "0",
+    "max_value": "100",
+    "unit": "score",
+    "description": "Minimum attribute value."
+  },
+  {
+    "key": "MaxAttribute",
+    "category": "Clamp",
+    "value_type": "Int",
+    "value": "100",
+    "min_value": "0",
+    "max_value": "100",
+    "unit": "score",
+    "description": "Maximum attribute value."
+  },
+  {
+    "key": "MinHP",
+    "category": "Clamp",
+    "value_type": "Int",
+    "value": "0",
+    "min_value": "0",
+    "max_value": "100",
+    "unit": "score",
+    "description": "Minimum HP."
+  },
+  {
+    "key": "MaxHP",
+    "category": "Clamp",
+    "value_type": "Int",
+    "value": "100",
+    "min_value": "1",
+    "max_value": "100",
+    "unit": "score",
+    "description": "Maximum HP."
+  },
+  {
+    "key": "MinStamina",
+    "category": "Clamp",
+    "value_type": "Int",
+    "value": "0",
+    "min_value": "0",
+    "max_value": "100",
+    "unit": "score",
+    "description": "Minimum stamina."
+  },
+  {
+    "key": "MaxStamina",
+    "category": "Clamp",
+    "value_type": "Int",
+    "value": "100",
+    "min_value": "1",
+    "max_value": "100",
+    "unit": "score",
+    "description": "Maximum stamina."
+  },
+  {
+    "key": "MinFocus",
+    "category": "Clamp",
+    "value_type": "Int",
+    "value": "0",
+    "min_value": "0",
+    "max_value": "100",
+    "unit": "score",
+    "description": "Minimum focus."
+  },
+  {
+    "key": "MaxFocus",
+    "category": "Clamp",
+    "value_type": "Int",
+    "value": "100",
+    "min_value": "1",
+    "max_value": "100",
+    "unit": "score",
+    "description": "Maximum focus."
+  },
+  {
+    "key": "MinHitChance",
+    "category": "Clamp",
+    "value_type": "Float",
+    "value": "0.05",
+    "min_value": "0",
+    "max_value": "1",
+    "unit": "percent",
+    "description": "Minimum hit chance."
+  },
+  {
+    "key": "MaxHitChance",
+    "category": "Clamp",
+    "value_type": "Float",
+    "value": "0.95",
+    "min_value": "0",
+    "max_value": "1",
+    "unit": "percent",
+    "description": "Maximum hit chance."
+  },
+  {
+    "key": "MaxKillChance",
+    "category": "Clamp",
+    "value_type": "Float",
+    "value": "0.85",
+    "min_value": "0",
+    "max_value": "1",
+    "unit": "percent",
+    "description": "Maximum kill chance."
+  },
+  {
+    "key": "MinPlantTime",
+    "category": "Clamp",
+    "value_type": "Int",
+    "value": "3",
+    "min_value": "1",
+    "max_value": "10",
+    "unit": "s",
+    "description": "Minimum plant time."
+  },
+  {
+    "key": "MaxPlantTime",
+    "category": "Clamp",
+    "value_type": "Int",
+    "value": "8",
+    "min_value": "1",
+    "max_value": "15",
+    "unit": "s",
+    "description": "Maximum plant time."
+  },
+  {
+    "key": "MinDefuseTime",
+    "category": "Clamp",
+    "value_type": "Int",
+    "value": "5",
+    "min_value": "1",
+    "max_value": "15",
+    "unit": "s",
+    "description": "Minimum defuse time."
+  },
+  {
+    "key": "MaxDefuseTime",
+    "category": "Clamp",
+    "value_type": "Int",
+    "value": "12",
+    "min_value": "1",
+    "max_value": "20",
+    "unit": "s",
+    "description": "Maximum defuse time."
+  },
+  {
+    "key": "MinMoveTime",
+    "category": "Clamp",
+    "value_type": "Int",
+    "value": "1",
+    "min_value": "1",
+    "max_value": "20",
+    "unit": "s",
+    "description": "Minimum move time."
+  },
+  {
+    "key": "MaxMoveTime",
+    "category": "Clamp",
+    "value_type": "Int",
+    "value": "30",
+    "min_value": "1",
+    "max_value": "60",
+    "unit": "s",
+    "description": "Maximum move time."
+  },
+  {
+    "key": "BattleReportDebugLog",
+    "category": "Debug",
+    "value_type": "Bool",
+    "value": "true",
+    "min_value": "",
+    "max_value": "",
+    "unit": "switch",
+    "description": "Enable full battle report logs in the browser console."
   }
 ]
