@@ -8,7 +8,8 @@ import MapView from "../components/battle/MapView"
 import KillFeed from "../components/battle/KillFeed"
 import EventFeed from "../components/battle/EventFeed"
 import { battleState, type BattlePlayer, type BattleTeam } from "../components/battle/data/battle"
-import type { BombPublicState, GameEvent, MatchReport, PlayerState, RoundReport } from "../types/match-report"
+import type { BombPublicState, MatchReport, PlayerState, RoundReport } from "../types/match-report"
+import { authoritativeScoreAtPlayback, latestBombAtPlayback } from "./battle-playback"
 
 interface BattleLocationState {
   report?: MatchReport
@@ -98,13 +99,6 @@ function phaseLabel(round: RoundReport) {
   return round.is_side_switch ? "半场换边" : `半场 ${round.half}`
 }
 
-function latestBomb(round: RoundReport, events: GameEvent[]): BombPublicState | undefined {
-  for (let i = events.length - 1; i >= 0; i--) {
-    if (events[i].bomb) return events[i].bomb
-  }
-  return round.bomb
-}
-
 function buildBattlePlayer(
   state: PlayerState,
   aliveMap: Map<string, boolean>,
@@ -131,18 +125,6 @@ function buildBattlePlayer(
 
 function buildTeam(name: string, tag: string, side: "t" | "ct", score: number, players: BattlePlayer[]): BattleTeam {
   return { name, tag, side, score, players }
-}
-
-function previousScore(report: MatchReport, roundIndex: number) {
-  if (roundIndex <= 0) return { teamA: 0, teamB: 0 }
-  const previous = report.rounds[roundIndex - 1]
-  return { teamA: previous.score_team_a, teamB: previous.score_team_b }
-}
-
-function scoreAtPlayback(report: MatchReport, round: RoundReport, roundIndex: number, events: GameEvent[]) {
-  const hasRoundEnd = events.some((ev) => ev.event_type === "ROUND_END")
-  if (hasRoundEnd) return { teamA: round.score_team_a, teamB: round.score_team_b }
-  return previousScore(report, roundIndex)
 }
 
 function winnerName(report: MatchReport) {
@@ -236,7 +218,7 @@ export default function BattlePage() {
       if (ev.attacker_id) kills.set(ev.attacker_id, (kills.get(ev.attacker_id) ?? 0) + 1)
     })
 
-    const score = scoreAtPlayback(report, currentRound, roundIndex, visibleEvents)
+    const score = authoritativeScoreAtPlayback(report, currentRound, roundIndex, visibleEvents)
     const teamAPlayers = currentRound.player_states
       .filter((p) => p.team_id === report.match_info.team_a_id)
       .map((p) => buildBattlePlayer(p, alive, kills, deaths))
@@ -248,7 +230,7 @@ export default function BattlePage() {
     return {
       teamA: buildTeam(report.match_info.team_a_name, sideA.toUpperCase(), sideA, score.teamA, teamAPlayers),
       teamB: buildTeam(report.match_info.team_b_name, sideB.toUpperCase(), sideB, score.teamB, teamBPlayers),
-      bomb: latestBomb(currentRound, visibleEvents),
+      bomb: latestBombAtPlayback(currentRound, visibleEvents),
     }
   }, [report, currentRound, roundIndex, visibleEvents])
 

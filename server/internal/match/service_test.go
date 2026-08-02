@@ -104,6 +104,59 @@ func TestDebugSimuMatchWeaponsFollowSideSwitch(t *testing.T) {
 	}
 }
 
+func TestPlayerFromConfigMapsExplicitTenAttributes(t *testing.T) {
+	if err := cfg.Init(); err != nil {
+		t.Fatalf("config init failed: %v", err)
+	}
+	row := cfg.GetPlayer("player_niko")
+	if row == nil {
+		t.Fatal("player_niko missing from generated config")
+	}
+	profile := playerFromConfig(row)
+	got := profile.Attributes
+	want := matchengine.PlayerAttributes{
+		Entry: 68, Aim: 91, Trade: 75, Clutch: 68, Firepower: 86, Gamesense: 80,
+		Reaction: 80, Positioning: 80, Awareness: 80, Teamplay: 75, Utility: 78,
+		Composure: 68, Mobility: 80, Endurance: 77, Discipline: 80,
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("player attributes were derived or dropped: got %+v want %+v", got, want)
+	}
+	if !reflect.DeepEqual(profile.RoleTags, []string{"AWPer", "IGL"}) {
+		t.Fatalf("role tags not mapped: %v", profile.RoleTags)
+	}
+}
+
+func TestBuildMapConfigMapsTemplateSideRoutesAndAllocations(t *testing.T) {
+	if err := cfg.Init(); err != nil {
+		t.Fatalf("config init failed: %v", err)
+	}
+	mapConfig, err := buildMapConfigFromTables(matchengine.DefaultMapID)
+	if err != nil {
+		t.Fatalf("map config build failed: %v", err)
+	}
+	if mapConfig.Version != matchengine.DefaultMapVersion || len(mapConfig.Warnings) != 0 {
+		t.Fatalf("formal Dust2 config should validate cleanly: version=%s warnings=%+v", mapConfig.Version, mapConfig.Warnings)
+	}
+	template := mapConfig.RouteTemplates["Default_Pick"]
+	if template.Side != matchengine.SideT {
+		t.Fatalf("template side not mapped: %q", template.Side)
+	}
+	if len(template.RouteIDs) != 4 || len(template.RouteAllocations) != 4 {
+		t.Fatalf("template routes not mapped: ids=%v allocations=%v", template.RouteIDs, template.RouteAllocations)
+	}
+	total := 0
+	for _, count := range template.RouteAllocations {
+		total += count
+	}
+	if total != 5 {
+		t.Fatalf("template allocations do not close to five: %v", template.RouteAllocations)
+	}
+	if !reflect.DeepEqual(template.CommonCTSetupIDs, []string{"CT_2A_1Mid_2B", "CT_3A_1Mid_1B", "CT_1A_1Mid_3B"}) {
+		t.Fatalf("CT setup priors not mapped: %v", template.CommonCTSetupIDs)
+	}
+}
+
 func TestCombatConstBool(t *testing.T) {
 	constants := matchengine.CombatConstants{Values: map[string]matchengine.CombatConstValue{
 		"Enabled":  {Value: "true"},
@@ -118,6 +171,23 @@ func TestCombatConstBool(t *testing.T) {
 	}
 	if combatConstBool(constants, "Invalid", false) || combatConstBool(constants, "Missing", false) {
 		t.Fatal("invalid and missing values should use the safe disabled fallback")
+	}
+}
+
+func TestDebugSimuMatchRequestRejectsRoundTruncationAndWinnerScripts(t *testing.T) {
+	for _, payload := range []string{
+		`{"map_id":"de_dust2","round_count":1}`,
+		`{"map_id":"de_dust2","max_rounds":1}`,
+		`{"map_id":"de_dust2","forced_round_winners":["team_a"]}`,
+	} {
+		var request DebugSimuMatchRequest
+		if err := decodeDebugSimuMatchRequest(payload, &request); err == nil {
+			t.Fatalf("request must reject non-contract control fields: %s", payload)
+		}
+	}
+	var request DebugSimuMatchRequest
+	if err := decodeDebugSimuMatchRequest(`{"map_id":"de_dust2","seed":42}`, &request); err != nil {
+		t.Fatalf("valid request rejected: %v", err)
 	}
 }
 

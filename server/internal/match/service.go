@@ -153,8 +153,6 @@ func (s *Service) buildTeam(teamID string, name string, playerIDs []string) (mat
 }
 
 func playerFromConfig(p *cfg.Player) matchengine.PlayerProfile {
-	avgSense := int(p.Gamesense)
-	avgAim := int(p.Aim)
 	return matchengine.PlayerProfile{
 		PlayerID:    p.Id,
 		DisplayName: p.Name,
@@ -162,20 +160,20 @@ func playerFromConfig(p *cfg.Player) matchengine.PlayerProfile {
 		RoleTags:    append([]string(nil), p.Positions...),
 		Attributes: matchengine.PlayerAttributes{
 			Entry:       int(p.Entry),
-			Aim:         avgAim,
+			Aim:         int(p.Aim),
 			Trade:       int(p.Trade),
 			Clutch:      int(p.Clutch),
 			Firepower:   int(p.Firepower),
-			Gamesense:   avgSense,
-			Reaction:    avgAim,
-			Positioning: avgSense,
-			Awareness:   avgSense,
-			Teamplay:    int(p.Trade),
-			Utility:     int((p.Trade + p.Gamesense) / 2),
-			Composure:   int(p.Clutch),
-			Mobility:    int((p.Entry + p.Aim) / 2),
-			Endurance:   80,
-			Discipline:  avgSense,
+			Gamesense:   int(p.Gamesense),
+			Reaction:    int(p.Reaction),
+			Positioning: int(p.Positioning),
+			Awareness:   int(p.Awareness),
+			Teamplay:    int(p.Teamplay),
+			Utility:     int(p.Utility),
+			Composure:   int(p.Composure),
+			Mobility:    int(p.Mobility),
+			Endurance:   int(p.Endurance),
+			Discipline:  int(p.Discipline),
 		},
 	}
 }

@@ -1,7 +1,7 @@
 [
   {
-    "id": "D2_A_LONG",
-    "name": "A Long Execute",
+    "id": "D2_T_A_LONG",
+    "name": "T A Long Execute",
     "side": "T",
     "target_site": "A",
     "nodes": [
@@ -10,11 +10,283 @@
       "A_LONG",
       "A_SITE"
     ],
-    "min_players": 2,
+    "min_players": 1,
     "max_players": 5,
     "style_tags": [
       "LongRange",
       "SiteEntry"
+    ]
+  },
+  {
+    "id": "D2_T_A_SHORT",
+    "name": "T A Short Split",
+    "side": "T",
+    "target_site": "A",
+    "nodes": [
+      "T_SPAWN",
+      "MID",
+      "CATWALK",
+      "SHORT",
+      "A_SITE"
+    ],
+    "min_players": 1,
+    "max_players": 5,
+    "style_tags": [
+      "MidControl",
+      "SiteEntry"
+    ]
+  },
+  {
+    "id": "D2_T_B_TUNNEL",
+    "name": "T B Tunnel Execute",
+    "side": "T",
+    "target_site": "B",
+    "nodes": [
+      "T_SPAWN",
+      "B_UPPER",
+      "B_TUNNEL",
+      "B_SITE"
+    ],
+    "min_players": 1,
+    "max_players": 5,
+    "style_tags": [
+      "CloseRange",
+      "SiteEntry"
+    ]
+  },
+  {
+    "id": "D2_T_MID_B",
+    "name": "T Mid To B",
+    "side": "T",
+    "target_site": "B",
+    "nodes": [
+      "T_SPAWN",
+      "MID",
+      "CT_MID",
+      "B_DOOR",
+      "B_SITE"
+    ],
+    "min_players": 1,
+    "max_players": 5,
+    "style_tags": [
+      "MidControl",
+      "Rotate",
+      "SiteEntry"
+    ]
+  },
+  {
+    "id": "D2_T_MID_CONTROL",
+    "name": "T Mid Control",
+    "side": "T",
+    "target_site": "None",
+    "nodes": [
+      "T_SPAWN",
+      "MID"
+    ],
+    "min_players": 1,
+    "max_players": 3,
+    "style_tags": [
+      "Default",
+      "Intel"
+    ]
+  },
+  {
+    "id": "D2_T_A_FAKE_PRESSURE",
+    "name": "T A Fake Pressure",
+    "side": "T",
+    "target_site": "None",
+    "nodes": [
+      "T_SPAWN",
+      "LONG_DOOR",
+      "A_LONG"
+    ],
+    "min_players": 1,
+    "max_players": 3,
+    "style_tags": [
+      "Fake",
+      "Pressure"
+    ]
+  },
+  {
+    "id": "D2_T_ROTATE_A_TO_B",
+    "name": "T Rotate A To B",
+    "side": "T",
+    "target_site": "B",
+    "nodes": [
+      "A_LONG",
+      "LONG_DOOR",
+      "T_SPAWN",
+      "MID",
+      "CT_MID",
+      "B_DOOR",
+      "B_SITE"
+    ],
+    "min_players": 1,
+    "max_players": 5,
+    "style_tags": [
+      "Rotate",
+      "PostContact"
+    ]
+  },
+  {
+    "id": "D2_T_ROTATE_B_TO_A",
+    "name": "T Rotate B To A",
+    "side": "T",
+    "target_site": "A",
+    "nodes": [
+      "B_TUNNEL",
+      "B_UPPER",
+      "T_SPAWN",
+      "MID",
+      "CATWALK",
+      "SHORT",
+      "A_SITE"
+    ],
+    "min_players": 1,
+    "max_players": 5,
+    "style_tags": [
+      "Rotate",
+      "PostContact"
+    ]
+  },
+  {
+    "id": "D2_CT_A_LONG_HOLD",
+    "name": "CT A Long Hold",
+    "side": "CT",
+    "target_site": "A",
+    "nodes": [
+      "CT_SPAWN",
+      "A_SITE",
+      "A_LONG",
+      "PIT"
+    ],
+    "min_players": 1,
+    "max_players": 2,
+    "style_tags": [
+      "Hold",
+      "LongRange"
+    ]
+  },
+  {
+    "id": "D2_CT_A_SHORT_HOLD",
+    "name": "CT A Short Hold",
+    "side": "CT",
+    "target_site": "A",
+    "nodes": [
+      "CT_SPAWN",
+      "CT_MID",
+      "CAR",
+      "SHORT"
+    ],
+    "min_players": 1,
+    "max_players": 2,
+    "style_tags": [
+      "Hold",
+      "MidControl"
+    ]
+  },
+  {
+    "id": "D2_CT_B_HOLD",
+    "name": "CT B Hold",
+    "side": "CT",
+    "target_site": "B",
+    "nodes": [
+      "CT_SPAWN",
+      "B_DOOR",
+      "B_SITE"
+    ],
+    "min_players": 1,
+    "max_players": 3,
+    "style_tags": [
+      "Hold",
+      "CloseRange"
+    ]
+  },
+  {
+    "id": "D2_CT_MID_HOLD",
+    "name": "CT Mid Hold",
+    "side": "CT",
+    "target_site": "None",
+    "nodes": [
+      "CT_SPAWN",
+      "CT_MID",
+      "CAR"
+    ],
+    "min_players": 1,
+    "max_players": 2,
+    "style_tags": [
+      "Hold",
+      "Intel"
+    ]
+  },
+  {
+    "id": "D2_CT_REINFORCE_A",
+    "name": "CT Reinforce A",
+    "side": "CT",
+    "target_site": "A",
+    "nodes": [
+      "CT_MID",
+      "CT_SPAWN",
+      "A_SITE"
+    ],
+    "min_players": 1,
+    "max_players": 3,
+    "style_tags": [
+      "Reinforce",
+      "Rotate"
+    ]
+  },
+  {
+    "id": "D2_CT_REINFORCE_B",
+    "name": "CT Reinforce B",
+    "side": "CT",
+    "target_site": "B",
+    "nodes": [
+      "CT_MID",
+      "B_DOOR",
+      "B_SITE"
+    ],
+    "min_players": 1,
+    "max_players": 3,
+    "style_tags": [
+      "Reinforce",
+      "Rotate"
+    ]
+  },
+  {
+    "id": "D2_CT_RETAKE_A_FROM_B",
+    "name": "CT Retake A From B",
+    "side": "CT",
+    "target_site": "A",
+    "nodes": [
+      "B_SITE",
+      "B_DOOR",
+      "CT_SPAWN",
+      "A_SITE"
+    ],
+    "min_players": 1,
+    "max_players": 5,
+    "style_tags": [
+      "Retake",
+      "PostPlant"
+    ]
+  },
+  {
+    "id": "D2_CT_RETAKE_B_FROM_A",
+    "name": "CT Retake B From A",
+    "side": "CT",
+    "target_site": "B",
+    "nodes": [
+      "A_SITE",
+      "CT_SPAWN",
+      "B_DOOR",
+      "B_SITE"
+    ],
+    "min_players": 1,
+    "max_players": 5,
+    "style_tags": [
+      "Retake",
+      "PostPlant"
     ]
   }
 ]

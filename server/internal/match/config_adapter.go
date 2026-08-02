@@ -34,14 +34,18 @@ func buildMapConfigFromTables(mapID string) (*matchengine.MapConfig, error) {
 		out.RouteTemplates[row.Id] = matchengine.RouteTemplate{
 			ID:               row.Id,
 			MapID:            row.MapId,
+			Side:             row.Side,
 			TargetSite:       row.TargetSite,
 			Tempo:            row.Tempo,
 			RecommendedMin:   int(row.RecommendedMin),
 			RecommendedMax:   int(row.RecommendedMax),
 			RequiredRoles:    append([]string(nil), row.RequiredRoles...),
 			KeyAttributes:    parseKeyAttributes(row.KeyAttributes),
+			RouteIDs:         append([]string(nil), row.RouteIds...),
+			RouteAllocations: copyRouteAllocations(row.RouteAllocations),
 			ScenarioIDs:      append([]string(nil), row.ScenarioIds...),
 			MapTagIDs:        append([]string(nil), row.MapTagIds...),
+			CommonCTSetupIDs: append([]string(nil), row.CommonCtSetupIds...),
 			SuccessNextPhase: row.SuccessNextPhase,
 			FailureFallbacks: append([]string(nil), row.FailureFallbacks...),
 		}
@@ -179,6 +183,14 @@ func parseKeyAttributes(raw string) map[string]float64 {
 			continue
 		}
 		out[strings.TrimSpace(parts[0])] = value
+	}
+	return out
+}
+
+func copyRouteAllocations(source map[string]int32) map[string]int {
+	out := make(map[string]int, len(source))
+	for routeID, count := range source {
+		out[routeID] = int(count)
 	}
 	return out
 }

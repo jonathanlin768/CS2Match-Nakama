@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
+	"strings"
 
 	"github.com/heroiclabs/nakama-common/runtime"
 )
@@ -14,7 +16,7 @@ func RPCDebugSimuMatch(service *Service) func(context.Context, runtime.Logger, *
 	return func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
 		var req DebugSimuMatchRequest
 		if payload != "" {
-			if err := json.Unmarshal([]byte(payload), &req); err != nil {
+			if err := decodeDebugSimuMatchRequest(payload, &req); err != nil {
 				return marshalError(&MatchError{Code: "INVALID_REQUEST", Message: err.Error()})
 			}
 		}
@@ -39,6 +41,21 @@ func RPCDebugSimuMatch(service *Service) func(context.Context, runtime.Logger, *
 		}
 		return string(bytes), nil
 	}
+}
+
+func decodeDebugSimuMatchRequest(payload string, target *DebugSimuMatchRequest) error {
+	decoder := json.NewDecoder(strings.NewReader(payload))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(target); err != nil {
+		return err
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return fmt.Errorf("request contains multiple JSON values")
+		}
+		return err
+	}
+	return nil
 }
 
 func marshalError(me *MatchError) (string, error) {

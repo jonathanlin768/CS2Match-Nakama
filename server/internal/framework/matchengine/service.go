@@ -21,6 +21,6 @@ func (s *Service) Simulate(ctx context.Context, input *MatchInput) (*MatchResult
 	if input == nil {
 		return nil, newError("INVALID_MATCH_INPUT", "input is nil")
 	}
-	engine := NewMatchEngine(input)
-	return engine.StartMatch(ctx)
+	engine := newProductionMatchEngine(input)
+	return engine.simulateMatch(ctx)
 }

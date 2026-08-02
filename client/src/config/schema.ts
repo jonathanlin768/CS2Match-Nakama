@@ -36,17 +36,17 @@ export class CombatConst {
     }
 
     /**
-     * 常量�?     */
+     * 常量�?     */
     readonly key: string
     /**
      * 类别
      */
     readonly category: string
     /**
-     * 值类�?     */
+     * 值类�?     */
     readonly valueType: string
     /**
-     * 原始�?     */
+     * 原始�?     */
     readonly value: string
     /**
      * 下限
@@ -66,14 +66,14 @@ export class CombatConst {
     readonly description: string
 
     resolve(tables:Tables) {
-        
-        
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
+
+
     }
 }
 
@@ -117,24 +117,24 @@ export class EncounterModifier {
      */
     readonly side: string
     /**
-     * 关联属�?     */
+     * 关联属�?     */
     readonly attribute: string
     /**
      * 权重
      */
     readonly weight: number
     /**
-     * 原因�?     */
+     * 原因�?     */
     readonly reasonCode: string
 
     resolve(tables:Tables) {
-        
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
+
     }
 }
 
@@ -173,10 +173,10 @@ export class item {
     readonly price: number
 
     resolve(tables:Tables) {
-        
-        
-        
-        
+
+
+
+
     }
 }
 
@@ -226,7 +226,7 @@ export class MapEdge {
      */
     readonly baseTime: number
     /**
-     * 体能消�?     */
+     * 体能消�?     */
     readonly staminaCost: number
     /**
      * 转移风险
@@ -250,16 +250,16 @@ export class MapEdge {
     readonly bidirectional: boolean
 
     resolve(tables:Tables) {
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
+
+
+
+
     }
 }
 
@@ -325,7 +325,7 @@ export class MapNode {
      */
     readonly nodeType: string
     /**
-     * 默认优势�?     */
+     * 默认优势�?     */
     readonly defaultSide: string
     /**
      * 归一化X
@@ -340,7 +340,7 @@ export class MapNode {
      */
     readonly floor: string
     /**
-     * 节点范围用�?     */
+     * 节点范围用�?     */
     readonly areaUsages: string[]
     /**
      * 节点范围形状
@@ -351,25 +351,25 @@ export class MapNode {
      */
     readonly radius: number
     /**
-     * 多边形顶�?x1,y1;x2,y2
+     * 多边形顶�?x1,y1;x2,y2
      */
     readonly points: string
 
     resolve(tables:Tables) {
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     }
 }
 
@@ -411,7 +411,7 @@ export class MapTag {
      */
     readonly category: string
     /**
-     * 标签�?     */
+     * 标签�?     */
     readonly value: string
     /**
      * 阵营
@@ -422,7 +422,7 @@ export class MapTag {
      */
     readonly weight: number
     /**
-     * 原因�?     */
+     * 原因�?     */
     readonly reasonCode: string
     /**
      * 说明
@@ -430,14 +430,14 @@ export class MapTag {
     readonly description: string
 
     resolve(tables:Tables) {
-        
-        
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
+
+
     }
 }
 
@@ -468,6 +468,24 @@ export class Player {
         this.firepower = _json_.firepower
         if (_json_.gamesense === undefined) { throw new Error() }
         this.gamesense = _json_.gamesense
+        if (_json_.reaction === undefined) { throw new Error() }
+        this.reaction = _json_.reaction
+        if (_json_.positioning === undefined) { throw new Error() }
+        this.positioning = _json_.positioning
+        if (_json_.awareness === undefined) { throw new Error() }
+        this.awareness = _json_.awareness
+        if (_json_.teamplay === undefined) { throw new Error() }
+        this.teamplay = _json_.teamplay
+        if (_json_.utility === undefined) { throw new Error() }
+        this.utility = _json_.utility
+        if (_json_.composure === undefined) { throw new Error() }
+        this.composure = _json_.composure
+        if (_json_.mobility === undefined) { throw new Error() }
+        this.mobility = _json_.mobility
+        if (_json_.endurance === undefined) { throw new Error() }
+        this.endurance = _json_.endurance
+        if (_json_.discipline === undefined) { throw new Error() }
+        this.discipline = _json_.discipline
         if (_json_.positions === undefined) { throw new Error() }
         { this.positions = []; for(let _ele0 of _json_.positions) { let _e0; _e0 = _ele0; this.positions.push(_e0);}}
         if (_json_.rarity === undefined) { throw new Error() }
@@ -485,7 +503,7 @@ export class Player {
      */
     readonly name: string
     /**
-     * 所属战�?     */
+     * 所属战�?     */
     readonly team: string
     /**
      * 国籍
@@ -516,6 +534,42 @@ export class Player {
      */
     readonly gamesense: number
     /**
+     * 反应
+     */
+    readonly reaction: number
+    /**
+     * 站位
+     */
+    readonly positioning: number
+    /**
+     * 感知
+     */
+    readonly awareness: number
+    /**
+     * 团队配合
+     */
+    readonly teamplay: number
+    /**
+     * 道具
+     */
+    readonly utility: number
+    /**
+     * 沉着
+     */
+    readonly composure: number
+    /**
+     * 机动
+     */
+    readonly mobility: number
+    /**
+     * 耐力
+     */
+    readonly endurance: number
+    /**
+     * 纪律
+     */
+    readonly discipline: number
+    /**
      * 位置标签
      */
     readonly positions: string[]
@@ -529,19 +583,28 @@ export class Player {
     readonly portrait: string
 
     resolve(tables:Tables) {
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     }
 }
 
@@ -591,10 +654,10 @@ export class Route {
      */
     readonly nodes: string[]
     /**
-     * 最少人�?     */
+     * 最少人�?     */
     readonly minPlayers: number
     /**
-     * 最多人�?     */
+     * 最多人�?     */
     readonly maxPlayers: number
     /**
      * 路线标签
@@ -602,14 +665,14 @@ export class Route {
     readonly styleTags: string[]
 
     resolve(tables:Tables) {
-        
-        
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
+
+
     }
 }
 
@@ -624,6 +687,8 @@ export class RouteTemplate {
         this.id = _json_.id
         if (_json_.map_id === undefined) { throw new Error() }
         this.mapId = _json_.map_id
+        if (_json_.side === undefined) { throw new Error() }
+        this.side = _json_.side
         if (_json_.target_site === undefined) { throw new Error() }
         this.targetSite = _json_.target_site
         if (_json_.tempo === undefined) { throw new Error() }
@@ -636,10 +701,16 @@ export class RouteTemplate {
         { this.requiredRoles = []; for(let _ele0 of _json_.required_roles) { let _e0; _e0 = _ele0; this.requiredRoles.push(_e0);}}
         if (_json_.key_attributes === undefined) { throw new Error() }
         this.keyAttributes = _json_.key_attributes
+        if (_json_.route_ids === undefined) { throw new Error() }
+        { this.routeIds = []; for(let _ele0 of _json_.route_ids) { let _e0; _e0 = _ele0; this.routeIds.push(_e0);}}
+        if (_json_.route_allocations === undefined) { throw new Error() }
+        this.routeAllocations = new Map<string, number>(); for(var _entry0_ of _json_.route_allocations) { let _k0; _k0 = _entry0_[0];  let _v0;  _v0 = _entry0_[1]; this.routeAllocations.set(_k0, _v0);  }
         if (_json_.scenario_ids === undefined) { throw new Error() }
         { this.scenarioIds = []; for(let _ele0 of _json_.scenario_ids) { let _e0; _e0 = _ele0; this.scenarioIds.push(_e0);}}
         if (_json_.map_tag_ids === undefined) { throw new Error() }
         { this.mapTagIds = []; for(let _ele0 of _json_.map_tag_ids) { let _e0; _e0 = _ele0; this.mapTagIds.push(_e0);}}
+        if (_json_.common_ct_setup_ids === undefined) { throw new Error() }
+        { this.commonCtSetupIds = []; for(let _ele0 of _json_.common_ct_setup_ids) { let _e0; _e0 = _ele0; this.commonCtSetupIds.push(_e0);}}
         if (_json_.success_next_phase === undefined) { throw new Error() }
         this.successNextPhase = _json_.success_next_phase
         if (_json_.failure_fallbacks === undefined) { throw new Error() }
@@ -655,6 +726,10 @@ export class RouteTemplate {
      */
     readonly mapId: string
     /**
+     * 阵营
+     */
+    readonly side: string
+    /**
      * 目标包点
      */
     readonly targetSite: string
@@ -663,45 +738,61 @@ export class RouteTemplate {
      */
     readonly tempo: string
     /**
-     * 推荐最少人�?     */
+     * 推荐最少人�?     */
     readonly recommendedMin: number
     /**
-     * 推荐最多人�?     */
+     * 推荐最多人�?     */
     readonly recommendedMax: number
     /**
      * 关键角色
      */
     readonly requiredRoles: string[]
     /**
-     * 属性权�?     */
+     * 属性权�?     */
     readonly keyAttributes: string
     /**
-     * 可生成场�?     */
+     * 路线ID
+     */
+    readonly routeIds: string[]
+    /**
+     * 路线人数分配
+     */
+    readonly routeAllocations: Map<string, number>
+    /**
+     * 可生成场�?     */
     readonly scenarioIds: string[]
     /**
      * 地图标签
      */
     readonly mapTagIds: string[]
     /**
-     * 成功后阶�?     */
+     * 常见CT配置先验
+     */
+    readonly commonCtSetupIds: string[]
+    /**
+     * 成功后阶�?     */
     readonly successNextPhase: string
     /**
-     * 失败候选策�?     */
+     * 失败候选模�?     */
     readonly failureFallbacks: string[]
 
     resolve(tables:Tables) {
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     }
 }
 
@@ -761,10 +852,10 @@ export class Scenario {
      */
     readonly tempo: string
     /**
-     * 姿�?     */
+     * 姿�?     */
     readonly posture: string
     /**
-     * 道具上下�?     */
+     * 道具上下�?     */
     readonly utilityContext: string
     /**
      * 地图标签
@@ -780,17 +871,17 @@ export class Scenario {
     readonly baseWeight: number
 
     resolve(tables:Tables) {
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
+
+
+
+
+
     }
 }
 
@@ -826,7 +917,7 @@ export class Visibility {
      */
     readonly id: string
     /**
-     * 观察�?     */
+     * 观察�?     */
     readonly fromNode: string
     /**
      * 被观察点
@@ -858,15 +949,15 @@ export class Visibility {
     readonly exposureModifier: number
 
     resolve(tables:Tables) {
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
+
+
+
     }
 }
 

@@ -7,7 +7,18 @@ export type GameEventType =
   | "HALF_TIME"
   | "SIDE_SWITCH"
   | "OVERTIME_START"
+  | "DAMAGE"
   | "KILL"
+  | "STRATEGY_ADJUSTED"
+  | "ROTATE"
+  | "REINFORCE"
+  | "CONTROL_GAINED"
+  | "BOMB_DROP"
+  | "BOMB_PICKUP"
+  | "BOMB_PLANT_START"
+  | "BOMB_PLANT_INTERRUPT"
+  | "DEFUSE_START"
+  | "DEFUSE_INTERRUPT"
   | "BOMB_PLANT"
   | "BOMB_DEFUSE"
   | "BOMB_EXPLODE"
@@ -18,12 +29,42 @@ export interface EventLocation {
   name: string
   x: number
   y: number
+  source_type?: string
+  source_id?: string
+  floor?: string
+  seed?: number
+}
+
+export interface ReasonModifier {
+  code: string
+  value: number
+  detail?: string
+}
+
+export interface ReasonValue {
+  kind: "Number" | "String" | "Bool" | "Null"
+  number?: number
+  string?: string
+  bool?: boolean
+}
+
+export interface ReasonStateChange {
+  field: string
+  before: ReasonValue
+  after: ReasonValue
 }
 
 export interface EventReason {
   code: string
   main_factor: string
+  modifiers?: ReasonModifier[]
   score_delta: number
+  probability?: number
+  formula?: string
+  inputs?: Record<string, number>
+  state_changes?: ReasonStateChange[]
+  source_action_id?: string
+  source_effect_id?: string
   detail?: string
 }
 
@@ -55,6 +96,9 @@ export interface NodeControlState {
 }
 
 export interface GameEvent {
+  event_id?: string
+  source_action_id?: string
+  source_effect_id?: string
   timestamp: number
   event_type: GameEventType
   attacker_id?: string
@@ -70,9 +114,27 @@ export interface GameEvent {
   message: string
   reason?: EventReason
   bomb?: BombPublicState
+  state?: EventStateSnapshot
   score_team_a?: number
   score_team_b?: number
   extra?: Record<string, unknown>
+}
+
+export interface EventStateSnapshot {
+  score_team_a: number
+  score_team_b: number
+  score_t: number
+  score_ct: number
+  players?: PlayerState[]
+  bomb?: BombPublicState
+  controls?: NodeControlState[]
+}
+
+export interface ExplainableReport {
+  key_events: GameEvent[]
+  strategy_summary: string
+  loss_reasons: EventReason[]
+  win_factors: EventReason[]
 }
 
 export interface PlayerState {
@@ -117,10 +179,12 @@ export interface RoundReport {
   route_main: string
   route_sub?: string
   strategy_template_id: string
+  ct_setup_template_id?: string
   events: GameEvent[]
   player_states: PlayerState[]
   bomb?: BombPublicState
   final_controls?: NodeControlState[]
+  report?: ExplainableReport
 }
 
 export interface MatchInfo {
@@ -166,8 +230,8 @@ export interface FinalStats {
 }
 
 export interface MatchReport {
-	debug_enabled: boolean
-	match_info: MatchInfo
+  debug_enabled: boolean
+  match_info: MatchInfo
   rounds: RoundReport[]
   final_stats: FinalStats
   winner: Side | ""
@@ -175,4 +239,5 @@ export interface MatchReport {
   final_score_team_a: number
   final_score_team_b: number
   total_rounds: number
+  report?: ExplainableReport
 }

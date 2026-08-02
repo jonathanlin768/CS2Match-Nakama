@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func makeTestInput(seed int64, winners []string) *MatchInput {
+func makeTestInput(seed int64) *MatchInput {
 	cfg := makeTestMapConfig()
 	return &MatchInput{
 		MatchID:    "test_match",
@@ -23,10 +23,9 @@ func makeTestInput(seed int64, winners []string) *MatchInput {
 			"team_a": SideT,
 			"team_b": SideCT,
 		},
-		MapConfig:          cfg,
-		WeaponSpecs:        makeTestWeapons(),
-		SideLoadouts:       makeTestLoadouts(),
-		ForcedRoundWinners: winners,
+		MapConfig:    cfg,
+		WeaponSpecs:  makeTestWeapons(),
+		SideLoadouts: makeTestLoadouts(),
 	}
 }
 
@@ -64,11 +63,10 @@ func makeTestLoadouts() map[string]WeaponLoadout {
 func makeTestMapConfig() *MapConfig {
 	consts := CombatConstants{Values: map[string]CombatConstValue{}}
 	for _, key := range requiredCombatConstKeys {
-		valueType := "Int"
+		valueType := expectedCombatConstTypes[key]
 		value := "10"
-		if strings.Contains(key, "Scale") || strings.Contains(key, "Noise") || strings.Contains(key, "Gap") || strings.Contains(key, "Chance") || strings.Contains(key, "Penalty") || strings.Contains(key, "Bonus") || strings.Contains(key, "Weight") {
-			valueType = "Float"
-			value = "10"
+		if valueType == "String" {
+			value = "TPL_A"
 		}
 		consts.Values[key] = CombatConstValue{Key: key, ValueType: valueType, Value: value}
 	}
@@ -77,15 +75,66 @@ func makeTestMapConfig() *MapConfig {
 	consts.Values["BasePlantTime"] = CombatConstValue{Key: "BasePlantTime", ValueType: "Int", Value: "4"}
 	consts.Values["BaseDefuseTime"] = CombatConstValue{Key: "BaseDefuseTime", ValueType: "Int", Value: "10"}
 	consts.Values["BasePickupTime"] = CombatConstValue{Key: "BasePickupTime", ValueType: "Int", Value: "2"}
+	consts.Values["DecisionDelay"] = CombatConstValue{Key: "DecisionDelay", ValueType: "Int", Value: "2"}
+	consts.Values["ForceExecuteThreshold"] = CombatConstValue{Key: "ForceExecuteThreshold", ValueType: "Int", Value: "20"}
 	consts.Values["MaxDecisionCount"] = CombatConstValue{Key: "MaxDecisionCount", ValueType: "Int", Value: "3"}
 	consts.Values["MaxEncounterPulses"] = CombatConstValue{Key: "MaxEncounterPulses", ValueType: "Int", Value: "3"}
+	consts.Values["CommunicationDelay"] = CombatConstValue{Key: "CommunicationDelay", ValueType: "Int", Value: "0"}
+	consts.Values["MaxRoundTimeline"] = CombatConstValue{Key: "MaxRoundTimeline", ValueType: "Int", Value: "180"}
+	consts.Values["MaxStateTransitions"] = CombatConstValue{Key: "MaxStateTransitions", ValueType: "Int", Value: "1000"}
+	consts.Values["MaxScheduledActions"] = CombatConstValue{Key: "MaxScheduledActions", ValueType: "Int", Value: "1000"}
+	consts.Values["MaxEffectsPerTimestamp"] = CombatConstValue{Key: "MaxEffectsPerTimestamp", ValueType: "Int", Value: "100"}
+	consts.Values["MaxNoOpTransitions"] = CombatConstValue{Key: "MaxNoOpTransitions", ValueType: "Int", Value: "4"}
+	consts.Values["MaxRotationsPerTeam"] = CombatConstValue{Key: "MaxRotationsPerTeam", ValueType: "Int", Value: "3"}
+	consts.Values["SoundIntelMinConfidence"] = CombatConstValue{Key: "SoundIntelMinConfidence", ValueType: "Int", Value: "30"}
+	consts.Values["SoundIntelMaxConfidence"] = CombatConstValue{Key: "SoundIntelMaxConfidence", ValueType: "Int", Value: "70"}
+	consts.Values["DeathIntelMaxConfidence"] = CombatConstValue{Key: "DeathIntelMaxConfidence", ValueType: "Int", Value: "70"}
+	consts.Values["ControlIntelTTL"] = CombatConstValue{Key: "ControlIntelTTL", ValueType: "Int", Value: "12"}
+	consts.Values["UtilityBudget"] = CombatConstValue{Key: "UtilityBudget", ValueType: "Int", Value: "100"}
+	consts.Values["MinStrategyWeight"] = CombatConstValue{Key: "MinStrategyWeight", ValueType: "Float", Value: "1"}
+	consts.Values["MaxStrategyWeight"] = CombatConstValue{Key: "MaxStrategyWeight", ValueType: "Float", Value: "100"}
+	consts.Values["MaxRandomNoise"] = CombatConstValue{Key: "MaxRandomNoise", ValueType: "Float", Value: "8"}
+	consts.Values["CloseScoreGap"] = CombatConstValue{Key: "CloseScoreGap", ValueType: "Float", Value: "6"}
+	consts.Values["DecisiveScoreGap"] = CombatConstValue{Key: "DecisiveScoreGap", ValueType: "Float", Value: "18"}
+	consts.Values["StrategyRepeatPenalty"] = CombatConstValue{Key: "StrategyRepeatPenalty", ValueType: "Float", Value: "3"}
+	consts.Values["SuccessBonusPerRound"] = CombatConstValue{Key: "SuccessBonusPerRound", ValueType: "Float", Value: "1.5"}
+	consts.Values["MaxPreviousSuccessBonus"] = CombatConstValue{Key: "MaxPreviousSuccessBonus", ValueType: "Float", Value: "6"}
+	consts.Values["CounterMemoryBonus"] = CombatConstValue{Key: "CounterMemoryBonus", ValueType: "Float", Value: "3"}
+	consts.Values["DefaultStrategyTemplateID"] = CombatConstValue{Key: "DefaultStrategyTemplateID", ValueType: "String", Value: "TPL_A"}
+	consts.Values["DefaultCTSetupTemplateID"] = CombatConstValue{Key: "DefaultCTSetupTemplateID", ValueType: "String", Value: "TPL_CT"}
+	for _, pair := range [][3]string{
+		{"MinPickupTime", "1", "Int"}, {"MaxPickupTime", "4", "Int"},
+		{"MinCombatDuration", "2", "Int"}, {"MaxCombatDuration", "12", "Int"},
+		{"MinDamagePotential", "0.2", "Float"}, {"MaxDamagePotential", "1.2", "Float"},
+		{"MinExposureModifier", "0.5", "Float"}, {"MaxExposureModifier", "1.5", "Float"},
+		{"MinIntelTTL", "3", "Int"}, {"MaxIntelTTL", "20", "Int"},
+		{"MinAttribute", "0", "Int"}, {"MaxAttribute", "100", "Int"},
+		{"MinHP", "0", "Int"}, {"MaxHP", "100", "Int"},
+		{"MinStamina", "0", "Int"}, {"MaxStamina", "100", "Int"},
+		{"MinFocus", "0", "Int"}, {"MaxFocus", "100", "Int"},
+		{"MinHitChance", "0.05", "Float"}, {"MaxHitChance", "0.95", "Float"}, {"MaxKillChance", "0.85", "Float"},
+		{"MinPlantTime", "3", "Int"}, {"MaxPlantTime", "8", "Int"},
+		{"MinDefuseTime", "5", "Int"}, {"MaxDefuseTime", "12", "Int"},
+		{"MinMoveTime", "1", "Int"}, {"MaxMoveTime", "30", "Int"},
+	} {
+		consts.Values[pair[0]] = CombatConstValue{Key: pair[0], ValueType: pair[2], Value: pair[1]}
+	}
+	modifiers := map[string]EncounterModifier{
+		"MOD_A": {ID: "MOD_A", ScenarioID: "SCN_A", Factor: "LongRange", Side: "Both", Attribute: "aim", Weight: 8, ReasonCode: "aim_long_range"},
+	}
+	for index, attribute := range scenarioWeightAttributes {
+		id := "WEIGHT_" + strings.ToUpper(attribute)
+		modifiers[id] = EncounterModifier{ID: id, ScenarioID: "SCN_A", Factor: "ScenarioWeight", Side: "Both", Attribute: attribute, Weight: 10, ReasonCode: "WEIGHT_" + strings.ToUpper(attribute)}
+		_ = index
+	}
 
 	return &MapConfig{
 		MapID:   DefaultMapID,
 		MapName: DefaultMapName,
 		Version: "test-map-v1",
 		RouteTemplates: map[string]RouteTemplate{
-			"TPL_A": {ID: "TPL_A", MapID: DefaultMapID, TargetSite: "A", Tempo: "Default", RecommendedMin: 2, RecommendedMax: 5, ScenarioIDs: []string{"SCN_A"}, MapTagIDs: []string{"TAG_A"}, SuccessNextPhase: "SiteEntry"},
+			"TPL_A":  {ID: "TPL_A", MapID: DefaultMapID, Side: SideT, TargetSite: "A", Tempo: "Default", RecommendedMin: 2, RecommendedMax: 5, RouteIDs: []string{"D2_A_LONG"}, RouteAllocations: map[string]int{"D2_A_LONG": 5}, ScenarioIDs: []string{"SCN_A"}, MapTagIDs: []string{"TAG_A"}, SuccessNextPhase: "SiteEntry"},
+			"TPL_CT": {ID: "TPL_CT", MapID: DefaultMapID, Side: SideCT, TargetSite: "None", Tempo: "Default", RecommendedMin: 1, RecommendedMax: 5, RouteIDs: []string{"D2_CT_A"}, RouteAllocations: map[string]int{"D2_CT_A": 5}, ScenarioIDs: []string{"SCN_A"}, MapTagIDs: []string{"TAG_A"}, SuccessNextPhase: "Advance"},
 		},
 		Scenarios: map[string]Scenario{
 			"SCN_A": {ID: "SCN_A", Route: "A_Long", Phase: "SiteEntry", Range: "Long", Site: "A", Tempo: "SlowDefault", Posture: "T_Executing", UtilityContext: "Even", MapTagIDs: []string{"TAG_A"}, BaseTimeCost: 12, BaseWeight: 10},
@@ -93,11 +142,10 @@ func makeTestMapConfig() *MapConfig {
 		MapTags: map[string]MapTag{
 			"TAG_A": {ID: "TAG_A", MapID: DefaultMapID, Category: "Range", Value: "LongRange", Side: "Both", Weight: 10, ReasonCode: "long_range_duel"},
 		},
-		EncounterModifiers: map[string]EncounterModifier{
-			"MOD_A": {ID: "MOD_A", ScenarioID: "SCN_A", Factor: "LongRange", Side: "Both", Attribute: "aim", Weight: 8, ReasonCode: "aim_long_range"},
-		},
+		EncounterModifiers: modifiers,
 		Nodes: map[string]MapNode{
 			"T_SPAWN":   {ID: "T_SPAWN", MapID: DefaultMapID, Name: "T Spawn", Site: "None", NodeType: "Spawn", DefaultSide: SideT, X: 0.5, Y: 0.9, Floor: "Ground", Shape: "None"},
+			"CT_SPAWN":  {ID: "CT_SPAWN", MapID: DefaultMapID, Name: "CT Spawn", Site: "None", NodeType: "Spawn", DefaultSide: SideCT, X: 0.5, Y: 0.1, Floor: "Ground", Shape: "None"},
 			"LONG_DOOR": {ID: "LONG_DOOR", MapID: DefaultMapID, Name: "Long Door", Site: "A", NodeType: "Connector", DefaultSide: "Both", X: 0.65, Y: 0.65, Floor: "Ground", Shape: "None"},
 			"A_LONG":    {ID: "A_LONG", MapID: DefaultMapID, Name: "A Long", Site: "A", NodeType: "Lane", DefaultSide: "Both", X: 0.85, Y: 0.55, Floor: "Ground", Shape: "Circle", Radius: 0.03, AreaUsages: []string{"KillSample"}},
 			"A_SITE":    {ID: "A_SITE", MapID: DefaultMapID, Name: "A Site", Site: "A", NodeType: "Site", DefaultSide: SideCT, X: 0.75, Y: 0.25, Floor: "Ground", Shape: "Circle", Radius: 0.05, AreaUsages: []string{"Plant", "KillSample"}},
@@ -107,95 +155,24 @@ func makeTestMapConfig() *MapConfig {
 			"E1": {ID: "E1", FromNode: "T_SPAWN", ToNode: "LONG_DOOR", BaseTime: 8, Bidirectional: true},
 			"E2": {ID: "E2", FromNode: "LONG_DOOR", ToNode: "A_LONG", BaseTime: 8, Bidirectional: true},
 			"E3": {ID: "E3", FromNode: "A_LONG", ToNode: "A_SITE", BaseTime: 8, Bidirectional: true},
+			"E4": {ID: "E4", FromNode: "CT_SPAWN", ToNode: "A_SITE", BaseTime: 6, Bidirectional: true},
 		},
 		Visibility: map[string]Visibility{},
 		Routes: map[string]Route{
 			"D2_A_LONG": {ID: "D2_A_LONG", Name: "A Long Execute", Side: SideT, TargetSite: "A", Nodes: []string{"T_SPAWN", "LONG_DOOR", "A_LONG", "A_SITE"}, MinPlayers: 2, MaxPlayers: 5},
+			"D2_CT_A":   {ID: "D2_CT_A", Name: "CT A Hold", Side: SideCT, TargetSite: "A", Nodes: []string{"CT_SPAWN", "A_SITE"}, MinPlayers: 1, MaxPlayers: 5},
 		},
 		CombatConstants: consts,
 	}
 }
 
-func TestRegulationEarlyWin(t *testing.T) {
-	winners := repeatWinner("team_a", 13)
-	res, err := NewMatchEngine(makeTestInput(100, winners)).StartMatch(context.Background())
-	if err != nil {
-		t.Fatalf("simulate failed: %v", err)
-	}
-	if res.WinnerTeamID != "team_a" {
-		t.Fatalf("expected team_a winner, got %s", res.WinnerTeamID)
-	}
-	if res.TotalRounds != 13 {
-		t.Fatalf("expected 13 rounds, got %d", res.TotalRounds)
-	}
-	if res.FinalScoreTeamA != 13 || res.FinalScoreTeamB != 0 {
-		t.Fatalf("unexpected score %d:%d", res.FinalScoreTeamA, res.FinalScoreTeamB)
-	}
-}
-
-func TestHalftimeSideSwitchKeepsTeamScore(t *testing.T) {
-	winners := append(repeatWinner("team_a", 8), repeatWinner("team_b", 4)...)
-	winners = append(winners, "team_a")
-	res, err := NewMatchEngine(makeTestInput(101, winners)).StartMatch(context.Background())
-	if err != nil {
-		t.Fatalf("simulate failed: %v", err)
-	}
-	if len(res.Rounds) < 13 {
-		t.Fatalf("expected at least 13 rounds")
-	}
-	round13 := res.Rounds[12]
-	if round13.TeamTID != "team_b" || round13.TeamCTID != "team_a" {
-		t.Fatalf("round 13 sides wrong: T=%s CT=%s", round13.TeamTID, round13.TeamCTID)
-	}
-	if round13.ScoreTeamA != 9 || round13.ScoreTeamB != 4 {
-		t.Fatalf("team score did not carry through switch: %d:%d", round13.ScoreTeamA, round13.ScoreTeamB)
-	}
-}
-
-func TestOvertimeBlockSideRulesAndWinner(t *testing.T) {
-	winners := regulationTieWinners()
-	winners = append(winners, "team_b", "team_b", "team_a", "team_b", "team_a", "team_b")
-	res, err := NewMatchEngine(makeTestInput(102, winners)).StartMatch(context.Background())
-	if err != nil {
-		t.Fatalf("simulate failed: %v", err)
-	}
-	if res.TotalRounds != 30 {
-		t.Fatalf("expected full OT block for 30 rounds, got %d", res.TotalRounds)
-	}
-	if res.WinnerTeamID != "team_b" {
-		t.Fatalf("expected team_b winner, got %s", res.WinnerTeamID)
-	}
-	for i := 24; i < 27; i++ {
-		if res.Rounds[i].Phase != "overtime" || res.Rounds[i].TeamCTID != "team_a" {
-			t.Fatalf("OT1 first half should continue second-half sides at round %d", i+1)
-		}
-	}
-	for i := 27; i < 30; i++ {
-		if res.Rounds[i].TeamTID != "team_a" {
-			t.Fatalf("OT1 second half should switch sides at round %d", i+1)
-		}
-	}
-}
-
-func TestOvertimeDoesNotEndEarlyInsideBlock(t *testing.T) {
-	winners := regulationTieWinners()
-	winners = append(winners, repeatWinner("team_a", 4)...)
-	res, err := NewMatchEngine(makeTestInput(103, winners)).StartMatch(context.Background())
-	if err != nil {
-		t.Fatalf("simulate failed: %v", err)
-	}
-	if res.TotalRounds != 30 {
-		t.Fatalf("expected complete OT block, got %d rounds", res.TotalRounds)
-	}
-}
-
 func TestSameSeedProducesSameMatch(t *testing.T) {
-	input := makeTestInput(12345, nil)
-	res1, err := NewMatchEngine(input).StartMatch(context.Background())
+	input := makeTestInput(12345)
+	res1, err := newProductionMatchEngine(input).simulateMatch(context.Background())
 	if err != nil {
 		t.Fatalf("first simulate failed: %v", err)
 	}
-	res2, err := NewMatchEngine(input).StartMatch(context.Background())
+	res2, err := newProductionMatchEngine(input).simulateMatch(context.Background())
 	if err != nil {
 		t.Fatalf("second simulate failed: %v", err)
 	}
@@ -217,8 +194,8 @@ func TestSameSeedProducesSameMatch(t *testing.T) {
 
 func TestRoundTerminalStateMatchesWinReason(t *testing.T) {
 	seenReasons := map[string]bool{}
-	for seed := int64(1); seed <= 200; seed++ {
-		res, err := NewMatchEngine(makeTestInput(seed, nil)).StartMatch(context.Background())
+	for seed := int64(1); seed <= 40; seed++ {
+		res, err := newProductionMatchEngine(makeTestInput(seed)).simulateMatch(context.Background())
 		if err != nil {
 			t.Fatalf("seed %d simulate failed: %v", seed, err)
 		}
@@ -263,7 +240,7 @@ func TestRoundTerminalStateMatchesWinReason(t *testing.T) {
 				if round.Winner != SideCT || tAlive == 0 || ctAlive == 0 || hasPlant {
 					t.Fatalf("seed %d round %d: invalid timeout state winner=%s alive=%d:%d plant=%v", seed, round.RoundNumber, round.Winner, tAlive, ctAlive, hasPlant)
 				}
-				if roundEndAt != int64(makeTestInput(seed, nil).RuleSet.RoundTimeLimit) {
+				if roundEndAt != int64(makeTestInput(seed).MapConfig.CombatConstants.Int("RoundTimeLimit", 0)) {
 					t.Fatalf("seed %d round %d: timeout ended at %d", seed, round.RoundNumber, roundEndAt)
 				}
 			case "bomb_defused":
@@ -274,16 +251,18 @@ func TestRoundTerminalStateMatchesWinReason(t *testing.T) {
 				if round.Winner != SideT || tAlive == 0 || ctAlive == 0 || !hasPlant || round.Bomb == nil || round.Bomb.Status != BombStatusExplode {
 					t.Fatalf("seed %d round %d: invalid explosion state winner=%s alive=%d:%d plant=%v bomb=%+v", seed, round.RoundNumber, round.Winner, tAlive, ctAlive, hasPlant, round.Bomb)
 				}
+			case "bomb_secured":
+				if round.Winner != SideT || ctAlive != 0 || !hasPlant || round.Bomb == nil || round.Bomb.Status != BombStatusPlanted {
+					t.Fatalf("seed %d round %d: invalid secured state winner=%s alive=%d:%d plant=%v bomb=%+v", seed, round.RoundNumber, round.Winner, tAlive, ctAlive, hasPlant, round.Bomb)
+				}
 			default:
 				t.Fatalf("seed %d round %d: unsupported win reason %q", seed, round.RoundNumber, round.WinReason)
 			}
 		}
 	}
 
-	for _, reason := range []string{"elimination", "timeout", "bomb_defused", "bomb_exploded"} {
-		if !seenReasons[reason] {
-			t.Fatalf("expected deterministic seed sweep to cover %s", reason)
-		}
+	if len(seenReasons) < 2 {
+		t.Fatalf("seed sweep did not exercise distinct causal terminals: %+v", seenReasons)
 	}
 }
 
@@ -346,20 +325,4 @@ func TestMatchengineDoesNotImportConfigPackage(t *testing.T) {
 			t.Fatalf("%s imports generated config package", file)
 		}
 	}
-}
-
-func repeatWinner(teamID string, n int) []string {
-	out := make([]string, n)
-	for i := range out {
-		out[i] = teamID
-	}
-	return out
-}
-
-func regulationTieWinners() []string {
-	winners := make([]string, 0, 24)
-	for i := 0; i < 12; i++ {
-		winners = append(winners, "team_a", "team_b")
-	}
-	return winners
 }

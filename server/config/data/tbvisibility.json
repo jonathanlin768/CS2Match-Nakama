@@ -1,13 +1,134 @@
 [
   {
-    "id": "VIS_CAT_A",
-    "from_node": "CATWALK",
+    "id": "VIS_PIT_A_LONG",
+    "from_node": "PIT",
+    "to_node": "A_LONG",
+    "visible": true,
+    "range": "Long",
+    "angle_advantage": "CT",
+    "elevation": "HighToLow",
+    "cover_modifier": -12,
+    "exposure_modifier": 14
+  },
+  {
+    "id": "VIS_A_SITE_A_LONG",
+    "from_node": "A_SITE",
+    "to_node": "A_LONG",
+    "visible": true,
+    "range": "Long",
+    "angle_advantage": "CT",
+    "elevation": "HighToLow",
+    "cover_modifier": -8,
+    "exposure_modifier": 12
+  },
+  {
+    "id": "VIS_A_LONG_PIT",
+    "from_node": "A_LONG",
+    "to_node": "PIT",
+    "visible": true,
+    "range": "Long",
+    "angle_advantage": "None",
+    "elevation": "LowToHigh",
+    "cover_modifier": -4,
+    "exposure_modifier": 14
+  },
+  {
+    "id": "VIS_CAR_MID",
+    "from_node": "CAR",
+    "to_node": "MID",
+    "visible": true,
+    "range": "Long",
+    "angle_advantage": "CT",
+    "elevation": "HighToLow",
+    "cover_modifier": -10,
+    "exposure_modifier": 13
+  },
+  {
+    "id": "VIS_CAR_CAT",
+    "from_node": "CAR",
+    "to_node": "CATWALK",
+    "visible": true,
+    "range": "Mid",
+    "angle_advantage": "CT",
+    "elevation": "Same",
+    "cover_modifier": -8,
+    "exposure_modifier": 12
+  },
+  {
+    "id": "VIS_CT_MID_MID",
+    "from_node": "CT_MID",
+    "to_node": "MID",
+    "visible": true,
+    "range": "Mid",
+    "angle_advantage": "CT",
+    "elevation": "Same",
+    "cover_modifier": -6,
+    "exposure_modifier": 11
+  },
+  {
+    "id": "VIS_SHORT_A_SITE",
+    "from_node": "SHORT",
     "to_node": "A_SITE",
     "visible": true,
     "range": "Mid",
     "angle_advantage": "T",
     "elevation": "HighToLow",
-    "cover_modifier": -8,
+    "cover_modifier": -4,
     "exposure_modifier": 12
+  },
+  {
+    "id": "VIS_A_SITE_SHORT",
+    "from_node": "A_SITE",
+    "to_node": "SHORT",
+    "visible": true,
+    "range": "Mid",
+    "angle_advantage": "CT",
+    "elevation": "LowToHigh",
+    "cover_modifier": -8,
+    "exposure_modifier": 11
+  },
+  {
+    "id": "VIS_B_SITE_TUNNEL",
+    "from_node": "B_SITE",
+    "to_node": "B_TUNNEL",
+    "visible": true,
+    "range": "Close",
+    "angle_advantage": "CT",
+    "elevation": "Same",
+    "cover_modifier": -10,
+    "exposure_modifier": 15
+  },
+  {
+    "id": "VIS_TUNNEL_B_SITE",
+    "from_node": "B_TUNNEL",
+    "to_node": "B_SITE",
+    "visible": true,
+    "range": "Close",
+    "angle_advantage": "T",
+    "elevation": "Same",
+    "cover_modifier": -4,
+    "exposure_modifier": 16
+  },
+  {
+    "id": "VIS_B_DOOR_B_SITE",
+    "from_node": "B_DOOR",
+    "to_node": "B_SITE",
+    "visible": true,
+    "range": "Close",
+    "angle_advantage": "CT",
+    "elevation": "Same",
+    "cover_modifier": -6,
+    "exposure_modifier": 10
+  },
+  {
+    "id": "VIS_MID_B_DOOR",
+    "from_node": "MID",
+    "to_node": "B_DOOR",
+    "visible": true,
+    "range": "Mid",
+    "angle_advantage": "None",
+    "elevation": "Same",
+    "cover_modifier": -3,
+    "exposure_modifier": 10
   }
 ]

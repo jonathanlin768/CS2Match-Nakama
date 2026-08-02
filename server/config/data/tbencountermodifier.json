@@ -1,11 +1,1190 @@
 [
   {
-    "id": "MOD_A_LONG_AIM",
-    "scenario_id": "SCN_A_LONG_ENTRY",
-    "factor": "LongRange",
+    "id": "W_SCN_A_LONG_OPENING_AIM",
+    "scenario_id": "SCN_A_LONG_OPENING",
+    "factor": "ScenarioWeight",
     "side": "Both",
     "attribute": "aim",
+    "weight": 28,
+    "reason_code": "WEIGHT_AIM"
+  },
+  {
+    "id": "W_SCN_A_LONG_OPENING_REACTION",
+    "scenario_id": "SCN_A_LONG_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "reaction",
+    "weight": 24,
+    "reason_code": "WEIGHT_REACTION"
+  },
+  {
+    "id": "W_SCN_A_LONG_OPENING_POSITIONING",
+    "scenario_id": "SCN_A_LONG_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "positioning",
+    "weight": 18,
+    "reason_code": "WEIGHT_POSITIONING"
+  },
+  {
+    "id": "W_SCN_A_LONG_OPENING_AWARENESS",
+    "scenario_id": "SCN_A_LONG_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "awareness",
     "weight": 8,
-    "reason_code": "aim_long_range"
+    "reason_code": "WEIGHT_AWARENESS"
+  },
+  {
+    "id": "W_SCN_A_LONG_OPENING_TEAMPLAY",
+    "scenario_id": "SCN_A_LONG_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "teamplay",
+    "weight": 8,
+    "reason_code": "WEIGHT_TEAMPLAY"
+  },
+  {
+    "id": "W_SCN_A_LONG_OPENING_UTILITY",
+    "scenario_id": "SCN_A_LONG_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "utility",
+    "weight": 6,
+    "reason_code": "WEIGHT_UTILITY"
+  },
+  {
+    "id": "W_SCN_A_LONG_OPENING_COMPOSURE",
+    "scenario_id": "SCN_A_LONG_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "composure",
+    "weight": 4,
+    "reason_code": "WEIGHT_COMPOSURE"
+  },
+  {
+    "id": "W_SCN_A_LONG_OPENING_MOBILITY",
+    "scenario_id": "SCN_A_LONG_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "mobility",
+    "weight": 2,
+    "reason_code": "WEIGHT_MOBILITY"
+  },
+  {
+    "id": "W_SCN_A_LONG_OPENING_ENDURANCE",
+    "scenario_id": "SCN_A_LONG_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "endurance",
+    "weight": 1,
+    "reason_code": "WEIGHT_ENDURANCE"
+  },
+  {
+    "id": "W_SCN_A_LONG_OPENING_DISCIPLINE",
+    "scenario_id": "SCN_A_LONG_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "discipline",
+    "weight": 1,
+    "reason_code": "WEIGHT_DISCIPLINE"
+  },
+  {
+    "id": "W_SCN_A_SHORT_OPENING_AIM",
+    "scenario_id": "SCN_A_SHORT_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "aim",
+    "weight": 28,
+    "reason_code": "WEIGHT_AIM"
+  },
+  {
+    "id": "W_SCN_A_SHORT_OPENING_REACTION",
+    "scenario_id": "SCN_A_SHORT_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "reaction",
+    "weight": 24,
+    "reason_code": "WEIGHT_REACTION"
+  },
+  {
+    "id": "W_SCN_A_SHORT_OPENING_POSITIONING",
+    "scenario_id": "SCN_A_SHORT_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "positioning",
+    "weight": 18,
+    "reason_code": "WEIGHT_POSITIONING"
+  },
+  {
+    "id": "W_SCN_A_SHORT_OPENING_AWARENESS",
+    "scenario_id": "SCN_A_SHORT_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "awareness",
+    "weight": 8,
+    "reason_code": "WEIGHT_AWARENESS"
+  },
+  {
+    "id": "W_SCN_A_SHORT_OPENING_TEAMPLAY",
+    "scenario_id": "SCN_A_SHORT_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "teamplay",
+    "weight": 8,
+    "reason_code": "WEIGHT_TEAMPLAY"
+  },
+  {
+    "id": "W_SCN_A_SHORT_OPENING_UTILITY",
+    "scenario_id": "SCN_A_SHORT_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "utility",
+    "weight": 6,
+    "reason_code": "WEIGHT_UTILITY"
+  },
+  {
+    "id": "W_SCN_A_SHORT_OPENING_COMPOSURE",
+    "scenario_id": "SCN_A_SHORT_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "composure",
+    "weight": 4,
+    "reason_code": "WEIGHT_COMPOSURE"
+  },
+  {
+    "id": "W_SCN_A_SHORT_OPENING_MOBILITY",
+    "scenario_id": "SCN_A_SHORT_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "mobility",
+    "weight": 2,
+    "reason_code": "WEIGHT_MOBILITY"
+  },
+  {
+    "id": "W_SCN_A_SHORT_OPENING_ENDURANCE",
+    "scenario_id": "SCN_A_SHORT_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "endurance",
+    "weight": 1,
+    "reason_code": "WEIGHT_ENDURANCE"
+  },
+  {
+    "id": "W_SCN_A_SHORT_OPENING_DISCIPLINE",
+    "scenario_id": "SCN_A_SHORT_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "discipline",
+    "weight": 1,
+    "reason_code": "WEIGHT_DISCIPLINE"
+  },
+  {
+    "id": "W_SCN_B_TUNNEL_OPENING_AIM",
+    "scenario_id": "SCN_B_TUNNEL_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "aim",
+    "weight": 28,
+    "reason_code": "WEIGHT_AIM"
+  },
+  {
+    "id": "W_SCN_B_TUNNEL_OPENING_REACTION",
+    "scenario_id": "SCN_B_TUNNEL_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "reaction",
+    "weight": 24,
+    "reason_code": "WEIGHT_REACTION"
+  },
+  {
+    "id": "W_SCN_B_TUNNEL_OPENING_POSITIONING",
+    "scenario_id": "SCN_B_TUNNEL_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "positioning",
+    "weight": 18,
+    "reason_code": "WEIGHT_POSITIONING"
+  },
+  {
+    "id": "W_SCN_B_TUNNEL_OPENING_AWARENESS",
+    "scenario_id": "SCN_B_TUNNEL_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "awareness",
+    "weight": 8,
+    "reason_code": "WEIGHT_AWARENESS"
+  },
+  {
+    "id": "W_SCN_B_TUNNEL_OPENING_TEAMPLAY",
+    "scenario_id": "SCN_B_TUNNEL_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "teamplay",
+    "weight": 8,
+    "reason_code": "WEIGHT_TEAMPLAY"
+  },
+  {
+    "id": "W_SCN_B_TUNNEL_OPENING_UTILITY",
+    "scenario_id": "SCN_B_TUNNEL_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "utility",
+    "weight": 6,
+    "reason_code": "WEIGHT_UTILITY"
+  },
+  {
+    "id": "W_SCN_B_TUNNEL_OPENING_COMPOSURE",
+    "scenario_id": "SCN_B_TUNNEL_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "composure",
+    "weight": 4,
+    "reason_code": "WEIGHT_COMPOSURE"
+  },
+  {
+    "id": "W_SCN_B_TUNNEL_OPENING_MOBILITY",
+    "scenario_id": "SCN_B_TUNNEL_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "mobility",
+    "weight": 2,
+    "reason_code": "WEIGHT_MOBILITY"
+  },
+  {
+    "id": "W_SCN_B_TUNNEL_OPENING_ENDURANCE",
+    "scenario_id": "SCN_B_TUNNEL_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "endurance",
+    "weight": 1,
+    "reason_code": "WEIGHT_ENDURANCE"
+  },
+  {
+    "id": "W_SCN_B_TUNNEL_OPENING_DISCIPLINE",
+    "scenario_id": "SCN_B_TUNNEL_OPENING",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "discipline",
+    "weight": 1,
+    "reason_code": "WEIGHT_DISCIPLINE"
+  },
+  {
+    "id": "W_SCN_MID_CONTROL_AIM",
+    "scenario_id": "SCN_MID_CONTROL",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "aim",
+    "weight": 16,
+    "reason_code": "WEIGHT_AIM"
+  },
+  {
+    "id": "W_SCN_MID_CONTROL_REACTION",
+    "scenario_id": "SCN_MID_CONTROL",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "reaction",
+    "weight": 12,
+    "reason_code": "WEIGHT_REACTION"
+  },
+  {
+    "id": "W_SCN_MID_CONTROL_POSITIONING",
+    "scenario_id": "SCN_MID_CONTROL",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "positioning",
+    "weight": 14,
+    "reason_code": "WEIGHT_POSITIONING"
+  },
+  {
+    "id": "W_SCN_MID_CONTROL_AWARENESS",
+    "scenario_id": "SCN_MID_CONTROL",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "awareness",
+    "weight": 22,
+    "reason_code": "WEIGHT_AWARENESS"
+  },
+  {
+    "id": "W_SCN_MID_CONTROL_TEAMPLAY",
+    "scenario_id": "SCN_MID_CONTROL",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "teamplay",
+    "weight": 12,
+    "reason_code": "WEIGHT_TEAMPLAY"
+  },
+  {
+    "id": "W_SCN_MID_CONTROL_UTILITY",
+    "scenario_id": "SCN_MID_CONTROL",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "utility",
+    "weight": 8,
+    "reason_code": "WEIGHT_UTILITY"
+  },
+  {
+    "id": "W_SCN_MID_CONTROL_COMPOSURE",
+    "scenario_id": "SCN_MID_CONTROL",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "composure",
+    "weight": 6,
+    "reason_code": "WEIGHT_COMPOSURE"
+  },
+  {
+    "id": "W_SCN_MID_CONTROL_MOBILITY",
+    "scenario_id": "SCN_MID_CONTROL",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "mobility",
+    "weight": 3,
+    "reason_code": "WEIGHT_MOBILITY"
+  },
+  {
+    "id": "W_SCN_MID_CONTROL_ENDURANCE",
+    "scenario_id": "SCN_MID_CONTROL",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "endurance",
+    "weight": 2,
+    "reason_code": "WEIGHT_ENDURANCE"
+  },
+  {
+    "id": "W_SCN_MID_CONTROL_DISCIPLINE",
+    "scenario_id": "SCN_MID_CONTROL",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "discipline",
+    "weight": 5,
+    "reason_code": "WEIGHT_DISCIPLINE"
+  },
+  {
+    "id": "W_SCN_A_SITE_ENTRY_AIM",
+    "scenario_id": "SCN_A_SITE_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "aim",
+    "weight": 20,
+    "reason_code": "WEIGHT_AIM"
+  },
+  {
+    "id": "W_SCN_A_SITE_ENTRY_REACTION",
+    "scenario_id": "SCN_A_SITE_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "reaction",
+    "weight": 18,
+    "reason_code": "WEIGHT_REACTION"
+  },
+  {
+    "id": "W_SCN_A_SITE_ENTRY_POSITIONING",
+    "scenario_id": "SCN_A_SITE_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "positioning",
+    "weight": 10,
+    "reason_code": "WEIGHT_POSITIONING"
+  },
+  {
+    "id": "W_SCN_A_SITE_ENTRY_AWARENESS",
+    "scenario_id": "SCN_A_SITE_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "awareness",
+    "weight": 6,
+    "reason_code": "WEIGHT_AWARENESS"
+  },
+  {
+    "id": "W_SCN_A_SITE_ENTRY_TEAMPLAY",
+    "scenario_id": "SCN_A_SITE_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "teamplay",
+    "weight": 18,
+    "reason_code": "WEIGHT_TEAMPLAY"
+  },
+  {
+    "id": "W_SCN_A_SITE_ENTRY_UTILITY",
+    "scenario_id": "SCN_A_SITE_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "utility",
+    "weight": 16,
+    "reason_code": "WEIGHT_UTILITY"
+  },
+  {
+    "id": "W_SCN_A_SITE_ENTRY_COMPOSURE",
+    "scenario_id": "SCN_A_SITE_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "composure",
+    "weight": 6,
+    "reason_code": "WEIGHT_COMPOSURE"
+  },
+  {
+    "id": "W_SCN_A_SITE_ENTRY_MOBILITY",
+    "scenario_id": "SCN_A_SITE_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "mobility",
+    "weight": 3,
+    "reason_code": "WEIGHT_MOBILITY"
+  },
+  {
+    "id": "W_SCN_A_SITE_ENTRY_ENDURANCE",
+    "scenario_id": "SCN_A_SITE_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "endurance",
+    "weight": 1,
+    "reason_code": "WEIGHT_ENDURANCE"
+  },
+  {
+    "id": "W_SCN_A_SITE_ENTRY_DISCIPLINE",
+    "scenario_id": "SCN_A_SITE_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "discipline",
+    "weight": 2,
+    "reason_code": "WEIGHT_DISCIPLINE"
+  },
+  {
+    "id": "W_SCN_A_SHORT_ENTRY_AIM",
+    "scenario_id": "SCN_A_SHORT_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "aim",
+    "weight": 20,
+    "reason_code": "WEIGHT_AIM"
+  },
+  {
+    "id": "W_SCN_A_SHORT_ENTRY_REACTION",
+    "scenario_id": "SCN_A_SHORT_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "reaction",
+    "weight": 18,
+    "reason_code": "WEIGHT_REACTION"
+  },
+  {
+    "id": "W_SCN_A_SHORT_ENTRY_POSITIONING",
+    "scenario_id": "SCN_A_SHORT_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "positioning",
+    "weight": 10,
+    "reason_code": "WEIGHT_POSITIONING"
+  },
+  {
+    "id": "W_SCN_A_SHORT_ENTRY_AWARENESS",
+    "scenario_id": "SCN_A_SHORT_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "awareness",
+    "weight": 6,
+    "reason_code": "WEIGHT_AWARENESS"
+  },
+  {
+    "id": "W_SCN_A_SHORT_ENTRY_TEAMPLAY",
+    "scenario_id": "SCN_A_SHORT_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "teamplay",
+    "weight": 18,
+    "reason_code": "WEIGHT_TEAMPLAY"
+  },
+  {
+    "id": "W_SCN_A_SHORT_ENTRY_UTILITY",
+    "scenario_id": "SCN_A_SHORT_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "utility",
+    "weight": 16,
+    "reason_code": "WEIGHT_UTILITY"
+  },
+  {
+    "id": "W_SCN_A_SHORT_ENTRY_COMPOSURE",
+    "scenario_id": "SCN_A_SHORT_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "composure",
+    "weight": 6,
+    "reason_code": "WEIGHT_COMPOSURE"
+  },
+  {
+    "id": "W_SCN_A_SHORT_ENTRY_MOBILITY",
+    "scenario_id": "SCN_A_SHORT_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "mobility",
+    "weight": 3,
+    "reason_code": "WEIGHT_MOBILITY"
+  },
+  {
+    "id": "W_SCN_A_SHORT_ENTRY_ENDURANCE",
+    "scenario_id": "SCN_A_SHORT_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "endurance",
+    "weight": 1,
+    "reason_code": "WEIGHT_ENDURANCE"
+  },
+  {
+    "id": "W_SCN_A_SHORT_ENTRY_DISCIPLINE",
+    "scenario_id": "SCN_A_SHORT_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "discipline",
+    "weight": 2,
+    "reason_code": "WEIGHT_DISCIPLINE"
+  },
+  {
+    "id": "W_SCN_B_SITE_ENTRY_AIM",
+    "scenario_id": "SCN_B_SITE_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "aim",
+    "weight": 20,
+    "reason_code": "WEIGHT_AIM"
+  },
+  {
+    "id": "W_SCN_B_SITE_ENTRY_REACTION",
+    "scenario_id": "SCN_B_SITE_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "reaction",
+    "weight": 18,
+    "reason_code": "WEIGHT_REACTION"
+  },
+  {
+    "id": "W_SCN_B_SITE_ENTRY_POSITIONING",
+    "scenario_id": "SCN_B_SITE_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "positioning",
+    "weight": 10,
+    "reason_code": "WEIGHT_POSITIONING"
+  },
+  {
+    "id": "W_SCN_B_SITE_ENTRY_AWARENESS",
+    "scenario_id": "SCN_B_SITE_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "awareness",
+    "weight": 6,
+    "reason_code": "WEIGHT_AWARENESS"
+  },
+  {
+    "id": "W_SCN_B_SITE_ENTRY_TEAMPLAY",
+    "scenario_id": "SCN_B_SITE_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "teamplay",
+    "weight": 18,
+    "reason_code": "WEIGHT_TEAMPLAY"
+  },
+  {
+    "id": "W_SCN_B_SITE_ENTRY_UTILITY",
+    "scenario_id": "SCN_B_SITE_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "utility",
+    "weight": 16,
+    "reason_code": "WEIGHT_UTILITY"
+  },
+  {
+    "id": "W_SCN_B_SITE_ENTRY_COMPOSURE",
+    "scenario_id": "SCN_B_SITE_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "composure",
+    "weight": 6,
+    "reason_code": "WEIGHT_COMPOSURE"
+  },
+  {
+    "id": "W_SCN_B_SITE_ENTRY_MOBILITY",
+    "scenario_id": "SCN_B_SITE_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "mobility",
+    "weight": 3,
+    "reason_code": "WEIGHT_MOBILITY"
+  },
+  {
+    "id": "W_SCN_B_SITE_ENTRY_ENDURANCE",
+    "scenario_id": "SCN_B_SITE_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "endurance",
+    "weight": 1,
+    "reason_code": "WEIGHT_ENDURANCE"
+  },
+  {
+    "id": "W_SCN_B_SITE_ENTRY_DISCIPLINE",
+    "scenario_id": "SCN_B_SITE_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "discipline",
+    "weight": 2,
+    "reason_code": "WEIGHT_DISCIPLINE"
+  },
+  {
+    "id": "W_SCN_MID_TO_B_ENTRY_AIM",
+    "scenario_id": "SCN_MID_TO_B_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "aim",
+    "weight": 16,
+    "reason_code": "WEIGHT_AIM"
+  },
+  {
+    "id": "W_SCN_MID_TO_B_ENTRY_REACTION",
+    "scenario_id": "SCN_MID_TO_B_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "reaction",
+    "weight": 12,
+    "reason_code": "WEIGHT_REACTION"
+  },
+  {
+    "id": "W_SCN_MID_TO_B_ENTRY_POSITIONING",
+    "scenario_id": "SCN_MID_TO_B_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "positioning",
+    "weight": 14,
+    "reason_code": "WEIGHT_POSITIONING"
+  },
+  {
+    "id": "W_SCN_MID_TO_B_ENTRY_AWARENESS",
+    "scenario_id": "SCN_MID_TO_B_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "awareness",
+    "weight": 22,
+    "reason_code": "WEIGHT_AWARENESS"
+  },
+  {
+    "id": "W_SCN_MID_TO_B_ENTRY_TEAMPLAY",
+    "scenario_id": "SCN_MID_TO_B_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "teamplay",
+    "weight": 12,
+    "reason_code": "WEIGHT_TEAMPLAY"
+  },
+  {
+    "id": "W_SCN_MID_TO_B_ENTRY_UTILITY",
+    "scenario_id": "SCN_MID_TO_B_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "utility",
+    "weight": 8,
+    "reason_code": "WEIGHT_UTILITY"
+  },
+  {
+    "id": "W_SCN_MID_TO_B_ENTRY_COMPOSURE",
+    "scenario_id": "SCN_MID_TO_B_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "composure",
+    "weight": 6,
+    "reason_code": "WEIGHT_COMPOSURE"
+  },
+  {
+    "id": "W_SCN_MID_TO_B_ENTRY_MOBILITY",
+    "scenario_id": "SCN_MID_TO_B_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "mobility",
+    "weight": 3,
+    "reason_code": "WEIGHT_MOBILITY"
+  },
+  {
+    "id": "W_SCN_MID_TO_B_ENTRY_ENDURANCE",
+    "scenario_id": "SCN_MID_TO_B_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "endurance",
+    "weight": 2,
+    "reason_code": "WEIGHT_ENDURANCE"
+  },
+  {
+    "id": "W_SCN_MID_TO_B_ENTRY_DISCIPLINE",
+    "scenario_id": "SCN_MID_TO_B_ENTRY",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "discipline",
+    "weight": 5,
+    "reason_code": "WEIGHT_DISCIPLINE"
+  },
+  {
+    "id": "W_SCN_A_RETAKE_AIM",
+    "scenario_id": "SCN_A_RETAKE",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "aim",
+    "weight": 18,
+    "reason_code": "WEIGHT_AIM"
+  },
+  {
+    "id": "W_SCN_A_RETAKE_REACTION",
+    "scenario_id": "SCN_A_RETAKE",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "reaction",
+    "weight": 16,
+    "reason_code": "WEIGHT_REACTION"
+  },
+  {
+    "id": "W_SCN_A_RETAKE_POSITIONING",
+    "scenario_id": "SCN_A_RETAKE",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "positioning",
+    "weight": 14,
+    "reason_code": "WEIGHT_POSITIONING"
+  },
+  {
+    "id": "W_SCN_A_RETAKE_AWARENESS",
+    "scenario_id": "SCN_A_RETAKE",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "awareness",
+    "weight": 14,
+    "reason_code": "WEIGHT_AWARENESS"
+  },
+  {
+    "id": "W_SCN_A_RETAKE_TEAMPLAY",
+    "scenario_id": "SCN_A_RETAKE",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "teamplay",
+    "weight": 14,
+    "reason_code": "WEIGHT_TEAMPLAY"
+  },
+  {
+    "id": "W_SCN_A_RETAKE_UTILITY",
+    "scenario_id": "SCN_A_RETAKE",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "utility",
+    "weight": 8,
+    "reason_code": "WEIGHT_UTILITY"
+  },
+  {
+    "id": "W_SCN_A_RETAKE_COMPOSURE",
+    "scenario_id": "SCN_A_RETAKE",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "composure",
+    "weight": 12,
+    "reason_code": "WEIGHT_COMPOSURE"
+  },
+  {
+    "id": "W_SCN_A_RETAKE_MOBILITY",
+    "scenario_id": "SCN_A_RETAKE",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "mobility",
+    "weight": 1,
+    "reason_code": "WEIGHT_MOBILITY"
+  },
+  {
+    "id": "W_SCN_A_RETAKE_ENDURANCE",
+    "scenario_id": "SCN_A_RETAKE",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "endurance",
+    "weight": 1,
+    "reason_code": "WEIGHT_ENDURANCE"
+  },
+  {
+    "id": "W_SCN_A_RETAKE_DISCIPLINE",
+    "scenario_id": "SCN_A_RETAKE",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "discipline",
+    "weight": 2,
+    "reason_code": "WEIGHT_DISCIPLINE"
+  },
+  {
+    "id": "W_SCN_B_RETAKE_AIM",
+    "scenario_id": "SCN_B_RETAKE",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "aim",
+    "weight": 18,
+    "reason_code": "WEIGHT_AIM"
+  },
+  {
+    "id": "W_SCN_B_RETAKE_REACTION",
+    "scenario_id": "SCN_B_RETAKE",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "reaction",
+    "weight": 16,
+    "reason_code": "WEIGHT_REACTION"
+  },
+  {
+    "id": "W_SCN_B_RETAKE_POSITIONING",
+    "scenario_id": "SCN_B_RETAKE",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "positioning",
+    "weight": 14,
+    "reason_code": "WEIGHT_POSITIONING"
+  },
+  {
+    "id": "W_SCN_B_RETAKE_AWARENESS",
+    "scenario_id": "SCN_B_RETAKE",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "awareness",
+    "weight": 14,
+    "reason_code": "WEIGHT_AWARENESS"
+  },
+  {
+    "id": "W_SCN_B_RETAKE_TEAMPLAY",
+    "scenario_id": "SCN_B_RETAKE",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "teamplay",
+    "weight": 14,
+    "reason_code": "WEIGHT_TEAMPLAY"
+  },
+  {
+    "id": "W_SCN_B_RETAKE_UTILITY",
+    "scenario_id": "SCN_B_RETAKE",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "utility",
+    "weight": 8,
+    "reason_code": "WEIGHT_UTILITY"
+  },
+  {
+    "id": "W_SCN_B_RETAKE_COMPOSURE",
+    "scenario_id": "SCN_B_RETAKE",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "composure",
+    "weight": 12,
+    "reason_code": "WEIGHT_COMPOSURE"
+  },
+  {
+    "id": "W_SCN_B_RETAKE_MOBILITY",
+    "scenario_id": "SCN_B_RETAKE",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "mobility",
+    "weight": 1,
+    "reason_code": "WEIGHT_MOBILITY"
+  },
+  {
+    "id": "W_SCN_B_RETAKE_ENDURANCE",
+    "scenario_id": "SCN_B_RETAKE",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "endurance",
+    "weight": 1,
+    "reason_code": "WEIGHT_ENDURANCE"
+  },
+  {
+    "id": "W_SCN_B_RETAKE_DISCIPLINE",
+    "scenario_id": "SCN_B_RETAKE",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "discipline",
+    "weight": 2,
+    "reason_code": "WEIGHT_DISCIPLINE"
+  },
+  {
+    "id": "W_SCN_A_BOMB_RESOLUTION_AIM",
+    "scenario_id": "SCN_A_BOMB_RESOLUTION",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "aim",
+    "weight": 18,
+    "reason_code": "WEIGHT_AIM"
+  },
+  {
+    "id": "W_SCN_A_BOMB_RESOLUTION_REACTION",
+    "scenario_id": "SCN_A_BOMB_RESOLUTION",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "reaction",
+    "weight": 16,
+    "reason_code": "WEIGHT_REACTION"
+  },
+  {
+    "id": "W_SCN_A_BOMB_RESOLUTION_POSITIONING",
+    "scenario_id": "SCN_A_BOMB_RESOLUTION",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "positioning",
+    "weight": 14,
+    "reason_code": "WEIGHT_POSITIONING"
+  },
+  {
+    "id": "W_SCN_A_BOMB_RESOLUTION_AWARENESS",
+    "scenario_id": "SCN_A_BOMB_RESOLUTION",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "awareness",
+    "weight": 14,
+    "reason_code": "WEIGHT_AWARENESS"
+  },
+  {
+    "id": "W_SCN_A_BOMB_RESOLUTION_TEAMPLAY",
+    "scenario_id": "SCN_A_BOMB_RESOLUTION",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "teamplay",
+    "weight": 14,
+    "reason_code": "WEIGHT_TEAMPLAY"
+  },
+  {
+    "id": "W_SCN_A_BOMB_RESOLUTION_UTILITY",
+    "scenario_id": "SCN_A_BOMB_RESOLUTION",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "utility",
+    "weight": 8,
+    "reason_code": "WEIGHT_UTILITY"
+  },
+  {
+    "id": "W_SCN_A_BOMB_RESOLUTION_COMPOSURE",
+    "scenario_id": "SCN_A_BOMB_RESOLUTION",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "composure",
+    "weight": 12,
+    "reason_code": "WEIGHT_COMPOSURE"
+  },
+  {
+    "id": "W_SCN_A_BOMB_RESOLUTION_MOBILITY",
+    "scenario_id": "SCN_A_BOMB_RESOLUTION",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "mobility",
+    "weight": 1,
+    "reason_code": "WEIGHT_MOBILITY"
+  },
+  {
+    "id": "W_SCN_A_BOMB_RESOLUTION_ENDURANCE",
+    "scenario_id": "SCN_A_BOMB_RESOLUTION",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "endurance",
+    "weight": 1,
+    "reason_code": "WEIGHT_ENDURANCE"
+  },
+  {
+    "id": "W_SCN_A_BOMB_RESOLUTION_DISCIPLINE",
+    "scenario_id": "SCN_A_BOMB_RESOLUTION",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "discipline",
+    "weight": 2,
+    "reason_code": "WEIGHT_DISCIPLINE"
+  },
+  {
+    "id": "W_SCN_B_BOMB_RESOLUTION_AIM",
+    "scenario_id": "SCN_B_BOMB_RESOLUTION",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "aim",
+    "weight": 18,
+    "reason_code": "WEIGHT_AIM"
+  },
+  {
+    "id": "W_SCN_B_BOMB_RESOLUTION_REACTION",
+    "scenario_id": "SCN_B_BOMB_RESOLUTION",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "reaction",
+    "weight": 16,
+    "reason_code": "WEIGHT_REACTION"
+  },
+  {
+    "id": "W_SCN_B_BOMB_RESOLUTION_POSITIONING",
+    "scenario_id": "SCN_B_BOMB_RESOLUTION",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "positioning",
+    "weight": 14,
+    "reason_code": "WEIGHT_POSITIONING"
+  },
+  {
+    "id": "W_SCN_B_BOMB_RESOLUTION_AWARENESS",
+    "scenario_id": "SCN_B_BOMB_RESOLUTION",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "awareness",
+    "weight": 14,
+    "reason_code": "WEIGHT_AWARENESS"
+  },
+  {
+    "id": "W_SCN_B_BOMB_RESOLUTION_TEAMPLAY",
+    "scenario_id": "SCN_B_BOMB_RESOLUTION",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "teamplay",
+    "weight": 14,
+    "reason_code": "WEIGHT_TEAMPLAY"
+  },
+  {
+    "id": "W_SCN_B_BOMB_RESOLUTION_UTILITY",
+    "scenario_id": "SCN_B_BOMB_RESOLUTION",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "utility",
+    "weight": 8,
+    "reason_code": "WEIGHT_UTILITY"
+  },
+  {
+    "id": "W_SCN_B_BOMB_RESOLUTION_COMPOSURE",
+    "scenario_id": "SCN_B_BOMB_RESOLUTION",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "composure",
+    "weight": 12,
+    "reason_code": "WEIGHT_COMPOSURE"
+  },
+  {
+    "id": "W_SCN_B_BOMB_RESOLUTION_MOBILITY",
+    "scenario_id": "SCN_B_BOMB_RESOLUTION",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "mobility",
+    "weight": 1,
+    "reason_code": "WEIGHT_MOBILITY"
+  },
+  {
+    "id": "W_SCN_B_BOMB_RESOLUTION_ENDURANCE",
+    "scenario_id": "SCN_B_BOMB_RESOLUTION",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "endurance",
+    "weight": 1,
+    "reason_code": "WEIGHT_ENDURANCE"
+  },
+  {
+    "id": "W_SCN_B_BOMB_RESOLUTION_DISCIPLINE",
+    "scenario_id": "SCN_B_BOMB_RESOLUTION",
+    "factor": "ScenarioWeight",
+    "side": "Both",
+    "attribute": "discipline",
+    "weight": 2,
+    "reason_code": "WEIGHT_DISCIPLINE"
+  },
+  {
+    "id": "MOD_A_LONG_CT_HOLD",
+    "scenario_id": "SCN_A_LONG_OPENING",
+    "factor": "CTHoldAngle",
+    "side": "CT",
+    "attribute": "positioning",
+    "weight": 5,
+    "reason_code": "CT_HOLD_ANGLE"
+  },
+  {
+    "id": "MOD_A_SHORT_SYNC",
+    "scenario_id": "SCN_A_SHORT_OPENING",
+    "factor": "SyncPeek",
+    "side": "T",
+    "attribute": "teamplay",
+    "weight": 20,
+    "reason_code": "SYNC_PEEK"
+  },
+  {
+    "id": "MOD_B_TUNNEL_UTILITY",
+    "scenario_id": "SCN_B_TUNNEL_OPENING",
+    "factor": "UtilityExecution",
+    "side": "T",
+    "attribute": "utility",
+    "weight": 20,
+    "reason_code": "UTILITY_EXECUTION"
+  },
+  {
+    "id": "MOD_MID_INTEL",
+    "scenario_id": "SCN_MID_CONTROL",
+    "factor": "IntelControl",
+    "side": "Both",
+    "attribute": "awareness",
+    "weight": 7,
+    "reason_code": "MID_INTEL"
+  },
+  {
+    "id": "MOD_A_ENTRY_PRESSURE",
+    "scenario_id": "SCN_A_SITE_ENTRY",
+    "factor": "SitePressure",
+    "side": "T",
+    "attribute": "teamplay",
+    "weight": 20,
+    "reason_code": "SITE_PRESSURE"
+  },
+  {
+    "id": "MOD_A_SHORT_ENTRY_SYNC",
+    "scenario_id": "SCN_A_SHORT_ENTRY",
+    "factor": "SyncPeek",
+    "side": "T",
+    "attribute": "teamplay",
+    "weight": 20,
+    "reason_code": "SYNC_PEEK"
+  },
+  {
+    "id": "MOD_B_ENTRY_REACTION",
+    "scenario_id": "SCN_B_SITE_ENTRY",
+    "factor": "CloseExecute",
+    "side": "T",
+    "attribute": "reaction",
+    "weight": 20,
+    "reason_code": "CLOSE_EXECUTE"
+  },
+  {
+    "id": "MOD_MID_B_ROTATE_RISK",
+    "scenario_id": "SCN_MID_TO_B_ENTRY",
+    "factor": "RotateRisk",
+    "side": "T",
+    "attribute": "discipline",
+    "weight": -5,
+    "reason_code": "ROTATE_RISK"
+  },
+  {
+    "id": "MOD_A_RETAKE_COVER",
+    "scenario_id": "SCN_A_RETAKE",
+    "factor": "RetakeCover",
+    "side": "CT",
+    "attribute": "teamplay",
+    "weight": 7,
+    "reason_code": "RETAKE_COVER"
+  },
+  {
+    "id": "MOD_B_RETAKE_COVER",
+    "scenario_id": "SCN_B_RETAKE",
+    "factor": "RetakeCover",
+    "side": "CT",
+    "attribute": "teamplay",
+    "weight": 7,
+    "reason_code": "RETAKE_COVER"
+  },
+  {
+    "id": "MOD_A_BOMB_COMPOSURE",
+    "scenario_id": "SCN_A_BOMB_RESOLUTION",
+    "factor": "BombComposure",
+    "side": "Both",
+    "attribute": "composure",
+    "weight": 6,
+    "reason_code": "BOMB_COMPOSURE"
+  },
+  {
+    "id": "MOD_B_BOMB_COMPOSURE",
+    "scenario_id": "SCN_B_BOMB_RESOLUTION",
+    "factor": "BombComposure",
+    "side": "Both",
+    "attribute": "composure",
+    "weight": 6,
+    "reason_code": "BOMB_COMPOSURE"
   }
 ]

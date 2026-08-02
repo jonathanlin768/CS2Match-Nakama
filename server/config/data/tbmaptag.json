@@ -1,12 +1,122 @@
 [
   {
-    "id": "D2_A_LONG_RANGE",
+    "id": "D2_LONG_RANGE",
     "map_id": "de_dust2",
     "category": "Range",
     "value": "LongRange",
     "side": "Both",
     "weight": 12,
-    "reason_code": "long_range_duel",
-    "description": "A Long long-range duel pressure."
+    "reason_code": "LONG_RANGE",
+    "description": "Long-range sightline and weapon pressure."
+  },
+  {
+    "id": "D2_CLOSE_RANGE",
+    "map_id": "de_dust2",
+    "category": "Range",
+    "value": "CloseRange",
+    "side": "Both",
+    "weight": 10,
+    "reason_code": "CLOSE_RANGE",
+    "description": "Close-range entry and trade pressure."
+  },
+  {
+    "id": "D2_CT_HOLD_ANGLE",
+    "map_id": "de_dust2",
+    "category": "Angle",
+    "value": "CTHoldAngle",
+    "side": "CT",
+    "weight": 5,
+    "reason_code": "CT_HOLD_ANGLE",
+    "description": "Configured CT hold-angle advantage."
+  },
+  {
+    "id": "D2_SITE_PRESSURE_A",
+    "map_id": "de_dust2",
+    "category": "Site",
+    "value": "ASitePressure",
+    "side": "Both",
+    "weight": 9,
+    "reason_code": "A_SITE_PRESSURE",
+    "description": "A-site execute and retake pressure."
+  },
+  {
+    "id": "D2_SITE_PRESSURE_B",
+    "map_id": "de_dust2",
+    "category": "Site",
+    "value": "BSitePressure",
+    "side": "Both",
+    "weight": 9,
+    "reason_code": "B_SITE_PRESSURE",
+    "description": "B-site execute and retake pressure."
+  },
+  {
+    "id": "D2_MID_CONTROL",
+    "map_id": "de_dust2",
+    "category": "Site",
+    "value": "MidControl",
+    "side": "Both",
+    "weight": 8,
+    "reason_code": "MID_CONTROL",
+    "description": "Mid control and information value."
+  },
+  {
+    "id": "D2_ROTATE_RISK",
+    "map_id": "de_dust2",
+    "category": "Risk",
+    "value": "RotateExposure",
+    "side": "Both",
+    "weight": 8,
+    "reason_code": "ROTATE_RISK",
+    "description": "Exposure while crossing between sites."
+  },
+  {
+    "id": "D2_POSTPLANT_A",
+    "map_id": "de_dust2",
+    "category": "Posture",
+    "value": "APostPlant",
+    "side": "Both",
+    "weight": 9,
+    "reason_code": "A_POSTPLANT",
+    "description": "A-site post-plant positioning."
+  },
+  {
+    "id": "D2_POSTPLANT_B",
+    "map_id": "de_dust2",
+    "category": "Posture",
+    "value": "BPostPlant",
+    "side": "Both",
+    "weight": 9,
+    "reason_code": "B_POSTPLANT",
+    "description": "B-site post-plant positioning."
+  },
+  {
+    "id": "D2_FAST_TIMING",
+    "map_id": "de_dust2",
+    "category": "Timing",
+    "value": "FastTiming",
+    "side": "T",
+    "weight": 22,
+    "reason_code": "FAST_TIMING",
+    "description": "Fast execute timing window."
+  },
+  {
+    "id": "D2_LOW_TIME",
+    "map_id": "de_dust2",
+    "category": "Timing",
+    "value": "LowTime",
+    "side": "Both",
+    "weight": 8,
+    "reason_code": "LOW_TIME",
+    "description": "Low-time decision pressure."
+  },
+  {
+    "id": "D2_T_EXECUTE",
+    "map_id": "de_dust2",
+    "category": "Posture",
+    "value": "TExecuting",
+    "side": "T",
+    "weight": 25,
+    "reason_code": "T_EXECUTE",
+    "description": "Coordinated T execute posture."
   }
 ]

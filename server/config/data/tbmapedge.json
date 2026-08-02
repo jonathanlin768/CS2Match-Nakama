@@ -3,88 +3,313 @@
     "id": "EDGE_T_LONG",
     "from_node": "T_SPAWN",
     "to_node": "LONG_DOOR",
-    "base_time": 8,
+    "base_time": 4,
     "stamina_cost": 5,
     "risk": 22,
     "noise": 12,
     "risk_points": [
       "A_LONG_CROSS"
     ],
-    "intercept_nodes": [],
+    "intercept_nodes": [
+      "PIT"
+    ],
     "bidirectional": true
   },
   {
     "id": "EDGE_LONG_A",
     "from_node": "LONG_DOOR",
     "to_node": "A_LONG",
-    "base_time": 8,
+    "base_time": 4,
     "stamina_cost": 5,
     "risk": 22,
     "noise": 12,
     "risk_points": [
       "A_LONG_CROSS"
     ],
-    "intercept_nodes": [],
+    "intercept_nodes": [
+      "PIT"
+    ],
     "bidirectional": true
   },
   {
-    "id": "EDGE_A_SITE",
+    "id": "EDGE_LONG_PIT",
+    "from_node": "A_LONG",
+    "to_node": "PIT",
+    "base_time": 3,
+    "stamina_cost": 3,
+    "risk": 18,
+    "noise": 8,
+    "risk_points": [
+      "A_LONG_CROSS"
+    ],
+    "intercept_nodes": [
+      "A_LONG"
+    ],
+    "bidirectional": true
+  },
+  {
+    "id": "EDGE_A_LONG_SITE",
     "from_node": "A_LONG",
     "to_node": "A_SITE",
-    "base_time": 8,
+    "base_time": 3,
     "stamina_cost": 5,
-    "risk": 10,
-    "noise": 12,
-    "risk_points": [],
-    "intercept_nodes": [],
+    "risk": 16,
+    "noise": 10,
+    "risk_points": [
+      "A_LONG_CROSS"
+    ],
+    "intercept_nodes": [
+      "PIT",
+      "SHORT"
+    ],
     "bidirectional": true
   },
   {
-    "id": "EDGE_T_CAT",
+    "id": "EDGE_T_MID",
     "from_node": "T_SPAWN",
+    "to_node": "MID",
+    "base_time": 3,
+    "stamina_cost": 4,
+    "risk": 18,
+    "noise": 14,
+    "risk_points": [
+      "MID_DOOR_CROSS"
+    ],
+    "intercept_nodes": [
+      "CAR",
+      "CT_MID"
+    ],
+    "bidirectional": true
+  },
+  {
+    "id": "EDGE_MID_CAT",
+    "from_node": "MID",
     "to_node": "CATWALK",
-    "base_time": 8,
-    "stamina_cost": 5,
-    "risk": 10,
-    "noise": 12,
-    "risk_points": [],
-    "intercept_nodes": [],
+    "base_time": 2,
+    "stamina_cost": 4,
+    "risk": 16,
+    "noise": 10,
+    "risk_points": [
+      "SHORT_RAMP"
+    ],
+    "intercept_nodes": [
+      "CAR"
+    ],
     "bidirectional": true
   },
   {
-    "id": "EDGE_CAT_A",
+    "id": "EDGE_CAT_SHORT",
     "from_node": "CATWALK",
+    "to_node": "SHORT",
+    "base_time": 2,
+    "stamina_cost": 3,
+    "risk": 18,
+    "noise": 9,
+    "risk_points": [
+      "SHORT_RAMP"
+    ],
+    "intercept_nodes": [
+      "CAR",
+      "A_SITE"
+    ],
+    "bidirectional": true
+  },
+  {
+    "id": "EDGE_SHORT_A",
+    "from_node": "SHORT",
     "to_node": "A_SITE",
-    "base_time": 8,
-    "stamina_cost": 5,
-    "risk": 10,
-    "noise": 12,
-    "risk_points": [],
-    "intercept_nodes": [],
+    "base_time": 2,
+    "stamina_cost": 4,
+    "risk": 20,
+    "noise": 10,
+    "risk_points": [
+      "SHORT_RAMP"
+    ],
+    "intercept_nodes": [
+      "A_SITE",
+      "PIT"
+    ],
     "bidirectional": true
   },
   {
-    "id": "EDGE_T_B",
+    "id": "EDGE_T_B_UPPER",
     "from_node": "T_SPAWN",
-    "to_node": "B_TUNNEL",
-    "base_time": 8,
+    "to_node": "B_UPPER",
+    "base_time": 4,
     "stamina_cost": 5,
-    "risk": 10,
-    "noise": 12,
-    "risk_points": [],
-    "intercept_nodes": [],
+    "risk": 14,
+    "noise": 10,
+    "risk_points": [
+      "B_TUNNEL_EXIT"
+    ],
+    "intercept_nodes": [
+      "B_TUNNEL"
+    ],
     "bidirectional": true
   },
   {
-    "id": "EDGE_B_SITE",
+    "id": "EDGE_B_UPPER_TUNNEL",
+    "from_node": "B_UPPER",
+    "to_node": "B_TUNNEL",
+    "base_time": 2,
+    "stamina_cost": 3,
+    "risk": 16,
+    "noise": 12,
+    "risk_points": [
+      "B_TUNNEL_EXIT"
+    ],
+    "intercept_nodes": [
+      "B_SITE"
+    ],
+    "bidirectional": true
+  },
+  {
+    "id": "EDGE_TUNNEL_B",
     "from_node": "B_TUNNEL",
     "to_node": "B_SITE",
-    "base_time": 8,
-    "stamina_cost": 5,
+    "base_time": 2,
+    "stamina_cost": 4,
+    "risk": 22,
+    "noise": 14,
+    "risk_points": [
+      "B_TUNNEL_EXIT"
+    ],
+    "intercept_nodes": [
+      "B_SITE",
+      "B_DOOR"
+    ],
+    "bidirectional": true
+  },
+  {
+    "id": "EDGE_CT_A",
+    "from_node": "CT_SPAWN",
+    "to_node": "A_SITE",
+    "base_time": 10,
+    "stamina_cost": 4,
     "risk": 10,
+    "noise": 8,
+    "risk_points": [
+      "SHORT_RAMP"
+    ],
+    "intercept_nodes": [
+      "A_SITE"
+    ],
+    "bidirectional": true
+  },
+  {
+    "id": "EDGE_CT_MID",
+    "from_node": "CT_SPAWN",
+    "to_node": "CT_MID",
+    "base_time": 8,
+    "stamina_cost": 3,
+    "risk": 8,
+    "noise": 8,
+    "risk_points": [
+      "MID_DOOR_CROSS"
+    ],
+    "intercept_nodes": [
+      "MID"
+    ],
+    "bidirectional": true
+  },
+  {
+    "id": "EDGE_CT_MID_TO_MID",
+    "from_node": "CT_MID",
+    "to_node": "MID",
+    "base_time": 4,
+    "stamina_cost": 3,
+    "risk": 18,
     "noise": 12,
-    "risk_points": [],
-    "intercept_nodes": [],
+    "risk_points": [
+      "MID_DOOR_CROSS"
+    ],
+    "intercept_nodes": [
+      "MID",
+      "CAR"
+    ],
+    "bidirectional": true
+  },
+  {
+    "id": "EDGE_CT_MID_CAR",
+    "from_node": "CT_MID",
+    "to_node": "CAR",
+    "base_time": 3,
+    "stamina_cost": 2,
+    "risk": 12,
+    "noise": 7,
+    "risk_points": [
+      "MID_DOOR_CROSS"
+    ],
+    "intercept_nodes": [
+      "MID",
+      "SHORT"
+    ],
+    "bidirectional": true
+  },
+  {
+    "id": "EDGE_CAR_SHORT",
+    "from_node": "CAR",
+    "to_node": "SHORT",
+    "base_time": 4,
+    "stamina_cost": 3,
+    "risk": 16,
+    "noise": 8,
+    "risk_points": [
+      "SHORT_RAMP"
+    ],
+    "intercept_nodes": [
+      "CATWALK"
+    ],
+    "bidirectional": true
+  },
+  {
+    "id": "EDGE_CT_B_DOOR",
+    "from_node": "CT_SPAWN",
+    "to_node": "B_DOOR",
+    "base_time": 11,
+    "stamina_cost": 3,
+    "risk": 10,
+    "noise": 8,
+    "risk_points": [
+      "B_DOOR_CROSS"
+    ],
+    "intercept_nodes": [
+      "B_SITE"
+    ],
+    "bidirectional": true
+  },
+  {
+    "id": "EDGE_B_DOOR_SITE",
+    "from_node": "B_DOOR",
+    "to_node": "B_SITE",
+    "base_time": 3,
+    "stamina_cost": 2,
+    "risk": 18,
+    "noise": 8,
+    "risk_points": [
+      "B_DOOR_CROSS"
+    ],
+    "intercept_nodes": [
+      "B_TUNNEL"
+    ],
+    "bidirectional": true
+  },
+  {
+    "id": "EDGE_CT_MID_B_DOOR",
+    "from_node": "CT_MID",
+    "to_node": "B_DOOR",
+    "base_time": 5,
+    "stamina_cost": 4,
+    "risk": 18,
+    "noise": 10,
+    "risk_points": [
+      "B_DOOR_CROSS",
+      "MID_DOOR_CROSS"
+    ],
+    "intercept_nodes": [
+      "MID",
+      "B_SITE"
+    ],
     "bidirectional": true
   }
 ]

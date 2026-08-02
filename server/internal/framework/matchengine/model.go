@@ -7,22 +7,33 @@ const (
 	SideT  = "T"
 	SideCT = "CT"
 
-	EventMatchStart   = "MATCH_START"
-	EventRoundStart   = "ROUND_START"
-	EventHalfTime     = "HALF_TIME"
-	EventSideSwitch   = "SIDE_SWITCH"
-	EventOvertime     = "OVERTIME_START"
-	EventKill         = "KILL"
-	EventBombPlant    = "BOMB_PLANT"
-	EventBombDefuse   = "BOMB_DEFUSE"
-	EventBombExplode  = "BOMB_EXPLODE"
-	EventRoundEnd     = "ROUND_END"
-	EventMatchEnd     = "MATCH_END"
-	BombStatusCarried = "Carried"
-	BombStatusPlanted = "Planted"
-	BombStatusDefused = "Defused"
-	BombStatusExplode = "Exploded"
-	BombStatusDropped = "Dropped"
+	EventMatchStart       = "MATCH_START"
+	EventRoundStart       = "ROUND_START"
+	EventHalfTime         = "HALF_TIME"
+	EventSideSwitch       = "SIDE_SWITCH"
+	EventOvertime         = "OVERTIME_START"
+	EventDamage           = "DAMAGE"
+	EventKill             = "KILL"
+	EventStrategyAdjusted = "STRATEGY_ADJUSTED"
+	EventRotate           = "ROTATE"
+	EventReinforce        = "REINFORCE"
+	EventControlGained    = "CONTROL_GAINED"
+	EventBombDrop         = "BOMB_DROP"
+	EventBombPickup       = "BOMB_PICKUP"
+	EventPlantStart       = "BOMB_PLANT_START"
+	EventPlantInterrupt   = "BOMB_PLANT_INTERRUPT"
+	EventDefuseStart      = "DEFUSE_START"
+	EventDefuseInterrupt  = "DEFUSE_INTERRUPT"
+	EventBombPlant        = "BOMB_PLANT"
+	EventBombDefuse       = "BOMB_DEFUSE"
+	EventBombExplode      = "BOMB_EXPLODE"
+	EventRoundEnd         = "ROUND_END"
+	EventMatchEnd         = "MATCH_END"
+	BombStatusCarried     = "Carried"
+	BombStatusPlanted     = "Planted"
+	BombStatusDefused     = "Defused"
+	BombStatusExplode     = "Exploded"
+	BombStatusDropped     = "Dropped"
 )
 
 // EngineError 是引擎层返回的结构化错误。
@@ -94,21 +105,13 @@ type WeaponSpec struct {
 
 // RuleSet 表示完整比赛规则快照。
 type RuleSet struct {
-	RuleSetID             string `json:"rule_set_id"`             // 规则集唯一标识。
-	RegulationHalfRounds  int    `json:"regulation_half_rounds"`  // 常规赛每半场回合数。
-	RegulationWinRounds   int    `json:"regulation_win_rounds"`   // 常规赛获胜所需队伍分数。
-	RegulationMaxRounds   int    `json:"regulation_max_rounds"`   // 常规赛最多回合数。
-	OvertimeEnabled       bool   `json:"overtime_enabled"`        // 常规赛平局时是否进入加时。
-	OvertimeHalfRounds    int    `json:"overtime_half_rounds"`    // 每个加时半段的回合数。
-	OvertimeBlockRounds   int    `json:"overtime_block_rounds"`   // 每个完整加时 block 的回合数。
-	RoundTimeLimit        int    `json:"round_time_limit"`        // 单回合时间上限，单位为秒。
-	BombExplodeTime       int    `json:"bomb_explode_time"`       // 下包后爆炸倒计时，单位为秒。
-	BasePlantTime         int    `json:"base_plant_time"`         // 基础下包耗时，单位为秒。
-	BaseDefuseTime        int    `json:"base_defuse_time"`        // 基础拆包耗时，单位为秒。
-	BasePickupTime        int    `json:"base_pickup_time"`        // 拾取炸弹基础耗时，单位为秒。
-	ForceExecuteThreshold int    `json:"force_execute_threshold"` // 剩余时间低于该秒数时强制执行战术。
-	MaxDecisionCount      int    `json:"max_decision_count"`      // 单回合允许的最大决策次数。
-	MaxEncounterPulses    int    `json:"max_encounter_pulses"`    // 单次遭遇战允许的最大结算脉冲数。
+	RuleSetID            string `json:"rule_set_id"`            // 规则集唯一标识。
+	RegulationHalfRounds int    `json:"regulation_half_rounds"` // 常规赛每半场回合数。
+	RegulationWinRounds  int    `json:"regulation_win_rounds"`  // 常规赛获胜所需队伍分数。
+	RegulationMaxRounds  int    `json:"regulation_max_rounds"`  // 常规赛最多回合数。
+	OvertimeEnabled      bool   `json:"overtime_enabled"`       // 常规赛平局时是否进入加时。
+	OvertimeHalfRounds   int    `json:"overtime_half_rounds"`   // 每个加时半段的回合数。
+	OvertimeBlockRounds  int    `json:"overtime_block_rounds"`  // 每个完整加时 block 的回合数。
 }
 
 // MatchInput 是引擎的整场推演输入。
@@ -126,22 +129,20 @@ type MatchInput struct {
 	WeaponSpecs       map[string]WeaponSpec    `json:"weapon_specs"`         // 武器 ID 到武器数值的映射。
 	SideLoadouts      map[string]WeaponLoadout `json:"side_loadouts"`        // T/CT 阵营到默认回合装备的映射。
 
-	// ForcedRoundWinners is intentionally unexported to JSON; tests can use it
-	// to pin rule-flow edge cases without making the public RPC deterministic by score script.
-	ForcedRoundWinners []string `json:"-"`                    // 测试专用的逐回合指定胜方，不对外序列化。
-	StartTime          int64    `json:"start_time,omitempty"` // 比赛开始时间，Unix 毫秒；为零时由引擎生成。
+	StartTime int64 `json:"start_time,omitempty"` // 比赛开始时间，Unix 毫秒；为零时由引擎生成。
 }
 
 // MatchResult 表示整场比赛完成后的权威结果和完整回合战报。
 type MatchResult struct {
-	MatchInfo       *MatchInfo     `json:"match_info"`         // 比赛元信息和最终摘要。
-	Rounds          []*RoundResult `json:"rounds"`             // 按回合号排序的完整回合结果。
-	FinalStats      *FinalStats    `json:"final_stats"`        // 整场聚合统计。
-	Winner          string         `json:"winner"`             // 获胜队伍在比赛结束时的阵营。
-	WinnerTeamID    string         `json:"winner_team_id"`     // 获胜队伍唯一标识。
-	FinalScoreTeamA int            `json:"final_score_team_a"` // Team A 最终得分。
-	FinalScoreTeamB int            `json:"final_score_team_b"` // Team B 最终得分。
-	TotalRounds     int            `json:"total_rounds"`       // 实际完成的总回合数。
+	MatchInfo       *MatchInfo         `json:"match_info"`         // 比赛元信息和最终摘要。
+	Rounds          []*RoundResult     `json:"rounds"`             // 按回合号排序的完整回合结果。
+	FinalStats      *FinalStats        `json:"final_stats"`        // 整场聚合统计。
+	Winner          string             `json:"winner"`             // 获胜队伍在比赛结束时的阵营。
+	WinnerTeamID    string             `json:"winner_team_id"`     // 获胜队伍唯一标识。
+	FinalScoreTeamA int                `json:"final_score_team_a"` // Team A 最终得分。
+	FinalScoreTeamB int                `json:"final_score_team_b"` // Team B 最终得分。
+	TotalRounds     int                `json:"total_rounds"`       // 实际完成的总回合数。
+	Report          *ExplainableReport `json:"report,omitempty"`
 }
 
 // MatchInfo 表示客户端展示和复现比赛所需的元信息。
@@ -185,29 +186,81 @@ type RoundResult struct {
 	RouteMain            string              `json:"route_main"`                        // 本回合选择的主进攻路线 ID。
 	RouteSub             string              `json:"route_sub"`                         // 预留的辅助路线 ID。
 	StrategyTemplateID   string              `json:"strategy_template_id"`              // 本回合选择的战术模板 ID。
-	Events               []*GameEvent        `json:"events"`                            // 按时间戳排序的公开事件列表。
-	PlayerStates         []*PlayerState      `json:"player_states"`                     // 回合结束时的选手公共状态。
-	Bomb                 *BombPublicState    `json:"bomb,omitempty"`                    // 回合结束时的炸弹公共状态。
-	FinalControls        []*NodeControlState `json:"final_controls,omitempty"`          // 回合结束时的关键节点控制权快照。
+	CTSetupTemplateID    string              `json:"ct_setup_template_id,omitempty"`
+	Events               []*GameEvent        `json:"events"`                   // 按时间戳排序的公开事件列表。
+	PlayerStates         []*PlayerState      `json:"player_states"`            // 回合结束时的选手公共状态。
+	Bomb                 *BombPublicState    `json:"bomb,omitempty"`           // 回合结束时的炸弹公共状态。
+	FinalControls        []*NodeControlState `json:"final_controls,omitempty"` // 回合结束时的关键节点控制权快照。
+	Report               *ExplainableReport  `json:"report,omitempty"`
 }
 
 // Location 表示战报事件在地图雷达上的归一化位置。
 type Location struct {
-	Name string  `json:"name"` // 点位显示名称。
-	X    float64 `json:"x"`    // 雷达横轴归一化坐标，范围为 0 到 1。
-	Y    float64 `json:"y"`    // 雷达纵轴归一化坐标，范围为 0 到 1。
+	Name       string  `json:"name"` // 点位显示名称。
+	X          float64 `json:"x"`    // 雷达横轴归一化坐标，范围为 0 到 1。
+	Y          float64 `json:"y"`    // 雷达纵轴归一化坐标，范围为 0 到 1。
+	SourceType string  `json:"source_type,omitempty"`
+	SourceID   string  `json:"source_id,omitempty"`
+	Floor      string  `json:"floor,omitempty"`
+	Seed       int64   `json:"seed,omitempty"`
+}
+
+type ReasonModifier struct {
+	Code   string  `json:"code"`
+	Value  float64 `json:"value"`
+	Detail string  `json:"detail,omitempty"`
+}
+
+type ReasonValue struct {
+	Kind   string   `json:"kind"`
+	Number *float64 `json:"number,omitempty"`
+	String *string  `json:"string,omitempty"`
+	Bool   *bool    `json:"bool,omitempty"`
+}
+
+type ReasonStateChange struct {
+	Field  string      `json:"field"`
+	Before ReasonValue `json:"before"`
+	After  ReasonValue `json:"after"`
 }
 
 // EventReason 描述事件产生的可解释原因和评分影响。
 type EventReason struct {
-	Code       string  `json:"code"`             // 稳定的原因代码。
-	MainFactor string  `json:"main_factor"`      // 对该事件影响最大的阶段、属性或规则。
-	ScoreDelta float64 `json:"score_delta"`      // 相关评分差值，用于调试和解释。
-	Detail     string  `json:"detail,omitempty"` // 可选的补充说明。
+	Code           string              `json:"code"`        // 稳定的原因代码。
+	MainFactor     string              `json:"main_factor"` // 对该事件影响最大的阶段、属性或规则。
+	Modifiers      []ReasonModifier    `json:"modifiers,omitempty"`
+	ScoreDelta     float64             `json:"score_delta"` // 相关评分差值，用于调试和解释。
+	Probability    *float64            `json:"probability,omitempty"`
+	Formula        string              `json:"formula,omitempty"`
+	Inputs         map[string]float64  `json:"inputs,omitempty"`
+	StateChanges   []ReasonStateChange `json:"state_changes,omitempty"`
+	SourceActionID string              `json:"source_action_id,omitempty"`
+	SourceEffectID string              `json:"source_effect_id,omitempty"`
+	Detail         string              `json:"detail,omitempty"` // 可选的补充说明。
+}
+
+type EventStateSnapshot struct {
+	ScoreTeamA int                 `json:"score_team_a"`
+	ScoreTeamB int                 `json:"score_team_b"`
+	ScoreT     int                 `json:"score_t"`
+	ScoreCT    int                 `json:"score_ct"`
+	Players    []*PlayerState      `json:"players,omitempty"`
+	Bomb       *BombPublicState    `json:"bomb,omitempty"`
+	Controls   []*NodeControlState `json:"controls,omitempty"`
+}
+
+type ExplainableReport struct {
+	KeyEvents       []*GameEvent   `json:"key_events"`
+	StrategySummary string         `json:"strategy_summary"`
+	LossReasons     []*EventReason `json:"loss_reasons"`
+	WinFactors      []*EventReason `json:"win_factors"`
 }
 
 // GameEvent 表示客户端可见的一条离散比赛事件。
 type GameEvent struct {
+	EventID        string                 `json:"event_id,omitempty"`         // 稳定事件 ID。
+	SourceActionID string                 `json:"source_action_id,omitempty"` // 产生事件的真实行动 ID。
+	SourceEffectID string                 `json:"source_effect_id,omitempty"` // 产生事件的已应用效果 ID。
 	Timestamp      int64                  `json:"timestamp"`                  // 回合内事件时间，单位为秒。
 	EventType      string                 `json:"event_type"`                 // 事件类型常量，例如 KILL 或 BOMB_PLANT。
 	AttackerID     string                 `json:"attacker_id,omitempty"`      // 进攻行为发起者的选手 ID。
@@ -223,9 +276,13 @@ type GameEvent struct {
 	Message        string                 `json:"message"`                    // 面向客户端直接展示的战报文本。
 	Reason         *EventReason           `json:"reason,omitempty"`           // 事件的可解释原因。
 	Bomb           *BombPublicState       `json:"bomb,omitempty"`             // 事件发生后的炸弹状态快照。
-	ScoreTeamA     int                    `json:"score_team_a,omitempty"`     // 事件发生后的 Team A 比分。
-	ScoreTeamB     int                    `json:"score_team_b,omitempty"`     // 事件发生后的 Team B 比分。
-	Extra          map[string]interface{} `json:"extra,omitempty"`            // 事件类型特有的扩展公开数据。
+	State          *EventStateSnapshot    `json:"state,omitempty"`
+	ScoreTeamA     int                    `json:"score_team_a,omitempty"` // 事件发生后的 Team A 比分。
+	ScoreTeamB     int                    `json:"score_team_b,omitempty"` // 事件发生后的 Team B 比分。
+	Extra          map[string]interface{} `json:"extra,omitempty"`        // 事件类型特有的扩展公开数据。
+	sortPriority   int                    `json:"-"`
+	sortActionType string                 `json:"-"`
+	sortMinActorID string                 `json:"-"`
 }
 
 // PlayerState 表示单个选手在回合结束时的公开状态。
@@ -310,22 +367,27 @@ type MapConfig struct {
 	Visibility         map[string]Visibility        `json:"visibility"`          // 视野关系 ID 到视野数据的映射。
 	Routes             map[string]Route             `json:"routes"`              // 实际路线 ID 到路线数据的映射。
 	CombatConstants    CombatConstants              `json:"combat_constants"`    // 引擎运行所需的战斗常量快照。
+	Warnings           []EngineError                `json:"warnings,omitempty"`  // 允许降级的配置诊断，例如 KillSample 几何回退。
 }
 
 // RouteTemplate 表示可供回合决策选择的战术路线模板。
 type RouteTemplate struct {
-	ID               string             `json:"id"`                          // 战术模板唯一标识。
-	MapID            string             `json:"map_id"`                      // 所属地图 ID。
-	TargetSite       string             `json:"target_site"`                 // 目标包点或 None。
-	Tempo            string             `json:"tempo"`                       // 战术节奏，例如 Fast、Default 或 Slow。
-	RecommendedMin   int                `json:"recommended_min"`             // 推荐参与人数下限。
-	RecommendedMax   int                `json:"recommended_max"`             // 推荐参与人数上限。
-	RequiredRoles    []string           `json:"required_roles,omitempty"`    // 战术要求的选手角色。
-	KeyAttributes    map[string]float64 `json:"key_attributes,omitempty"`    // 关键能力名称及其评分权重。
-	ScenarioIDs      []string           `json:"scenario_ids,omitempty"`      // 可进入的场景 ID 列表。
-	MapTagIDs        []string           `json:"map_tag_ids,omitempty"`       // 参与战术评分的地图标签 ID。
-	SuccessNextPhase string             `json:"success_next_phase"`          // 执行成功后的下一阶段名称。
-	FailureFallbacks []string           `json:"failure_fallbacks,omitempty"` // 执行失败时可选择的后备模板 ID。
+	ID               string             `json:"id"`                            // 战术模板唯一标识。
+	MapID            string             `json:"map_id"`                        // 所属地图 ID。
+	Side             string             `json:"side"`                          // 模板所属阵营，T 或 CT。
+	TargetSite       string             `json:"target_site"`                   // 目标包点或 None。
+	Tempo            string             `json:"tempo"`                         // 战术节奏，例如 Fast、Default 或 Slow。
+	RecommendedMin   int                `json:"recommended_min"`               // 推荐参与人数下限。
+	RecommendedMax   int                `json:"recommended_max"`               // 推荐参与人数上限。
+	RequiredRoles    []string           `json:"required_roles,omitempty"`      // 战术要求的选手角色。
+	KeyAttributes    map[string]float64 `json:"key_attributes,omitempty"`      // 关键能力名称及其评分权重。
+	RouteIDs         []string           `json:"route_ids,omitempty"`           // 模板允许使用的语义路线 ID。
+	RouteAllocations map[string]int     `json:"route_allocations,omitempty"`   // 路线 ID 到分配人数的闭合映射。
+	ScenarioIDs      []string           `json:"scenario_ids,omitempty"`        // 可进入的场景 ID 列表。
+	MapTagIDs        []string           `json:"map_tag_ids,omitempty"`         // 参与战术评分的地图标签 ID。
+	CommonCTSetupIDs []string           `json:"common_ct_setup_ids,omitempty"` // T 模板可见的常见 CT 配置先验。
+	SuccessNextPhase string             `json:"success_next_phase"`            // 执行成功后的下一阶段名称。
+	FailureFallbacks []string           `json:"failure_fallbacks,omitempty"`   // 执行失败时可选择的后备模板 ID。
 }
 
 // Scenario 表示路线模板内的一种具体战斗场景。
