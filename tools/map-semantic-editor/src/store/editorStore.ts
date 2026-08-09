@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { fetchProject, fetchPublishedProject, runGenConfig, saveProject, writeLuban, type GenConfigOutput, type WriteLogEntry } from '../lib/api'
+import { fetchProject, fetchPublishedProject, importLubanConfig, runGenConfig, saveProject, writeLuban, type GenConfigOutput, type ImportLogEntry, type WriteLogEntry } from '../lib/api'
 import type { MapEdge, MapNode, MapProject, Point, RangeDraft, Route, SelectedObject, ToolMode, Visibility } from '../lib/model'
 import { cellToPoints } from '../lib/model'
 import { sampleNode } from '../lib/sampling'
@@ -19,6 +19,7 @@ interface EditorState {
   issues: ValidationIssue[]
   samples: Point[]
   writeLog: WriteLogEntry[]
+  importLog: ImportLogEntry[]
   genConfig: GenConfigOutput | null
   serviceMessage: string
   busy: boolean
@@ -28,6 +29,7 @@ interface EditorState {
   newProject: () => void
   load: () => Promise<void>
   loadPublished: () => Promise<void>
+  importFromExcel: () => Promise<void>
   save: () => Promise<void>
   validate: () => ValidationIssue[]
   previewSamples: () => void
@@ -69,6 +71,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   issues: [],
   samples: [],
   writeLog: [],
+  importLog: [],
   genConfig: null,
   serviceMessage: '服务: 未连接',
   busy: false,
@@ -94,6 +97,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       issues: validateProject(project),
       samples: [],
       writeLog: [],
+      importLog: [],
       genConfig: null,
       serviceMessage: `已新建 ${project.map_id} 工程模板`,
     })
@@ -103,7 +107,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ busy: true })
     try {
       const project = await fetchProject()
-      set({ project, located: null, serviceMessage: '服务: 已连接', issues: validateProject(project), busy: false })
+      set({ project, located: null, serviceMessage: '服务: 已连接', issues: validateProject(project), importLog: [], busy: false })
     } catch (error) {
       set({ serviceMessage: errorMessage(error), busy: false })
     }
@@ -124,8 +128,37 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         samples: [],
         history: [],
         future: [],
+        importLog: [],
         serviceMessage: `已读回 ${project.map_id}.json`,
         issues: validateProject(project),
+        busy: false,
+      })
+    } catch (error) {
+      set({ serviceMessage: errorMessage(error), busy: false })
+    }
+  },
+
+  importFromExcel: async () => {
+    const { project: current } = get()
+    set({ busy: true })
+    try {
+      const { project, summary, warnings } = await importLubanConfig(current)
+      const issues = validateProject(project)
+      set({
+        project,
+        selected: null,
+        located: null,
+        pendingNodeId: null,
+        routeDraft: [],
+        rangeDraft: null,
+        samples: [],
+        history: [],
+        future: [],
+        issues,
+        importLog: summary,
+        serviceMessage: warnings.length > 0
+          ? `已读取 Excel 配置（${summary.length} 张表，${warnings.length} 条警告）`
+          : `已读取 Excel 配置（${summary.length} 张表）`,
         busy: false,
       })
     } catch (error) {

@@ -116,7 +116,7 @@ export function PropertiesPanel() {
             <NodeSelect label="to" value={visibility.to} onChange={(value) => updateVisibility(visibility.id, { to: value })} />
             <SelectInput label="range" value={visibility.range} options={['Close', 'Mid', 'Long']} onChange={(value) => updateVisibility(visibility.id, { range: value })} />
             <SelectInput label="angle_advantage" value={visibility.angle_advantage} options={['T', 'CT', 'None']} onChange={(value) => updateVisibility(visibility.id, { angle_advantage: value })} />
-            <SelectInput label="elevation" value={visibility.elevation} options={['HighToLow', 'LowToHigh', 'SameLevel', 'HeightBlocked']} onChange={(value) => updateVisibility(visibility.id, { elevation: value })} />
+ <SelectInput label="elevation" value={visibility.elevation} options={['HighToLow', 'LowToHigh', 'SameLevel', 'Same', 'HeightBlocked']} onChange={(value) => updateVisibility(visibility.id, { elevation: value })} />
             <NumberInput label="cover_modifier" value={visibility.cover_modifier} step={1} onChange={(value) => updateVisibility(visibility.id, { cover_modifier: Math.round(value) })} />
             <NumberInput label="exposure_modifier" value={visibility.exposure_modifier} step={1} onChange={(value) => updateVisibility(visibility.id, { exposure_modifier: Math.round(value) })} />
             <label className="field toggle"><span>visible</span><input type="checkbox" checked={visibility.visible} onChange={(event) => updateVisibility(visibility.id, { visible: event.target.checked })} /></label>

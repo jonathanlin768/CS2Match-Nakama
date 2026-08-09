@@ -18,26 +18,26 @@ export interface WriteResult {
   entries: WriteEntry[]
 }
 
-export async function writeExportTables(tables: ExportTable[]): Promise<WriteResult> {
+export async function writeExportTables(tables: ExportTable[], root = dataRoot): Promise<WriteResult> {
   const stamp = timestamp()
   const entries: WriteEntry[] = []
 
-  await fs.mkdir(dataRoot, { recursive: true })
+  await fs.mkdir(root, { recursive: true })
 
   for (const table of tables) {
-    const target = dataFilePath(table.fileName)
+    const target = dataFilePath(table.fileName, root)
     const backup = await backupExisting(target, stamp)
     await writeTableWorkbook(target, table)
     entries.push({
       tableName: table.tableName,
-      file: path.relative(dataRoot, target),
+      file: path.relative(root, target),
       rows: table.rows.length,
-      backup: backup ? path.relative(dataRoot, backup) : undefined,
+      backup: backup ? path.relative(root, backup) : undefined,
       warnings: table.rows.length === 0 ? ['表为空，仅写入表头'] : [],
     })
   }
 
-  return { ok: true, root: dataRoot, entries }
+  return { ok: true, root, entries }
 }
 
 export async function readLubanSummary(): Promise<{ file: string; rows: number; columns: number }[]> {
@@ -97,7 +97,7 @@ async function backupExisting(target: string, stamp: string): Promise<string | u
     return undefined
   }
 
-  const backupDir = resolveInside(dataRoot, '.bak', 'map-semantic-editor', stamp)
+  const backupDir = resolveInside(path.dirname(target), '.bak', 'map-semantic-editor', stamp)
   await fs.mkdir(backupDir, { recursive: true })
   const backup = resolveInside(backupDir, path.basename(target))
   await fs.copyFile(target, backup)
@@ -109,4 +109,3 @@ function timestamp(): string {
   const pad = (value: number) => String(value).padStart(2, '0')
   return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
 }
-

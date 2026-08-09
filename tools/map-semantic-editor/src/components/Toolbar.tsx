@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, CheckCircle2, Download, FilePlus2, FolderOpen, GitBranch, MousePointer2, Play, Radar, Redo2, Route, Save, Search, ShieldAlert, Undo2, Waypoints, X } from 'lucide-react'
+import { Check, CheckCircle2, Download, FileInput, FilePlus2, FolderOpen, GitBranch, MousePointer2, Play, Radar, Redo2, Route, Save, Search, ShieldAlert, Undo2, Waypoints, X } from 'lucide-react'
 import { useEditorStore } from '../store/editorStore'
 import type { ToolMode } from '../lib/model'
 
@@ -23,6 +23,7 @@ export function Toolbar() {
   const setTool = useEditorStore((state) => state.setTool)
   const load = useEditorStore((state) => state.load)
   const loadPublished = useEditorStore((state) => state.loadPublished)
+  const importFromExcel = useEditorStore((state) => state.importFromExcel)
   const save = useEditorStore((state) => state.save)
   const undo = useEditorStore((state) => state.undo)
   const redo = useEditorStore((state) => state.redo)
@@ -61,6 +62,10 @@ export function Toolbar() {
           <button type="button" className="commandButton" disabled={busy} onClick={() => void loadPublished()} title={`从 configs/Datas/${project.map_id}.json 读取工程快照`}>
             <FolderOpen size={16} />
             从项目中读取
+          </button>
+          <button type="button" className="commandButton" disabled={busy} onClick={() => void importFromExcel()} title="读取 configs/Datas/#*.xlsx 当前内容并载入编辑器（保留工程元数据，替换地图数据）">
+            <FileInput size={16} />
+            读取当前Excel配置
           </button>
           <button type="button" className="commandButton" onClick={() => void save()} title="保存工程文件">
             <Save size={16} />

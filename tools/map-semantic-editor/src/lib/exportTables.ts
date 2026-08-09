@@ -1,5 +1,5 @@
 import type { MapProject } from './model'
-import { listToCell, pointsToCell, round } from './model'
+import { allocationsToCell, listToCell, pointsToCell, round } from './model'
 
 export interface ExportField {
   key: string
@@ -8,90 +8,55 @@ export interface ExportField {
   comment: string
 }
 
+export type ExportRow = Record<string, string | number | boolean | null>
+
 export interface ExportTable {
   tableName: string
   fileName: string
+  key: ImportTableKey
   fields: ExportField[]
-  rows: Record<string, string | number | boolean | null>[]
+  rows: ExportRow[]
+}
+
+export type ImportTableKey =
+  | 'route_templates'
+  | 'scenarios'
+  | 'map_tags'
+  | 'encounter_modifiers'
+  | 'nodes'
+  | 'edges'
+  | 'visibility'
+  | 'routes'
+  | 'combat_consts'
+
+export interface LubanTableSpec {
+  tableName: string
+  fileName: string
+  key: ImportTableKey
 }
 
 const group = 'c,s,e'
 
-export function toExportTables(project: MapProject): ExportTable[] {
-  return [
-    table('tb_route_template', '#RouteTemplate.xlsx', routeTemplateFields, project.route_templates.map((item) => ({
-      ...item,
-      required_roles: listToCell(item.required_roles),
-      scenario_ids: listToCell(item.scenario_ids),
-      map_tag_ids: listToCell(item.map_tag_ids),
-      failure_fallbacks: listToCell(item.failure_fallbacks),
-    }))),
-    table('tb_scenario', '#Scenario.xlsx', scenarioFields, project.scenarios.map((item) => ({
-      ...item,
-      map_tag_ids: listToCell(item.map_tag_ids),
-    }))),
-    table('tb_map_tag', '#MapTag.xlsx', mapTagFields, project.map_tags),
-    table('tb_encounter_modifier', '#EncounterModifier.xlsx', encounterModifierFields, project.encounter_modifiers),
-    table('tb_map_node', '#MapNode.xlsx', mapNodeFields, project.nodes.map((node) => ({
-      ...node,
-      x: round(node.x),
-      y: round(node.y),
-      area_usages: listToCell(node.area_usages),
-      radius: node.radius ?? '',
-      points: pointsToCell(node.points),
-    }))),
-    table('tb_map_edge', '#MapEdge.xlsx', mapEdgeFields, project.edges.map((edge) => ({
-      id: edge.id,
-      from_node: edge.from,
-      to_node: edge.to,
-      base_time: edge.base_time,
-      stamina_cost: edge.stamina_cost,
-      risk: edge.risk,
-      noise: edge.noise,
-      risk_points: listToCell(edge.risk_points),
-      intercept_nodes: listToCell(edge.intercept_nodes),
-      bidirectional: edge.bidirectional,
-    }))),
-    table('tb_visibility', '#Visibility.xlsx', visibilityFields, project.visibility.map((visibility) => ({
-      id: visibility.id,
-      from_node: visibility.from,
-      to_node: visibility.to,
-      visible: visibility.visible,
-      range: visibility.range,
-      angle_advantage: visibility.angle_advantage,
-      elevation: visibility.elevation,
-      cover_modifier: visibility.cover_modifier,
-      exposure_modifier: visibility.exposure_modifier,
-    }))),
-    table('tb_route', '#Route.xlsx', routeFields, project.routes.map((route) => ({
-      ...route,
-      nodes: listToCell(route.nodes),
-      style_tags: listToCell(route.style_tags),
-    }))),
-    table('tb_combat_const', '#CombatConst.xlsx', combatConstFields, project.combat_consts),
-  ]
-}
-
-function table(
-  tableName: string,
-  fileName: string,
-  fields: ExportField[],
-  rows: Record<string, string | number | boolean | null>[],
-): ExportTable {
-  return { tableName, fileName, fields, rows }
+interface TableSpec extends LubanTableSpec {
+  fields: ExportField[]
+  toRows: (project: MapProject) => ExportRow[]
 }
 
 const routeTemplateFields: ExportField[] = [
   field('id', 'string', '模板ID', ''),
   field('map_id', 'string', '地图ID'),
+  field('side', 'string', '阵营'),
   field('target_site', 'string', '目标包点'),
   field('tempo', 'string', '节奏'),
   field('recommended_min', 'int', '推荐最少人数'),
   field('recommended_max', 'int', '推荐最多人数'),
   field('required_roles', '(list#sep=,),string', '关键角色'),
   field('key_attributes', 'string', '属性权重'),
+  field('route_ids', '(list#sep=,),string', '路线ID'),
+  field('route_allocations', '(map#sep=,),string,int', '路线人数分配'),
   field('scenario_ids', '(list#sep=,),string', '可生成场景'),
   field('map_tag_ids', '(list#sep=,),string', '地图标签'),
+  field('common_ct_setup_ids', '(list#sep=,),string', '常见CT配置先验'),
   field('success_next_phase', 'string', '成功后阶段'),
   field('failure_fallbacks', '(list#sep=,),string', '失败候选策略'),
 ]
@@ -194,6 +159,128 @@ const combatConstFields: ExportField[] = [
   field('unit', 'string', '单位'),
   field('description', 'string', '说明'),
 ]
+
+const tableSpecs: TableSpec[] = [
+  {
+    tableName: 'tb_route_template',
+    fileName: '#RouteTemplate.xlsx',
+    key: 'route_templates',
+    fields: routeTemplateFields,
+    toRows: (project) => project.route_templates.map((item) => ({
+      ...item,
+      required_roles: listToCell(item.required_roles),
+      route_ids: listToCell(item.route_ids),
+      route_allocations: allocationsToCell(item.route_allocations),
+      scenario_ids: listToCell(item.scenario_ids),
+      map_tag_ids: listToCell(item.map_tag_ids),
+      common_ct_setup_ids: listToCell(item.common_ct_setup_ids),
+      failure_fallbacks: listToCell(item.failure_fallbacks),
+    })),
+  },
+  {
+    tableName: 'tb_scenario',
+    fileName: '#Scenario.xlsx',
+    key: 'scenarios',
+    fields: scenarioFields,
+    toRows: (project) => project.scenarios.map((item) => ({
+      ...item,
+      map_tag_ids: listToCell(item.map_tag_ids),
+    })),
+  },
+  {
+    tableName: 'tb_map_tag',
+    fileName: '#MapTag.xlsx',
+    key: 'map_tags',
+    fields: mapTagFields,
+    toRows: (project) => project.map_tags,
+  },
+  {
+    tableName: 'tb_encounter_modifier',
+    fileName: '#EncounterModifier.xlsx',
+    key: 'encounter_modifiers',
+    fields: encounterModifierFields,
+    toRows: (project) => project.encounter_modifiers,
+  },
+  {
+    tableName: 'tb_map_node',
+    fileName: '#MapNode.xlsx',
+    key: 'nodes',
+    fields: mapNodeFields,
+    toRows: (project) => project.nodes.map((node) => ({
+      ...node,
+      x: round(node.x),
+      y: round(node.y),
+      area_usages: listToCell(node.area_usages),
+      radius: node.radius ?? '',
+      points: pointsToCell(node.points),
+    })),
+  },
+  {
+    tableName: 'tb_map_edge',
+    fileName: '#MapEdge.xlsx',
+    key: 'edges',
+    fields: mapEdgeFields,
+    toRows: (project) => project.edges.map((edge) => ({
+      id: edge.id,
+      from_node: edge.from,
+      to_node: edge.to,
+      base_time: edge.base_time,
+      stamina_cost: edge.stamina_cost,
+      risk: edge.risk,
+      noise: edge.noise,
+      risk_points: listToCell(edge.risk_points),
+      intercept_nodes: listToCell(edge.intercept_nodes),
+      bidirectional: edge.bidirectional,
+    })),
+  },
+  {
+    tableName: 'tb_visibility',
+    fileName: '#Visibility.xlsx',
+    key: 'visibility',
+    fields: visibilityFields,
+    toRows: (project) => project.visibility.map((visibility) => ({
+      id: visibility.id,
+      from_node: visibility.from,
+      to_node: visibility.to,
+      visible: visibility.visible,
+      range: visibility.range,
+      angle_advantage: visibility.angle_advantage,
+      elevation: visibility.elevation,
+      cover_modifier: visibility.cover_modifier,
+      exposure_modifier: visibility.exposure_modifier,
+    })),
+  },
+  {
+    tableName: 'tb_route',
+    fileName: '#Route.xlsx',
+    key: 'routes',
+    fields: routeFields,
+    toRows: (project) => project.routes.map((route) => ({
+      ...route,
+      nodes: listToCell(route.nodes),
+      style_tags: listToCell(route.style_tags),
+    })),
+  },
+  {
+    tableName: 'tb_combat_const',
+    fileName: '#CombatConst.xlsx',
+    key: 'combat_consts',
+    fields: combatConstFields,
+    toRows: (project) => project.combat_consts,
+  },
+]
+
+export const LUBAN_TABLE_SPECS: LubanTableSpec[] = tableSpecs.map(({ tableName, fileName, key }) => ({ tableName, fileName, key }))
+
+export function toExportTables(project: MapProject): ExportTable[] {
+  return tableSpecs.map((spec) => ({
+    tableName: spec.tableName,
+    fileName: spec.fileName,
+    key: spec.key,
+    fields: spec.fields,
+    rows: spec.toRows(project),
+  }))
+}
 
 function field(key: string, type: string, comment: string, exportGroup = group): ExportField {
   return { key, type, group: exportGroup, comment }

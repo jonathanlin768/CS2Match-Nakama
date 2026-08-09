@@ -25,11 +25,11 @@ export function projectFilePath(name: string): string {
   return resolveInside(projectFileRoot, name)
 }
 
-export function dataFilePath(fileName: string): string {
+export function dataFilePath(fileName: string, root = dataRoot): string {
   if (!/^#?[A-Za-z0-9_]+\.xlsx$/.test(fileName) && !/^__[A-Za-z0-9_]+__\.xlsx$/.test(fileName)) {
     throw new Error('Luban file name must be an expected .xlsx file name')
   }
-  return resolveInside(dataRoot, fileName)
+  return resolveInside(root, fileName)
 }
 
 export function dataProjectFilePath(name: string): string {

@@ -1,20 +1,23 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useEditorStore } from '../store/editorStore'
 
-type Tab = 'issues' | 'preview' | 'summary' | 'write' | 'gen'
+type Tab = 'issues' | 'preview' | 'summary' | 'import' | 'write' | 'gen'
 
 export function BottomPanel() {
   const [tab, setTab] = useState<Tab>('issues')
   const issues = useEditorStore((state) => state.issues)
   const samples = useEditorStore((state) => state.samples)
   const writeLog = useEditorStore((state) => state.writeLog)
+  const importLog = useEditorStore((state) => state.importLog)
   const genConfig = useEditorStore((state) => state.genConfig)
   const project = useEditorStore((state) => state.project)
   const locate = useEditorStore((state) => state.locate)
 
-  useEffect(() => {
+  const [prevGenConfig, setPrevGenConfig] = useState(genConfig)
+  if (prevGenConfig !== genConfig) {
+    setPrevGenConfig(genConfig)
     if (genConfig) setTab('gen')
-  }, [genConfig])
+  }
 
   const summary = useMemo(() => ({
     nodes: project.nodes.length,
@@ -30,6 +33,7 @@ export function BottomPanel() {
         <TabButton active={tab === 'issues'} onClick={() => setTab('issues')}>校验结果</TabButton>
         <TabButton active={tab === 'preview'} onClick={() => setTab('preview')}>采样预览</TabButton>
         <TabButton active={tab === 'summary'} onClick={() => setTab('summary')}>导出摘要</TabButton>
+        <TabButton active={tab === 'import'} onClick={() => setTab('import')}>读取日志</TabButton>
         <TabButton active={tab === 'write'} onClick={() => setTab('write')}>写入日志</TabButton>
         <TabButton active={tab === 'gen'} onClick={() => setTab('gen')}>导表输出</TabButton>
       </div>
@@ -67,6 +71,16 @@ export function BottomPanel() {
             {writeLog.length === 0 ? <p>写入 Luban 后显示每张表的路径、行数和备份。</p> : writeLog.map((entry) => (
               <p key={entry.file}>
                 <strong>{entry.file}</strong> {entry.rows} rows {entry.backup ? `backup: ${entry.backup}` : 'new file'} {entry.warnings.join(' ')}
+              </p>
+            ))}
+          </div>
+        ) : null}
+
+        {tab === 'import' ? (
+          <div className="textOutput">
+            {importLog.length === 0 ? <p>点击"读取当前Excel配置"后显示每张表的行数和警告。</p> : importLog.map((entry) => (
+              <p key={entry.file}>
+                <strong>{entry.file}</strong> {entry.rows} rows {entry.warnings.length > 0 ? entry.warnings.join(' ') : ''}
               </p>
             ))}
           </div>
