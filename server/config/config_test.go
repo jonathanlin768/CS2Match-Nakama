@@ -31,8 +31,11 @@ func TestConfigLoad(t *testing.T) {
 	if p == nil {
 		t.Fatal("player_niko not found")
 	}
-	if p.Name != "NiKo" {
-		t.Fatalf("expected NiKo, got %s", p.Name)
+	if p.Team != "Falcons" {
+		t.Fatalf("expected Falcons, got %s", p.Team)
+	}
+	if p.Portrait != "portraits/player_niko.jpg" {
+		t.Fatalf("unexpected portrait: %s", p.Portrait)
 	}
 	t.Logf("Loaded %d tables and %d players, first: %s (entry=%d)", TableCount(), len(players), p.Name, p.Entry)
 }

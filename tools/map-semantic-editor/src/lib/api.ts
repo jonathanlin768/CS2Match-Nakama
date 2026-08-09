@@ -9,6 +9,13 @@ export interface WriteLogEntry {
   warnings: string[]
 }
 
+export interface ImportLogEntry {
+  tableName: string
+  file: string
+  rows: number
+  warnings: string[]
+}
+
 export interface GenConfigOutput {
   status: 'success' | 'failed' | 'timeout' | 'running'
   exitCode: number | null
@@ -29,6 +36,21 @@ export async function fetchPublishedProject(projectName = 'de_dust2.json'): Prom
   const body = await response.json() as ApiBody
   if (!response.ok || !body.ok) throw new Error(body.error ?? '读取发布快照失败')
   return parseProject(body.project)
+}
+
+export async function importLubanConfig(project: MapProject): Promise<{ project: MapProject; summary: ImportLogEntry[]; warnings: string[] }> {
+  const response = await fetch('/api/luban/import', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ project }),
+  })
+  const body = await response.json() as ApiBody
+  if (!response.ok || !body.ok) throw new Error(body.error ?? '读取 Excel 配置失败')
+  return {
+    project: parseProject(body.project),
+    summary: Array.isArray(body.summary) ? body.summary as ImportLogEntry[] : [],
+    warnings: Array.isArray(body.warnings) ? body.warnings as string[] : [],
+  }
 }
 
 export async function saveProject(project: MapProject): Promise<void> {
@@ -77,6 +99,8 @@ interface ApiBody {
   ok?: boolean
   error?: string
   project?: unknown
+  summary?: unknown
+  warnings?: unknown
   result?: unknown
   issues?: unknown
 }

@@ -6,20 +6,23 @@
 
 构建一套带 `Dust2` 地图语义的数值战斗引擎。
 
-系统不做真实 CS 空间仿真，不模拟逐帧移动、弹道、完整寻路和连续视野传播。地图、视野、转点、下包作为场景标签和数值修正项参与结算。
+系统不做真实 CS 空间仿真，不模拟逐帧移动、弹道、物理导航网格和连续视野传播。地图、视野、转点与炸弹不是事后叙事标签：它们分别由语义 `MapNode/MapEdge/Route`、可见性与情报、可打断 `ScheduledAction` 以及权威 `BombState` 参与实际结算；场景标签和数值修正只补充这些权威状态，不替代它们。
 
-整场对局由 `MatchInput` 驱动。`MatchInput` 可以只要求推演一小局，也可以要求连续推演多小局。每小局会派生出一个 `RoundInput`，再按战术模板和遭遇战推进：
+正式整场对局由 `MatchInput` 驱动，并始终按 RuleSet 推演到比赛终局。单回合测试、调试和批量标定使用内部 `RoundInput/roundSimulator`，但仍执行同一个 causal RoundEngine，不能通过 `MatchInput` 的固定回合数截断正式比赛。每小局由 Match 层派生 `RoundInput`：
 
 ```text
 MatchInput
   -> InitializeMatchState
   -> BuildRoundInput
-  -> SelectStrategyTemplate
-  -> AssignRoles
-  -> ResolveOpeningEncounter
-  -> ResolveMidRoundDecision
-  -> ResolveSiteEncounter
-  -> ResolveBombPhase
+  -> SelectTStrategyAndCTSetup
+  -> AssignRolesAndOpeningRoutes
+  -> RunRoundEventLoop
+       -> PlanFromCurrentDecisionView
+       -> ScheduleMove/Hold/Encounter/BombActions
+       -> AdvanceToEarliestActionOrDeadline
+       -> ApplyTimestampBatchAtomically
+       -> UpdateDamage/Deaths/Intel/Control/Bomb
+       -> ReevaluateDecisionAndTerminal
   -> GenerateExplainableReport
   -> UpdateMatchMemory
   -> MatchResult
@@ -56,7 +59,7 @@ RouteTemplate     Dust2 战术模板
 StrategyTemplate  队伍回合策略
 Scenario          战斗场景标签集合
 Encounter         一次明确参战人员的遭遇战
-EncounterContext  遭遇战上下文
+EncounterStartContext / CombatPulseContext  遭遇战启动上下文与脉冲不可变快照
 MapTag            地图语义标签
 PlayerProfile     选手静态属性
 PlayerState       选手回合状态
@@ -72,9 +75,9 @@ MatchResult       整场结构化战报
 ExplainableReport 可解释战报
 EventReason       事件原因
 
-MapNode           可选地图节点，用于展示、路线图关系、击杀点采样、包点、控制权和交火范围
-MapEdge           可选路径标记，用于耗时、风险热点权重和拦截候选标签
-Visibility        可选视野标记，用于场景修正
+MapNode           正式 Dust2 配置必需的辅助地图节点，用于展示、路线图关系、击杀点采样、包点、控制权和交火范围
+MapEdge           正式 Dust2 配置必需的辅助路径标记，用于耗时、风险热点权重和拦截候选标签
+Visibility        可选关系模型；正式 Dust2 配置必须覆盖关键视线，用于场景修正
 ```
 
 ---
@@ -93,11 +96,11 @@ Visibility        可选视野标记，用于场景修正
 | `Scenario` | 定义每次结算的场景标签 | 主模型 |
 | `Encounter` | 定义参战人员、阶段、权重和输出 | 主模型 |
 | `MapTag` | 定义距离、角度、风险、包点等地图语义 | 主模型 |
-| `MapNode` | 提供战报位置、路线锚点、可选采样范围、包点和控制区语义 | 辅助模型 |
-| `MapEdge` | 提供转点耗时、风险热点权重、拦截候选标签 | 辅助模型 |
-| `Visibility` | 提供架点、距离、暴露关系修正 | 辅助模型 |
+| `MapNode` | 提供战报位置、路线锚点、可选采样范围、包点和控制区语义；正式 Dust2 配置必需 | 辅助模型 |
+| `MapEdge` | 提供转点耗时、风险热点权重、拦截候选标签；正式 Dust2 配置必需 | 辅助模型 |
+| `Visibility` | 提供架点、距离、暴露关系修正；单条关系可选，但正式 Dust2 必须覆盖关键视线 | 辅助模型 |
 
-`A大`、`A小`、`B二楼` 是宏观进攻路线。点位图只服务于战报坐标、行动耗时、风险热点权重和高级冲突修正，不作为第一版主要结算入口。
+`A大`、`A小`、`B二楼` 是宏观进攻路线。点位图是正式第一版移动可达性、行动耗时、战报坐标、风险热点权重和拦截候选的必需辅助输入；它不替代 RouteTemplate/Scenario，也不升级为连续空间物理仿真。
 
 #### 战术模板
 
@@ -118,12 +121,14 @@ Visibility        可选视野标记，用于场景修正
 |---|---|
 | `id` | 模板 ID |
 | `map_id` | `de_dust2` |
+| `side` | `T` 战术或 `CT` setup |
 | `target_site` | `A` / `B` / `None` |
-| `recommended_players` | 推荐投入人数 |
+| `recommended_min / recommended_max` | 推荐投入人数范围 |
 | `required_roles` | `Entry`、`Support`、`AWPer`、`Lurker` 等 |
 | `key_attributes` | 关键属性权重 |
-| `default_scenarios` | 可能生成的 `Scenario` 序列 |
-| `common_ct_setups` | 容易遭遇的 CT 防守类型 |
+| `route_ids / route_allocations` | 同阵营路线与目标人数分配 |
+| `scenario_ids` | 可生成的 `Scenario` 集合 |
+| `common_ct_setup_ids` | 常见 CT 防守 setup 模板 ID；只表达赛前先验，不指定本回合实际 CT setup |
 | `success_next_phase` | 成功后进入的阶段 |
 | `failure_fallbacks` | 失败后允许转点、救包、强攻或保枪 |
 
@@ -193,15 +198,21 @@ AI 决策只能读取本方 `KnownControl`，不能直接读取 `ActualControl`�
 |---|---|---|
 | `id` | string | 战术模板 ID |
 | `map_id` | string | 地图 ID |
+| `side` | enum | `T` 表示进攻战术模板，`CT` 表示开局防守 setup 模板 |
 | `target_site` | enum | `A` / `B` / `None` |
 | `tempo` | enum | `Fast` / `Default` / `Slow` / `Late` |
 | `recommended_min` / `recommended_max` | int | 推荐人数范围 |
 | `required_roles` | string[] | 关键角色 |
 | `key_attributes` | map | 属性权重 |
+| `route_ids` | string[] | 本模板允许使用的同阵营 `tb_route`；CT setup SHALL 覆盖完整五人部署 |
+| `route_allocations` | map<string,int> | 各路线目标人数；总数必须等于队伍人数并满足 Route min/max |
 | `scenario_ids` | string[] | 可生成场景 |
 | `map_tag_ids` | string[] | 模板默认地图语义标签 |
+| `common_ct_setup_ids` | string[] | 仅 T 模板使用；引用常见 CT setup 作为先验/标定语义，不决定本回合 CT 实际选择 |
 | `success_next_phase` | string | 成功后阶段 |
 | `failure_fallbacks` | string[] | 失败后候选策略 |
+
+正式 Dust2 除六个 `side=T` 战术模板外，必须配置多个 `side=CT` setup 模板，至少表达 A/B/Mid 的初始覆盖与合法回防入口。CT setup 使用本方阵容、角色、属性、历史 `StrategyMemory` 和独立 `CTSetupSeed` 选择；不得读取本回合 T 已选模板、T Route/Intent 或其他隐藏状态。T 模板中的 `common_ct_setup_ids` 只描述赛前可知的地图先验，可用于 T 模板评分、Scenario 适配和标定，不得把其中某项强制成实际 CT setup。
 
 #### `tb_scenario`
 
@@ -230,7 +241,7 @@ AI 决策只能读取本方 `KnownControl`，不能直接读取 `ActualControl`�
 | `tb_map_tag` | 定义可复用地图语义，如长距离、强架点、包点压力、转点风险 |
 | `tb_scenario` | 组合场景标签，引用 `map_tag_ids` |
 | `tb_map_node` | 定义地图语义节点，提供默认展示坐标、图关系引用和可选二维区域范围 |
-| `tb_visibility` | 仅描述点位之间的可见关系，第一版可选 |
+| `tb_visibility` | 仅描述点位之间的可见关系；单条关系可选，但正式 Dust2 配置必须覆盖关键视线 |
 | `tb_encounter_modifier` | 定义某个场景下标签和属性如何转成分数 |
 
 | 字段 | 类型 | 说明 |
@@ -311,7 +322,7 @@ if shape == None:
 采样必须使用派生 Seed，保证同一输入、同一回合、同一事件生成相同展示坐标。
 
 ```text
-LocationSeed = Hash(RoundSeed, "event_location", EventID, MapNodeID)
+LocationSeed = Hash(RoundSeed, "event_location", EventID, SourceObjectID)
 ```
 
 `MapNode` 的区域几何不参与真实空间仿真。它只提供“这个事件在雷达图上应该自然落在哪个范围里”的展示语义，以及包点、控制区、交火区、声音区、风险区等可复用地图语义。
@@ -381,14 +392,26 @@ LocationSeed = Hash(RoundSeed, "event_location", EventID, MapNodeID)
 | `BasePlantTime` | `Bomb` | `Int` | `s` | 基础下包时间 |
 | `BaseDefuseTime` | `Bomb` | `Int` | `s` | 基础拆包时间 |
 | `BasePickupTime` | `Bomb` | `Int` | `s` | 基础捡包时间 |
+| `MinPickupTime` | `Clamp` | `Int` | `s` | 捡包时间下限 |
+| `MaxPickupTime` | `Clamp` | `Int` | `s` | 捡包时间上限 |
 | `ForceExecuteThreshold` | `Decision` | `Int` | `s` | 低时间强攻阈值 |
+| `DecisionDelay` | `Decision` | `Int` | `s` | 决策行动的离散耗时 |
 | `MaxDecisionCount` | `Decision` | `Int` | `count` | 单回合最大重新决策次数 |
 | `MaxEncounterPulses` | `Combat` | `Int` | `count` | 单次遭遇战最大脉冲数 |
+| `MinCombatDuration` | `Combat` | `Int` | `s` | 单次 Encounter 最短持续时间 |
+| `MaxCombatDuration` | `Combat` | `Int` | `s` | 单次 Encounter 最长持续时间 |
+| `PulseFireWindow` | `Combat` | `Int` | `s` | 单个战斗脉冲覆盖的射击时间窗 |
 | `CombatScale` | `Combat` | `Float` | `score` | 战斗分差转概率缩放 |
+| `MinDamagePotential` | `Clamp` | `Float` | `percent` | 武器致命潜力下限 |
+| `MaxDamagePotential` | `Clamp` | `Float` | `percent` | 武器致命潜力上限 |
+| `MinExposureModifier` | `Clamp` | `Float` | `percent` | 暴露修正下限 |
+| `MaxExposureModifier` | `Clamp` | `Float` | `percent` | 暴露修正上限 |
 | `BaseNoise` | `Decision` | `Float` | `score` | 随机扰动基础值 |
 | `MaxRandomNoise` | `Decision` | `Float` | `score` | 随机扰动绝对上限 |
 | `CloseScoreGap` | `Decision` | `Float` | `score` | 近似同分阈值 |
 | `DecisiveScoreGap` | `Decision` | `Float` | `score` | 明显优势阈值 |
+| `DefaultStrategyTemplateID` | `Decision` | `String` | `none` | 开局计划重试仍失败时使用的配置默认模板 ID，第一版指向合法的 `Default_Pick` 配置行 |
+| `DefaultCTSetupTemplateID` | `Decision` | `String` | `none` | CT setup 重试仍失败时使用的合法 `side=CT` 配置模板 ID |
 | `StrategyRepeatWindow` | `Decision` | `Int` | `round` | 战术重复统计窗口 |
 | `RepeatFreeCount` | `Decision` | `Int` | `round` | 允许无惩罚连续使用同战术次数 |
 | `StrategyRepeatPenalty` | `Decision` | `Float` | `score` | 同路线/模板连续使用惩罚 |
@@ -398,6 +421,19 @@ LocationSeed = Hash(RoundSeed, "event_location", EventID, MapNodeID)
 | `MinStrategyWeight` | `Clamp` | `Float` | `score` | 战术候选权重下限 |
 | `MaxStrategyWeight` | `Clamp` | `Float` | `score` | 战术候选权重上限 |
 | `ControlIntelTTL` | `Intel` | `Int` | `s` | 控制权情报有效时间 |
+| `CommunicationDelay` | `Intel` | `Int` | `s` | 队内情报传播延迟预留字段；第一版必须配置为 `0`，表示即时共享 |
+| `SoundIntelMinConfidence` | `Intel` | `Int` | `percent` | 真实声音区域情报置信度下限，第一版为 `30` |
+| `SoundIntelMaxConfidence` | `Intel` | `Int` | `percent` | 真实声音区域情报置信度上限，第一版为 `70` |
+| `DeathIntelMaxConfidence` | `Intel` | `Int` | `percent` | 观察者死亡瞬间情报置信度上限，第一版不超过 `70` |
+| `MinIntelTTL` | `Intel` | `Int` | `s` | 情报 TTL 下限 |
+| `MaxIntelTTL` | `Intel` | `Int` | `s` | 情报 TTL 上限 |
+| `UtilityBudget` | `Resource` | `Int` | `score` | 每队每回合可用于抽象道具行动的预算 |
+| `MaxStateTransitions` | `Clamp` | `Int` | `count` | 单回合状态转换上限 |
+| `MaxScheduledActions` | `Clamp` | `Int` | `count` | 单回合调度行动上限 |
+| `MaxEffectsPerTimestamp` | `Clamp` | `Int` | `count` | 单时间戳 Effect 上限 |
+| `MaxNoOpTransitions` | `Clamp` | `Int` | `count` | 进入恢复与无进展检查前允许的连续 NoOp 数 |
+| `MaxRotationsPerTeam` | `Clamp` | `Int` | `count` | 单队主动转点上限 |
+| `MaxRoundTimeline` | `Clamp` | `Int` | `s` | 单回合绝对时间线上限 |
 | `MinAttribute` | `Clamp` | `Int` | `score` | 输入属性下限 |
 | `MaxAttribute` | `Clamp` | `Int` | `score` | 输入属性上限 |
 | `MinHP` | `Clamp` | `Int` | `score` | HP 下限 |
@@ -415,6 +451,8 @@ LocationSeed = Hash(RoundSeed, "event_location", EventID, MapNodeID)
 | `MaxDefuseTime` | `Clamp` | `Int` | `s` | 拆包时间上限 |
 | `MinMoveTime` | `Clamp` | `Int` | `s` | 移动耗时下限 |
 | `MaxMoveTime` | `Clamp` | `Int` | `s` | 移动耗时上限 |
+
+上述 key 是正式第一版的完整必配库存；场景族十属性权重和具体 Scenario 修正可以存放在 `EncounterModifier`，其余公式、调度、Clamp 和终局所需数值不得依赖未命名代码默认值。新增必配 key 必须先修订本表、Luban 表源和配置校验，再进入引擎实现。
 
 ### 2.3 回合资源模型
 
@@ -436,16 +474,13 @@ LocationSeed = Hash(RoundSeed, "event_location", EventID, MapNodeID)
 | `RoundTimer` | 常规回合倒计时，限制 T 方完成下包 | 下包前 |
 | `BombTimer` | 炸弹倒计时，限制 CT 方完成拆包 | 下包后 |
 
-状态机只维护一个递增的 `Timeline`。每个阶段返回 `TimeCost`，由状态机统一调用 `AdvanceTime(cost)`。
+状态机只维护一个递增的 `Timeline`。resolver/planner 可以计算行动 `Duration`，但不得通过“阶段返回耗时”阻塞整个回合；scheduler 将它冻结为 `ResolveAt = StartAt + Duration`，并只推进到全局最早的有效 action 或 deadline。
 
 ```text
-Timeline += TimeCost
-
-if Phase < PostPlant:
-    RoundTimer -= TimeCost
-
-if Phase >= PostPlant:
-    BombTimer -= TimeCost
+nextAt = min(NextValidAction.ResolveAt, ActiveRoundDeadline, ActiveBombDeadline)
+Timeline = nextAt
+RoundTimer = max(0, RoundDeadline - Timeline)  // 仅下包前投影
+BombTimer  = max(0, BombDeadline - Timeline)   // 仅下包后投影
 ```
 
 `RoundTimer` 和 `BombTimer` 不同时作为胜负条件生效。下包成功后，`RoundTimer` 失效，`BombTimer` 初始化为配置值，例如 `40s`。
@@ -456,7 +491,8 @@ PlantSuccess:
     Bomb.Status = Planted
     Bomb.PlantedAt = Timeline
     Bomb.ExplodeAt = Timeline + BombExplodeTime
-    BombTimer = BombExplodeTime
+    BombDeadline = Bomb.ExplodeAt
+    BombTimer = max(0, BombDeadline - Timeline)
 ```
 
 下包前时间耗尽，CT 以 `TIME_EXPIRED` 获胜。下包后即使 `RoundTimer` 已小于等于 0，也只检查 `BombTimer`。
@@ -618,8 +654,9 @@ Encounter =
 1. 根据 `RoundPlan` 和当前局势确定参战人员。
 2. 根据 `Scenario` 标签读取修正项。
 3. 计算双方 `EncounterScore`。
-4. 生成击杀、受伤、控制结果和耗时。
-5. 输出 `EventReason`，说明主因、修正项和分差。
+4. 在 Encounter 启动时只确定 `CombatDuration`、pulse 数量/绝对时间并安排 future action，不预生成未来伤亡。
+5. 每个 `CombatPulse` 到时根据当时不可变快照生成 Damage/Resource Effect，提交后再派生击杀、控制结果和中断。
+6. 输出 `ReasonRecord`，由已成功应用的 Effect 投影为 `EventReason`。
 
 #### 交火触发条件
 
@@ -672,6 +709,8 @@ EncounterScore =
   + RandomNoise
 ```
 
+`DeterministicEncounterScore` 使用同一公式但不包含 `RandomNoise`。`EncounterScore` 用于主动权、姿态、脉冲数量/时长、撤退倾向和战报解释，不直接设置 Encounter 胜方、目标存活人数或伤亡表。若确定性分差达到 `DecisiveScoreGap`，只能裁剪 RandomNoise 使评分顺序不翻转；每个 CombatPulse 的命中和伤害采样仍完整执行，因此强势方更稳定但仍允许实际概率链产生爆冷。
+
 第一版默认公式冻结为可测试的线性组合，所有权重来自 `CombatConst` 或 `EncounterModifier`，但代码中的计算顺序固定。
 
 ```text
@@ -716,7 +755,7 @@ PlayerCombatScore =
 | 属性范围 | 输入属性建议 `0..100`，加载时 clamp 到 `MinAttribute..MaxAttribute` |
 | 修正项范围 | 单个 modifier 建议不超过 `±25`，团队总修正建议 clamp 到 `-60..60` |
 | 随机扰动 | `RandomNoise` 绝对值不得超过 `MaxRandomNoise` |
-| 明显优势保护 | 若去掉随机后的分差 `abs(delta) >= DecisiveScoreGap`，随机只影响事件细节，不反转胜负趋势 |
+| 明显优势保护 | 若确定性分差 `abs(delta) >= DecisiveScoreGap`，有界 `RandomNoise` 不得把评分高低关系翻转；后续命中与伤害采样仍允许小概率爆冷，不得据此预定 Encounter 胜方 |
 
 场景标签直接决定哪些属性重要：
 
@@ -829,33 +868,33 @@ A_LONG / LONG_DOOR / PIT
 
 #### 单个选手战斗评分
 
-每个脉冲中，选手生成一个临时 `CombatScore`。
+每个脉冲中使用前文唯一冻结的 `PlayerCombatScore` 作为攻击方 `CombatScore`，不得再计算第二套分数：
 
 ```text
-CombatScore =
-    Aim
-  + Reaction
-  + Positioning
+CombatScore = PlayerCombatScore
+
+PlayerCombatScore =
+    WeightedPlayerScore
+  + RoleTagModifier
+  + WeaponModifier
   + PostureModifier
   + VisibilityModifier
   + TeamSupportModifier
-  + UtilityModifier
-  + MomentumModifier
   - StaminaPenalty
   - DamagePenalty
   - SuppressionPenalty
 ```
 
+`UtilityModifier`、`MomentumModifier` 和 `TimePressureModifier` 只在团队级 `EncounterScore` 中各计算一次，用于主动权、姿态、脉冲数量/时长和撤退倾向；它们不得再次直接加入 `PlayerCombatScore`，否则会重复计算团队局势。具体道具或节奏造成的可观察姿态、视野、协同变化，可以通过相应单项 modifier 间接影响本 pulse，但同一原因不得在两个层级重复计分。
+
 | 项 | 说明 |
 |---|---|
-| `Aim` | 击中目标的基础能力 |
-| `Reaction` | 遭遇时抢先开火 |
-| `Positioning` | 站位、预瞄、掩体利用 |
+| `WeightedPlayerScore` | 根据当前场景族十属性归一化权重计算的个人基础能力 |
+| `RoleTagModifier` | 当前角色与场景标签的匹配修正 |
+| `WeaponModifier` | 武器与当前距离/场景的适配修正 |
 | `PostureModifier` | 架点、移动、下包、撤退等姿态修正 |
 | `VisibilityModifier` | 视野距离、角度优势、掩体、暴露面积 |
 | `TeamSupportModifier` | 队友补枪覆盖、交叉火力 |
-| `UtilityModifier` | 烟闪雷等道具执行的抽象收益 |
-| `MomentumModifier` | 本次交火中的士气和节奏 |
 | `StaminaPenalty` | 体能不足导致反应和控枪下降 |
 | `DamagePenalty` | 已受伤影响稳定性 |
 | `SuppressionPenalty` | 被压制时命中和决策下降 |
@@ -881,13 +920,15 @@ CombatScore =
 
 1. 根据姿态和视野确定每名选手可攻击目标。
 2. 根据 `CombatScore` 和目标 `SurvivalScore` 计算命中/击杀概率。
-3. 使用同一个 Seed 进行随机采样。
-4. 应用伤害、击杀、压制、Focus 波动和 Stamina 消耗。
-5. 根据击杀和受伤结果调整下一脉冲的 `Momentum` 和姿态。
+3. 从 `PulseSeed` 按 `ActorID/TargetID/RollKind` 派生独立 `ActorRollSeed`，完成目标、命中、致命伤害包及其他随机采样。
+4. 基于 pulse 开始快照生成全部 `Effect`，再原子应用伤害、压制、Focus 波动和 Stamina 消耗，并由应用后的 HP 派生死亡与击杀。
+5. 根据实际击杀和受伤结果调整下一脉冲的 `Momentum` 和姿态。
+
+同一 `CombatPulse` 是一个原子战斗事务。所有在 pulse 开始快照中具备攻击资格的选手先完成目标选择、命中和伤害采样，再统一应用全部 `DamageEffect`；随后从应用后的 HP 派生死亡、`KILL`、`BOMB_DROP`、打断和控制权变化。某名选手在同一 pulse 中被击杀，不会取消其已经基于 pulse 快照形成的攻击。只有 CombatPulse 事务完成后，状态机才重新校验同秒的下包、拆包和移动等较低优先级行动。
 
 ```text
 HitChance = sigmoid((CombatScore - TargetSurvivalScore) / Scale)
-KillChance = HitChance * DamagePotential * ExposureModifier
+KillChance = min(HitChance * DamagePotential * ExposureModifier, HitChance)
 ```
 
 第一版概率公式必须显式 clamp：
@@ -897,10 +938,10 @@ RawHitChance = sigmoid((CombatScore - TargetSurvivalScore) / CombatScale)
 HitChance = clamp(RawHitChance, MinHitChance, MaxHitChance)
 
 RawKillChance = HitChance * DamagePotential * ExposureModifier
-KillChance = clamp(RawKillChance, 0, MaxKillChance)
+KillChance = clamp(min(RawKillChance, HitChance), 0, MaxKillChance)
 ```
 
-`DamagePotential` 与武器配置绑定，取值建议 `0.20..1.20`；`ExposureModifier` 由姿态、掩体和移动状态决定，取值建议 `0.50..1.50`。公式单测必须覆盖最小命中、最大命中、最大击杀率和极端分差不会产生 `0%` 或 `100%` 必然结果。
+`DamagePotential` 与武器配置绑定，取值建议 `0.20..1.20`；`ExposureModifier` 由姿态、掩体和移动状态决定，取值建议 `0.50..1.50`。`KillChance` 不得大于 `HitChance`，也不额外乘以 `TargetHPFactor`；低 HP 更容易死亡由实际伤害扣减自然体现。公式单测必须覆盖最小命中、最大命中、最大击杀率和极端分差不会产生 `0%` 或 `100%` 必然结果。
 
 `TargetSurvivalScore`：
 
@@ -914,6 +955,8 @@ TargetSurvivalScore =
   - MovementExposure
   - DamagePenalty
 ```
+
+这是第一版唯一冻结的生存分公式。`SuppressionPenalty` 已经降低攻击方 `PlayerCombatScore`，不得又从 `TargetSurvivalScore` 扣除；若未来要改变其因果语义，必须先修订设计、配置键和 golden tests。
 
 #### 伤害与击杀
 
@@ -951,24 +994,23 @@ TargetSurvivalScore =
 | 一方局部选手全灭 | 点位控制权转移 |
 | 一方撤退成功 | 生成撤退或转点决策 |
 | 双方失去视野 | 交火中断 |
-| 达到 `MaxCombatPulses` | 避免单次交火无限拉长 |
+| 达到 `MaxEncounterPulses` | 避免单次交火无限拉长 |
 | `CombatDuration` 达到上限 | 进入局势重评估 |
 
 团战结束后，状态机立即触发局势评估。T 方可能继续推进、转点或强攻；CT 方可能补防、回撤或重防。
 
 #### 结算结果
 
-一次团战输出：
+Encounter 不再一次性返回完整伤亡表、权威状态或阻塞性的 `TimeCost`。`Start` 只调度未来 `CombatPulse/EncounterEnd`；每个 pulse 到达自己的 `ResolveAt` 时只返回待事务应用的 Effect：
 
 ```go
-type CombatResult struct {
-    Events        []RoundEvent
-    UpdatedStates []PlayerState
-    NodeControls  []NodeControlChange
-    MomentumDelta  int
-    TimeCost       int
+type CombatPulseResult struct {
+    Effects       []Effect
+    ReasonRecords []ReasonRecord
 }
 ```
+
+公开事件、控制权、Momentum、炸弹掉落和最终玩家状态全部由成功应用的 Effect 及其派生 Effect 投影，resolver 不得直接写入权威 `RoundState`。
 
 可能事件：
 
@@ -1017,7 +1059,7 @@ DecisionScore =
   + RandomNoise
 ```
 
-`RandomNoise` 受 `Discipline`、`IGL`、`Awareness` 约束。纪律越高，随机波动越小。
+`RandomNoise` 受 `Discipline`、`IGL`、`Awareness` 约束。纪律、指挥和局势感知越高，随机波动越小。若不含随机项的候选分差达到 `DecisiveScoreGap`，噪声不得翻转候选评分顺序；这只保护决策趋势，不预定后续 Encounter 或回合胜方。
 
 #### 跨回合战术记忆
 
@@ -1098,7 +1140,7 @@ Round 6:
 | 不影响 | 不直接修改 `Aim/Reaction` 等选手基础属性 |
 | 半场切换 | 角色互换后清空或衰减阵营相关记忆，保留队伍风格记忆 |
 | 可回放 | `StrategyMemory` 来自前序 `RoundResult`，同一 `MatchInput + seed` 必须稳定 |
-| 前端解释 | 当记忆修正影响战术选择时，输出 `STRATEGY_ADJUSTED` 或在 `ROUND_START.Reason` 中标注 |
+| 前端解释 | 当记忆修正实际影响战术选择时，后端输出 `STRATEGY_ADJUSTED`，并在 `ROUND_START.Reason` 中保留对应评分输入；前端第一版可以不展示 |
 
 #### 信息模型
 
@@ -1166,9 +1208,9 @@ ActualControl
 
 | 问题 | 规则 |
 |---|---|
-| 情报是否全队瞬时共享 | 第一版视为队内无线电共享，但保留 `CommunicationDelay` 配置 |
+| 情报是否全队瞬时共享 | 第一版视为队内无线电即时共享，并保留 `CommunicationDelay` 配置字段；第一版该值必须为 `0`，非零值校验失败，不实现延迟投递队列 |
 | 死亡队友是否提供信息 | 提供死亡瞬间的攻击来源和大致人数，`confidence` 不超过 `70` |
-| 声音是否误判 | 声音线索允许误判，`confidence` 通常为 `30-70` |
+| 声音是否误判 | 第一版不生成虚假位置或虚假人数；声音不确定性只通过 `confidence = 30-70`、区域级位置和 TTL 表达 |
 | 没看到人是否等于空点 | 不是；生成低置信度 `EmptyAssumption` |
 | Bomb 是否精确已知 | 只有直接视野或明确声音事件才知道精确点；否则只知道区域 |
 | 观察者死亡 | 其提供的情报立即降低 `confidence`，但不删除 |
@@ -1179,9 +1221,9 @@ ActualControl
 | `confidence` | 含义 |
 |---:|---|
 | `90-100` | 直接视野、刚发生 |
-| `70-89` | 交火确认、队友死亡信息 |
-| `40-69` | 声音、自由人推断 |
-| `1-39` | 空点假设、过期控制权 |
+| `71-89` | 交火确认 |
+| `30-70` | 真实声音、移动暴露、队友死亡信息；死亡信息不得超过 `70` |
+| `1-29` | 空点假设、过期控制权 |
 | `0` | 不可用于决策 |
 
 AI 决策必须把 `confidence` 纳入评分。低置信度信息只能影响评分，不能触发确定性补防或转点。
@@ -1238,7 +1280,7 @@ PlantRisk =
 |---|---|
 | `BOMB_PLANT_START` | `T_SITE_CONTROL`、`UTILITY_COVER`、`LOW_TIME_FORCE` |
 | `BOMB_PLANT_INTERRUPT` | `CT_PRESSURE`、`PLANTER_ISOLATED`、`UNKNOWN_ANGLE` |
-| `BOMB_PLANTED` | `SITE_CONTROL_ADVANTAGE`、`DISCIPLINE_EXECUTION` |
+| `BOMB_PLANT` | `SITE_CONTROL_ADVANTAGE`、`DISCIPLINE_EXECUTION` |
 
 #### 下包时间
 
@@ -1324,8 +1366,8 @@ AND T 未被控制、压制或阻断路径
 |---|---|
 | `DEFUSE_START` | `CT_RETAKE_WIN`、`ENOUGH_TIME`、`KIT_ADVANTAGE` |
 | `DEFUSE_INTERRUPT` | `T_CAN_DENY`、`DEFUSER_LOW_HP`、`NO_COVER` |
-| `BOMB_DEFUSED` | `RETAKE_SUCCESS`、`COMPOSURE_CLUTCH`、`ENOUGH_TIME` |
-| `BOMB_EXPLODED` | `CT_RETAKE_TOO_SLOW`、`LOW_TIME`、`T_POSTPLANT_POSITION` |
+| `BOMB_DEFUSE` | `RETAKE_SUCCESS`、`COMPOSURE_CLUTCH`、`ENOUGH_TIME` |
+| `BOMB_EXPLODE` | `CT_RETAKE_TOO_SLOW`、`LOW_TIME`、`T_POSTPLANT_POSITION` |
 
 #### 拆包边界
 
@@ -1387,12 +1429,14 @@ PickupTime = clamp(BasePickupTime - ComposureModifier, MinPickupTime, MaxPickupT
 |---:|---|---|---|
 | 100 | 炸弹已拆除 | CT | `BOMB_DEFUSED` |
 | 90 | 炸弹已爆炸 | T | `BOMB_EXPLODED` |
-| 80 | 炸弹未下且 T 全灭 | CT | `T_ELIMINATED` |
+| 80 | 炸弹未下、T 全灭且 `Bomb.Status != Dropped` | CT | `T_ELIMINATED` |
+| 75 | 炸弹未下、T 全灭且 `Bomb.Status == Dropped` | CT | `T_ELIMINATED_BOMB_DROPPED` |
 | 70 | 炸弹未下且 CT 全灭 | T | `CT_ELIMINATED` |
 | 60 | 下包前 `RoundTimer <= 0` 且炸弹未下 | CT | `TIME_EXPIRED` |
-| 50 | 炸弹掉落且 T 全灭 | CT | `T_ELIMINATED_BOMB_DROPPED` |
 | 40 | 已下包且 CT 全灭且无拆包可能 | T | `BOMB_SECURED` |
-| 30 | No-op 兜底判定失败 | CT | `NO_PROGRESS_TIMEOUT` |
+| 30 | `NoProgressEligible` 且 `ValidNoProgress` 成立 | CT | `NO_PROGRESS_TIMEOUT` |
+
+`ValidNoProgress` 只是描述业务状态的纯条件，不会在普通事件批次后立即终局。只有连续 NoOp 达到 `MaxNoOpTransitions`、状态机已经通过 `NoProgressRecoveryState` 记录并完成一次确定性的 `ForceExecute`/恢复行动且仍无法产生合法进展后，才设置一次性的 `NoProgressEligible=true` 并执行 `NoProgressCheck`。终局纯函数只读取该资格标记和当前状态。恢复周期以 `CycleID` 标识：`Status=Running` 时，由该 `RecoveryActionID` 自身产生的排队、时间推进、移动、事件和完成 bookkeeping 不得清空恢复证明；恢复完成后若重新建立合法下包路径或普通可执行 action，则记为 `Succeeded` 并原子清空资格、NoOp 计数和恢复状态，若仍不可恢复则记为 `Failed` 并保留到紧随其后的 `NoProgressCheck`。来自其他 action/effect 的真实进展或恢复期间的外部打断会结束当前周期并原子清空上述状态。
 
 边界封口：
 
@@ -1402,7 +1446,8 @@ PickupTime = clamp(BasePickupTime - ComposureModifier, MinPickupTime, MaxPickupT
 | T 全灭且炸弹未下 | CT 立即 `T_ELIMINATED` 获胜 |
 | `PlantCompleteAt == RoundTimerExpireAt` | 先结算同秒事件；下包者存活则下包成功 |
 | CT 击杀最后一名 T 同一秒炸弹爆炸 | 先更新击杀，再判定爆炸；`BOMB_EXPLODED` 优先于 CT 全灭/T 全灭 |
-| CT 全灭但同秒拆包完成 | 同秒拆包完成后 `BOMB_DEFUSED` 优先 |
+| 除拆包者外最后一名 CT 同秒死亡，但拆包者存活并完成拆包 | `BOMB_DEFUSED` 优先 |
+| 最后一名 CT 正是拆包者，且其死亡时间 `== DefuseFinishAt` | CombatPulse 先应用，拆包者死亡使完成行动失效，拆包失败 |
 | T 全灭但炸弹掉落且未下 | CT 胜，保留 `BOMB_DROP` 事件用于战报 |
 
 原则：
@@ -1419,7 +1464,7 @@ Planting 边界：同秒下包完成在 RoundTimer 归零前接受
 
 ### 3.1 整场推演流程
 
-`MatchInput` 是对局级入口。单回合模拟只是 `MaxRounds = 1` 的特例。
+`MatchInput` 是必须推演到赛制终局的对局级入口。单回合模拟是内部 `roundSimulator` 的独立测试/调试模式，不是 `MatchInput.MaxRounds = 1` 的正式比赛特例。
 
 ```mermaid
 flowchart TD
@@ -1439,41 +1484,38 @@ flowchart TD
 
 | 职责 | 说明 |
 |---|---|
-| 比分推进 | 维护 `ScoreT/ScoreCT`、回合号、半场和胜利条件 |
+| 比分推进 | 以 TeamID 维护权威队伍比分、回合号、半场和胜利条件；`ScoreT/ScoreCT` 只按当前阵营映射投影 |
 | 战术记忆 | 根据前序小局生成 `StrategyMemory`，影响下一局战术权重 |
 | 汇总输出 | 聚合每局事件、最终选手统计和整场解释 |
 
-第一版可以先支持 `RoundCount = 1` 和固定多回合数量；后续再扩展为完整 `MR12/MR15`、加时和经济系统。
+第一版同时提供单回合测试入口和正式完整比赛入口；正式入口必须支持当前规则集的 MR12、换边与加时，单回合入口只用于验证同一因果 RoundEngine。MR15 和经济系统可在后续规则集扩展，不能用固定回合数量绕过比赛终局规则。
 
 ### 3.2 回合推演流程
 
 ```mermaid
 flowchart TD
     A["RoundInput"] --> B["Load Tactical Config"]
-    B --> C["Initialize PlayerState"]
-    C --> D["SelectStrategyTemplate"]
-    D --> E["AssignRoles"]
-    E --> F["ResolveOpeningEncounter"]
-    F --> G["ResolveMidRoundDecision"]
-    G --> H{"Need Rotate or Rehit?"}
-    H -->|Rotate| I["ResolveRotationDecision"]
-    H -->|Rehit| J["ResolveSiteEncounter"]
-    I --> J
-    J --> K{"Plant Attempt?"}
-    K -->|Yes| L["ResolveBombPhase"]
-    K -->|No| M["Check Elimination or Time"]
-    L --> N["GenerateExplainableReport"]
-    M --> N
-    N --> O["RoundResult"]
+    B --> C["Initialize authoritative RoundState"]
+    C --> D["Select T Strategy and independent CT Setup"]
+    D --> E["Assign Roles and schedule opening Move/Hold"]
+    E --> F["Choose earliest Action or Deadline"]
+    F --> G["Advance Timeline to absolute ResolveAt"]
+    G --> H["Apply same-time Effects atomically"]
+    H --> I["Update Player/Bomb/Control/Intel"]
+    I --> J{"Terminal state reached?"}
+    J -->|No| K["Reevaluate Decisions and schedule actions"]
+    K --> F
+    J -->|Yes| L["Project Events and ExplainableReport"]
+    L --> M["RoundResult"]
 ```
 
-第一版不要求状态机通过完整寻路发现冲突。AI 先选择 `StrategyTemplate`，再按模板生成 `Encounter` 序列。时间、伤亡、情报和炸弹状态会影响中期是否转点、强攻或进入下包阶段。
+第一版不构建物理导航网格，但必须在配置的 `MapNode/MapEdge/Route` 语义图上做有界确定性可达性与路径选择。AI 只生成当前状态下的 Intent/Action；Encounter 由双方实际位置、可见性、行动与拦截条件动态形成，不在开局按模板预生成固定序列。每次实际伤害、伤亡、情报、控制权、移动和炸弹变化都会反馈到后续决策。
 
 ### 3.3 状态机执行模型
 
 第一版使用离散事件状态机，不使用固定 tick。
 
-这里的状态机只负责推进 `Encounter`、决策窗口和炸弹事件的结算顺序，不负责模拟完整实时空间。移动、转点和拦截优先由 `RouteTemplate`、`Scenario`、`TimeCost`、`RiskTag` 表达。
+这里的状态机负责推进 Move/Hold/Intercept/Encounter/Decision/Bomb 等可打断 action 及其同时间戳事务，不负责模拟完整实时空间。移动、转点和拦截由 `RouteTemplate`、`MapNode/MapEdge/Route`、`Scenario`、`Duration/ResolveAt` 与风险语义共同表达。
 
 固定 tick 适合 Match Handler 的实时同步，例如 `10Hz` 或 `20Hz` 驱动客户端输入、插值和广播。本系统第一版通过 RPC 一次性推演完整回合，没有实时输入，不需要每 `100ms` 扫描一次世界状态。
 
@@ -1482,12 +1524,12 @@ flowchart TD
 ```text
 CurrentState
   -> GenerateCandidateActions
-  -> EstimateActionCost
-  -> PickNextResolvedAction
-  -> AdvanceTime(TimeCost)
-  -> ApplyActionResult
-  -> EmitEvents
-  -> TransitionPhase
+  -> ScheduleWithAbsoluteResolveAt
+  -> PickEarliestActionOrDeadline
+  -> AdvanceTimelineToNextAt
+  -> ApplyTimestampBatchAtomically
+  -> ProjectEventsFromAppliedEffects
+  -> EvaluateTerminalAndReplan
 ```
 
 #### 固定 tick 与离散事件对比
@@ -1499,7 +1541,7 @@ CurrentState
 
 #### 时间推进单位
 
-状态机不是逐秒循环，也不是逐 tick 循环。`TimeCost` 来自行动结果。
+状态机不是逐秒循环，也不是逐 tick 循环。每个行动根据当前快照计算 `Duration`，再冻结为绝对 `ResolveAt`；行动本身不直接推进全局时间。
 
 | 行动 | 时间来源 |
 |---|---|
@@ -1516,22 +1558,23 @@ CurrentState
 
 ```go
 type ScheduledAction struct {
-    ActionID  string
-    ActorIDs  []string
-    Type      string
-    FromNode  string
-    ToNode    string
-    StartAt   int
-    ResolveAt int
-    Priority  int
-    Version   int
+    ActionID      string
+    ActorIDs      []string
+    Type          string
+    FromNode      string
+    ToNode        string
+    StartAt       int
+    ResolveAt     int
+    Priority      int
+    VersionByActor map[string]int // ActorID -> 安排该 action 时的选手 ActionVersion
+    MinRequiredActors int // 从来源 Route/模板人数约束冻结；单人 action 为 1
 }
 ```
 
 调度规则：
 
 1. 生成双方当前可执行行动，如推进、架点、转点、补防、下包。
-2. 为每个行动计算 `ResolveAt = Timeline + TimeCost`。
+2. 为每个行动计算 `ResolveAt = StartAt + Duration`。
 3. 取最早 `ResolveAt` 的行动作为下一个结算点。
 4. 若行动路径经过敌方可见点位，提前生成 `Intercept` 结算点。
 5. 若多个行动同一时间结算，按同秒优先级处理。
@@ -1562,12 +1605,13 @@ type PlayerActionState struct {
 调度器结算行动前必须校验：
 
 ```text
-action.Version == player.ActionVersion
-AND action.ActionID == player.CurrentActionID
-AND player.Alive == true
+对 action.ActorIDs 中的每个 ActorID：
+    action.VersionByActor[ActorID] == player.ActionVersion
+    AND action.ActionID == player.CurrentActionID
+    AND player.Alive == true
 ```
 
-校验失败的行动直接丢弃，作为过期行动处理，不产生事件。
+单人行动任一校验失败时直接丢弃，作为过期行动处理，不产生完成事件。group action 在构造时必须冻结稳定排序后的 `ActorIDs`、逐 Actor 版本和来源 Route/模板人数约束派生的 `MinRequiredActors`，并满足 `1 <= MinRequiredActors <= len(ActorIDs)`，否则 planner 返回结构化不变量错误而不是入队；某个成员失效时先从本次执行资格集合中移除。合法成员数仍不少于 `MinRequiredActors` 时仅由剩余成员继续，否则整个 group action 失效并让幸存成员重新规划；不得由遍历顺序、隐藏常量或临时随机决定继续/取消。队形完整度只作为 `合法成员数 / 原始 ActorIDs 数` 的解释值，不引入第二个阈值。
 
 #### 行动三层模型
 
@@ -1588,14 +1632,15 @@ type Intent struct {
 }
 
 type ActionInstance struct {
-    ActionID  string
-    IntentID  string
-    Type      string
-    ActorIDs  []string
-    Status    string // Pending / Running / Interrupted / Completed / Cancelled
-    StartAt   int
-    ResolveAt int
-    Version   int
+    ActionID      string
+    IntentID      string
+    Type          string
+    ActorIDs      []string
+    Status        string // Pending / Running / Interrupted / Completed / Cancelled
+    StartAt       int
+    ResolveAt     int
+    VersionByActor map[string]int
+    MinRequiredActors int
 }
 
 type BusyInterval struct {
@@ -1612,7 +1657,7 @@ type BusyInterval struct {
 |---|---|
 | `Hold` | 持续 `Intent`，不自动完成；只在被替换、死亡、转点或交火打断时结束 |
 | `Plant/Defuse` 被打断 | `ActionInstance` 取消；`Intent` 可保留，交火后重新评估是否恢复 |
-| 多人同步拉枪 | 使用 group `ActionInstance`；成员死亡后剩余成员按队形完整度继续或取消 |
+| 多人同步拉枪 | 使用 group `ActionInstance`；成员死亡后按冻结的 `MinRequiredActors` 确定性判断剩余成员继续或整体取消 |
 | 转点中途被打断 | 已消耗时间和体能保留；剩余路径从当前 `OnEdgeLocation` 重新规划 |
 | 交火结束后恢复 | 原 `Intent` 重新评分，不自动恢复旧 `ActionInstance` |
 
@@ -1624,8 +1669,8 @@ type BusyInterval struct {
 
 | 优先级 | 类型 | 说明 |
 |---:|---|---|
-| 100 | `Death` / `CombatKill` | 击杀、死亡状态先生效 |
-| 90 | `CombatDamage` | 伤害、压制、打断 |
+| 100 | `CombatPulseCommit` / `Death` / `CombatKill` | 同一 pulse 的全部伤害先按 pulse 开始快照原子应用，再派生击杀和死亡 |
+| 90 | `CombatAftermath` | 应用压制、Focus/Stamina/Momentum、行动打断等战斗后效；不得取消同 pulse 已形成的攻击 |
 | 80 | `BombDrop` | 持包者死亡导致掉包 |
 | 70 | `BombPlantComplete` | 下包完成 |
 | 60 | `BombDefuseComplete` | 拆包完成 |
@@ -1645,6 +1690,16 @@ MinActorID ASC
 ActionID ASC
 ```
 
+Action/Effect/Event ID 都由稳定语义身份派生，不使用全局自增顺序。resolver 必须先按语义 tuple 稳定排序候选，再分配局部 ordinal：
+
+```text
+ActionID = Hash(RoundSeed, ActionType, IntentID, StartAt, ResolveAt, SortedActorIDs, ActionOrdinal)
+EffectID = Hash(ActionID, EffectType, ActorID, TargetID, EffectOrdinal)
+EventID  = Hash(RoundSeed, "event", SourceActionID, SourceEffectID, EventType, EventOrdinal)
+```
+
+action 生命周期事件可以没有 SourceEffectID，但必须有 SourceActionID；EventOrdinal 仍在该 action 内按稳定语义排序分配。map 遍历顺序不得进入任何 ID。
+
 关键边界：
 
 | 同秒事件 | 结果 |
@@ -1660,11 +1715,11 @@ ActionID ASC
 
 | 兜底 | 默认值 | 处理 |
 |---|---:|---|
-| `MaxStateTransitions` | `200` | 超出后强制按当前局势结算 |
+| `MaxStateTransitions` | `200` | 超出后若当前状态未满足正式终局，返回 `SIMULATION_ERROR`，不得按局势猜胜方 |
 | `MaxScheduledActions` | `500` | 超出后返回 `SIMULATION_ERROR` |
-| `MaxNoOpTransitions` | `5` | 连续无状态变化则强制决策 |
+| `MaxNoOpTransitions` | `5` | 连续无状态变化达到阈值后先执行一次确定性恢复，再进入显式 `NoProgressCheck` |
 | `MaxRotationsPerTeam` | `3` | 超出后禁止主动转点 |
-| `MaxRoundTimeline` | `RoundLimit + BombExplodeTime` | 超出后按炸弹状态结算 |
+| `MaxRoundTimeline` | `RoundLimit + BombExplodeTime` | 先结算已到期的 Round/Bomb deadline；若仍无正式终局则返回 `SIMULATION_ERROR` |
 
 `NoOp` 定义：
 
@@ -1673,17 +1728,32 @@ Timeline 未推进
 AND 无选手位置变化
 AND 无 HP/Stamina/Focus 变化
 AND 无控制权变化
+AND 无情报、Bomb、Intent/ActionQueue 变化
 AND 无事件产出
 ```
 
-连续 `NoOp` 后：
+通用状态指纹仍包含 action queue、事件和恢复状态，但“是否重置恢复周期”使用带来源的 `AppliedBatch` 判断，不能只比较两个无来源快照。当前 `RecoveryActionID` 自身的变更属于恢复周期内部进展；只有其完成后的可达性评估或其他 action/effect 的真实进展才能决定成功重置、失败保留或外部打断重置。
+
+连续 `NoOp` 达到 `MaxNoOpTransitions` 后，状态机以 `CycleID = Hash(RoundSeed, "no_progress_recovery", RecoveryOrdinal)` 创建恢复周期并递增单回合单调的 `RecoveryOrdinal`；该 ordinal 在周期重置时不回退。创建后冻结当前 `NoOpCount`，并且在该周期内至多生成一次确定性恢复行动。`Status=Running` 期间不继续累计 NoOp；恢复 action 自身的状态变化只更新该周期，不触发通用 reset。恢复行动完成或确认不存在合法恢复行动后，才执行显式 `NoProgressCheck`：
 
 | 场景 | 处理 |
 |---|---|
 | 未下包且 T 可到达包点 | 强制 T 执行最近包点 |
-| 未下包且 T 不可到达包点 | CT 胜，`NO_PROGRESS_TIMEOUT` |
+| 未下包且满足 `ValidNoProgress`（无可行下包计划且无行动可恢复可达性） | 设置 `NoProgressEligible`，由终局纯函数判 CT 胜，`NO_PROGRESS_TIMEOUT` |
 | 已下包 | 直接进入拆包/爆炸判定 |
 | 双方无法接敌 | 按时间耗尽或炸弹状态结算 |
+
+`NO_PROGRESS_TIMEOUT` 是正式回合终局，但只能用于 `NoProgressEligible=true` 且配置和状态均合法、炸弹未下、仍有 T 存活、不存在任何可行下包计划的业务状态：炸弹处于 `Carried` 时，持包者没有到任一包点的合法路径且不存在能恢复路径的行动；炸弹处于 `Dropped` 时，没有任何存活 T 能先到达炸弹再到任一包点；同时没有待执行行动能够恢复可达性。此时公开 `RoundResult.WinReason` 保留独立值 `no_progress_timeout`。配置缺失、图引用损坏、Scheduler 超限或状态不变量错误必须返回结构化 `SIMULATION_ERROR`，不得伪装成 `NO_PROGRESS_TIMEOUT`。
+
+恢复周期的重置规则固定为：
+
+| 状态变化来源 | 处理 |
+|---|---|
+| 当前 `RecoveryActionID` 的排队、推进、到达或完成 bookkeeping | 保留 `CycleID/Status`，直到完成后统一评估是否恢复可达性 |
+| 恢复 action 成功建立合法下包路径或普通可执行 action | `Status=Succeeded`，随后清空 recovery、NoProgressEligible 和 NoOpCount，恢复正常规划 |
+| 恢复 action 完成但仍满足 `ValidNoProgress` | `Status=Failed`，保留失败证明，设置一次性 NoProgressEligible 并立即执行 NoProgressCheck |
+| 当前周期确认不存在任何合法恢复 action | 直接记录 `Status=Failed/ResultCode=NO_LEGAL_RECOVERY`，再执行 NoProgressCheck |
+| 其他 action/effect 产生真实进展，或外部交火/状态变化打断恢复 | 清空当前 recovery 周期、NoProgressEligible 和 NoOpCount，重新从正常事件循环判断 |
 
 #### 移动中的拦截
 
@@ -1753,17 +1823,24 @@ LONG_DOOR_TO_A_LONG:
 
 ```go
 for state.Phase != RoundEnd {
-    actions := planner.Generate(state)
-    scheduled := scheduler.Schedule(actions, state)
-    next := scheduler.Next(scheduled)
+    ensureRunnableActions(state)
 
-    state.AdvanceTime(next.ResolveAt - state.Timeline)
+    nextAt := scheduler.NextResolveAtWithDeadlines(state)
+    state.AdvanceTime(nextAt - state.Timeline)
 
-    result := resolver.Resolve(next, state)
-    state.Apply(result)
-    state.Events = append(state.Events, result.Events...)
+    batch := scheduler.PopAllAt(nextAt)
+    batch = append(batch, dueDeadlineActions(state, nextAt)...)
+    applied := executeTimestampBatch(state, batch)
 
-    state.Phase = transition.Next(state)
+    state.Events = append(state.Events, eventBuilder.FromApplied(applied)...)
+    updateIntelControlAndDecisionTriggers(state, applied)
+
+    if terminal := EvaluateRoundTerminal(state, applied); terminal != nil {
+        enterRoundEnd(state, terminal)
+        break
+    }
+
+    transition.Reevaluate(state, applied)
 }
 ```
 
@@ -1842,14 +1919,14 @@ C3:    Hold CAR/SHORT angle
 
 #### 冲突耗时
 
-冲突不是瞬间结算。`EncounterResolver` 返回两个东西：
+冲突不是瞬间结算。`EncounterResolver.Start` 只返回调度计划：
 
 ```text
 CombatDuration
-CombatEvents
+CombatPulseActions + CombatEndAction
 ```
 
-`CombatDuration` 代表这次局部交火从接触到结果明确消耗的时间。
+`CombatDuration` 代表这次局部交火允许占用的时间窗；它不会让 scheduler 跳过中间时间，也不会提前确定整场交火结果。每个 `CombatPulseAction` 到达自己的绝对 `ResolveAt` 时，resolver 才读取最新存活、HP、Focus、Stamina、Suppression、Momentum、姿态和参与者快照并计算 Effect。
 
 | 场景 | 耗时特点 |
 |---|---|
@@ -1859,7 +1936,7 @@ CombatEvents
 | 一方执行质量高 | 时间降低，击杀更集中 |
 | 双方人数多 | 时间增加，但击杀事件可能更密集 |
 
-一次交火可以输出多个击杀事件，事件时间分布在 `CombatDuration` 内。
+一次交火可以自然输出多个击杀事件，事件来自各自 pulse 已应用的 DamageEffect，时间分布在 `CombatDuration` 内；不得在 EncounterStart 时预生成 `CombatEvents` 或固定伤亡表。
 
 ```text
 CombatStart: 0:08
@@ -1934,6 +2011,8 @@ AI 决策会产生下一批行动：继续推进、转点、补防、牵制、�
 | `PostPlant` | 最终冲突和拆包判定 | 拆包、爆炸、全灭 |
 | `RoundEnd` | 回合结束 | 生成战报 |
 
+`RoundState.Phase` 是回合当前主导活动的解释性投影，不是排他性的全局行动锁。每个 `Intent`、`ActionInstance` 和 `Encounter` 维护自己的局部阶段与资格。只要 Actor、位置、Bomb 和时间前置条件满足，互不共享 Actor/区域的行动可以跨主导阶段并发：例如 A 大处于 `Clash` 时，B 区未参战选手仍可完成移动、进入 `SiteContest`、开始下包或触发新的中期决策。主导 Phase 不得要求所有 Active Encounter 清空后才允许其他区域产生新行动。
+
 ### 3.5 核心数据结构
 
 ```go
@@ -1944,9 +2023,10 @@ type MatchState struct {
     RuleSetID    string
 
     RoundNumber int
-    ScoreT      int
-    ScoreCT     int
-    SideByTeam  map[string]string
+    TeamAID     string
+    TeamBID     string
+    ScoreByTeam map[string]int    // TeamID -> 权威累计比分
+    SideByTeam  map[string]string // TeamID -> T / CT
 
     StrategyMemory StrategyMemory
     PlayerStats    map[string]PlayerMatchStats
@@ -1959,19 +2039,24 @@ type MatchState struct {
 ```go
 type MatchScore struct {
     RoundNumber int
-    ScoreT      int
-    ScoreCT     int
+    ScoreTeamA  int // 权威比分
+    ScoreTeamB  int // 权威比分
     TeamTID     string
     TeamCTID    string
+    ScoreT      int // 由 ScoreByTeam[TeamTID] 派生的兼容投影
+    ScoreCT     int // 由 ScoreByTeam[TeamCTID] 派生的兼容投影
 }
 ```
 
+`SideSwitch` 只修改 `SideByTeam` 以及下一回合的 `TeamTID/TeamCTID`，绝不交换、重置或按阵营累计 `ScoreByTeam`。所有比赛早停、加时和 `WinnerTeamID` 判定只读取权威队伍比分；`ScoreT/ScoreCT` 仅用于当前回合阵营视图和兼容旧客户端。
+
 ```go
 type RoundPlan struct {
-    StrategyTemplateID string
-    RouteTemplateID    string
-    Assignments        []RoleAssignment
-    Encounters         []EncounterPlan
+    TStrategyTemplateID string
+    CTSetupTemplateID   string
+    RoleAssignments     []RoleAssignment
+    OpeningRoutes       map[string]string // PlayerID -> RouteID
+    BombCarrierID       string
 }
 ```
 
@@ -1998,45 +2083,73 @@ type EncounterPlan struct {
 }
 ```
 
+`EncounterPlan` 是运行时由实际位置、可见性、行动和冲突条件产生的局部计划，不存放在开局 `RoundPlan` 中，也不代表预定伤亡或胜方。
+
 ```go
+type NoProgressRecoveryState struct {
+    CycleID         string
+    Status          string // NotAttempted / Running / Failed / Succeeded
+    RecoveryActionID string
+    StartedAt       int
+    CompletedAt     int
+    ResultCode      string
+}
+
 type RoundState struct {
     RoundNumber int
     Phase       string
 
-    Timeline    int
-    RoundTimer  int
-    BombTimer   int
+    Timeline      int
+    RoundDeadline int
+    BombDeadline  int
 
-    MapID string
+    MapID     string
+    TeamTID   string
+    TeamCTID  string
     RoundPlan RoundPlan
-    Nodes map[string]*NodeRuntimeState
+    Players  map[string]*PlayerState
+    Nodes    map[string]*NodeRuntimeState
+    Intel    map[string]*TeamIntel
 
-    TeamT  []*PlayerState
-    TeamCT []*PlayerState
+    Bomb             BombState
+    ActiveEngagements map[string]*EncounterState
+    Scheduler        *ActionScheduler
+    Utility          map[string]*TeamUtilityState
 
-    Bomb BombState
-    Events []RoundEvent
+    MomentumT    int
+    MomentumCT   int
+    DecisionCount int
+    RotationCount map[string]int
+    TransitionCount int
+    NoOpCount       int
+    NoProgressEligible bool
+    RecoveryOrdinal int // 单回合单调递增，用于派生唯一 CycleID
+    RecoveryAttempt NoProgressRecoveryState
 
-    MomentumT  int
-    MomentumCT int
+    Events   []GameEvent
+    Terminal *RoundTerminal
 }
 ```
 
 ```go
 type PlayerState struct {
-    PlayerID string
-    Side     string
+    Profile PlayerProfile
+    TeamID  string
+    Side    string
+    Weapon  WeaponLoadout
 
-    CurrentNode string
+    Location    PlayerLocation // Node XOR OnEdgeLocation
     HP          int
     Stamina     int
     Focus       int
+    Suppressed  bool
+    Posture     CombatPosture
 
     Alive       bool
     HasBomb     bool
 
-    RoleTags    []string
     Intent      PlayerIntent
+    Action      PlayerActionState
 
     Kills       int
     Deaths      int
@@ -2046,34 +2159,44 @@ type PlayerState struct {
 
 ```go
 type BombState struct {
-    Status       string // Carried / Dropped / Planted / Exploded / Defused
+    Status       string // Carried / Dropped / Planting / Planted / Defusing / Exploded / Defused
     CarrierID    string
-    NodeID       string
+    Location     PlayerLocation
     PlantedSite  string
     PlantedAt    int
     ExplodeAt    int
+    PlantActionID  string
+    PlantActorID   string
+    PlantStartAt   int
+    PlantFinishAt  int
+    DefuseActionID string
+    DefuseActorID  string
+    DefuseStartAt  int
+    DefuseFinishAt int
 }
 ```
 
 ```go
-type RoundEvent struct {
-    EventID   string
-    MatchID   string
-    RoundNumber int
-    Timestamp int
-    Type      string
-    Phase     string
+type GameEvent struct {
+    EventID       string
+    SourceActionID string
+    SourceEffectID string
+    MatchID       string
+    RoundNumber   int
+    Timestamp     int64
+    EventType     string
+    Phase         string
 
-    ActorID   string
-    TargetID  string
-    NodeID    string
-    Site      string
-    Location  EventLocation
+    AttackerID    string // 兼容现有 DTO；非战斗 action 可为空
+    VictimID      string // 兼容现有 DTO；非战斗 action 可为空
+    NodeID        string
+    Site          string
+    Location      *EventLocation
 
-    Message   string
-    Reason    EventReason
-    State     EventStateSnapshot
-    Metadata  map[string]any
+    Message       string
+    Reason        *EventReason
+    State         *EventStateSnapshot
+    Extra         map[string]any // 保留现有扩展字段
 }
 ```
 
@@ -2089,30 +2212,72 @@ type EventLocation struct {
 ```
 
 ```go
+type ReasonModifier struct {
+    Code   string
+    Value  float64
+    Detail string
+}
+
+type ReasonValue struct {
+    Kind   string // Number / String / Bool / Null
+    Number *float64
+    String *string
+    Bool   *bool
+}
+
+type ReasonStateChange struct {
+    Field  string
+    Before ReasonValue // 只允许公开标量状态
+    After  ReasonValue // 只允许公开标量状态
+}
+
+type ReasonRecord struct { // 内部 resolver/effect 审计记录
+    Code           string
+    MainFactor     string
+    Modifiers      []ReasonModifier
+    ScoreDelta     float64
+    Probability    *float64
+    Formula        string
+    Inputs         map[string]float64
+    StateChanges   []ReasonStateChange
+    SourceActionID string
+    SourceEffectID string
+}
+
 type EventReason struct {
-    MainFactor string
-    Modifiers  []string
-    ScoreDelta int
-    Formula    string
-    Inputs     map[string]float64
+    Code           string
+    MainFactor     string
+    Modifiers      []ReasonModifier
+    ScoreDelta     float64
+    Probability    *float64 // 不适用时为 nil；实际 0 概率不能与缺失混淆
+    Formula        string
+    Inputs         map[string]float64
+    StateChanges   []ReasonStateChange
+    SourceActionID string
+    SourceEffectID string
+    Detail         string // 兼容现有客户端的可选说明
 }
 ```
 
 ```go
 type EventStateSnapshot struct {
-    ScoreT   int
-    ScoreCT  int
-    Players  []PlayerPublicState
-    Bomb     BombPublicState
-    Controls []NodeControlState
+    ScoreTeamA int // 权威比分
+    ScoreTeamB int // 权威比分
+    ScoreT     int // 当前阵营兼容投影
+    ScoreCT    int // 当前阵营兼容投影
+    Players    []PlayerPublicState
+    Bomb       BombPublicState
+    Controls   []NodeControlState
 }
 ```
+
+`ReasonRecord -> EventReason` 投影必须保留 `Code/MainFactor/Modifiers/ScoreDelta/Probability/Formula/Inputs/StateChanges/SourceActionID/SourceEffectID`，不得把 `float64 ScoreDelta` 截断为整数。`ReasonValue` 必须且只能设置与 Kind 对应的一个值字段，禁止把 map/object 塞入 StateChanges 造成非规范序列化。`GameEvent.SourceActionID/SourceEffectID` 必须从同一 ReasonRecord/AppliedEffect 复制，供稳定排序和审计；若事件来自真实 action 生命周期而无 Effect，则 `SourceEffectID` 为空但 `SourceActionID` 必须存在。`StateChanges` 只包含客户端允许看到的已应用标量变化，敌方隐藏 Intent、ActionQueue、未观察位置和 ActualControl 不得投影。
 
 `State` 是给前端回放用的可选快照。第一版至少在 `ROUND_START`、`BOMB_PLANT`、`BOMB_DEFUSE`、`BOMB_EXPLODE`、`ROUND_END` 输出完整快照；`KILL` 事件必须至少输出受影响玩家和比分/炸弹摘要。若带宽或响应体过大，可以在 RPC 层裁剪，但引擎结果必须保留。
 
 ```go
 type ExplainableReport struct {
-    KeyEvents       []RoundEvent
+    KeyEvents       []GameEvent
     StrategySummary string
     LossReasons     []EventReason
     WinFactors      []EventReason
@@ -2125,13 +2290,18 @@ type ExplainableReport struct {
 |---|---:|---|
 | `ROUND_START` | 否 | 回合开始、战术选择 |
 | `STRATEGY_ADJUSTED` | 否 | 跨回合记忆导致战术权重变化 |
+| `DAMAGE` | 否 | 实际伤害、压制和资源变化 |
 | `KILL` | 是 | 击杀 |
 | `ROTATE` | 否 | 转点 |
 | `REINFORCE` | 否 | CT 补防 |
 | `CONTROL_GAINED` | 否 | 控制权变化 |
 | `BOMB_DROP` | 否 | 炸弹掉落 |
 | `BOMB_PICKUP` | 否 | 炸弹拾取 |
+| `BOMB_PLANT_START` | 否 | 开始下包 |
+| `BOMB_PLANT_INTERRUPT` | 否 | 下包被交火、伤害、死亡或状态变化打断 |
 | `BOMB_PLANT` | 否 | 下包 |
+| `DEFUSE_START` | 否 | 开始拆包 |
+| `DEFUSE_INTERRUPT` | 否 | 拆包被交火、伤害、死亡或状态变化打断 |
 | `BOMB_DEFUSE` | 否 | 拆包 |
 | `BOMB_EXPLODE` | 否 | 爆炸 |
 | `ROUND_END` | 否 | 回合结束 |
@@ -2152,7 +2322,7 @@ type ExplainableReport struct {
 | 事件发生在 `MapNode` 但没有可用采样范围 | 使用 `MapNode.x/y`，允许极小半径偏移 |
 | 无法定位 | 使用当前路线或场景的 fallback 坐标，并输出配置告警 |
 
-采样后的坐标写入 `RoundEvent.Location`：
+采样后的坐标写入 `GameEvent.Location`：
 
 ```text
 Location = {
@@ -2171,9 +2341,9 @@ Location = {
 
 | 字段 | 是否返回 | 说明 |
 |---|---:|---|
-| 事件类型 | 是 | `Type` 使用稳定枚举 |
+| 事件类型 | 是 | `EventType` 使用稳定枚举 |
 | 时间戳 | 是 | `Timestamp` 为回合内秒数，整场展示可由 `RoundNumber + Timestamp` 组合 |
-| 原因解释 | 是 | `Reason.MainFactor`、`Modifiers`、`ScoreDelta` 必须保留 |
+| 原因解释 | 是 | `Code/MainFactor/Modifiers/ScoreDelta/Probability/Formula/Inputs/StateChanges/SourceActionID/SourceEffectID` 按适用性保留，ScoreDelta 不截断、0 概率不当作缺失 |
 | 玩家状态 | 是 | 至少包含存活、HP、当前位置、击杀、死亡、伤害 |
 | 比分 | 是 | 每个关键事件快照或 `ROUND_END` 中必须包含 |
 | 炸弹状态 | 是 | `Carried/Dropped/Planted/Exploded/Defused`、携带者或位置、包点、爆炸时间 |
@@ -2218,7 +2388,7 @@ server/internal/framework/matchengine/
   planner.go          候选 Encounter / 行动生成
   scheduler.go        离散事件调度，第一版可轻量实现
   transition.go       阶段切换规则
-  map_graph.go        地图辅助结构，非第一版核心
+  map_graph.go        正式第一版必需的语义辅助图；负责可达性、移动耗时和拦截候选，不实现物理寻路
   decision.go         AI 决策
   match_memory.go     跨回合战术重复、反制和风格修正
   encounter.go        遭遇战结算
@@ -2235,11 +2405,14 @@ server/internal/framework/matchengine/
 ```go
 type MatchEngine interface {
     Simulate(ctx context.Context, input *MatchInput) (*MatchResult, error)
+}
+
+type roundSimulator interface { // internal only
     SimulateRound(ctx context.Context, input *RoundInput) (*RoundResult, error)
 }
 ```
 
-`Simulate` 是正式入口。`SimulateRound` 只用于单测、调试和批量标定；业务 RPC 不应绕过 `MatchInput`。
+`Simulate` 是唯一公开正式入口。内部 `roundSimulator` 只用于 Match 规则层、单测、调试和批量标定，并且生产实现仍固定指向同一个 causal RoundEngine；业务 RPC 不得直接获得或调用该接口，测试 fake 也不得生成生产战斗事件。
 
 #### 输入模型冻结
 
@@ -2248,13 +2421,10 @@ type MatchInput struct {
     MatchID       string
     MapID         string
     MapVersion    string
-    Seed          int64
+    Seed          int64 // immutable root seed
     RuleSet       RuleSet
-    RoundCount    int
-    StartRound    int
-    InitialScoreT int
-    InitialScoreCT int
-
+    MapConfig     MapConfigSnapshot
+    WeaponSpecs   map[string]WeaponSpec
     TeamA TeamInput
     TeamB TeamInput
 
@@ -2275,9 +2445,9 @@ type TeamInput struct {
 type PlayerProfile struct {
     PlayerID   string
     DisplayName string
+    Portrait   string
     RoleTags   []string
     Attributes PlayerAttributes
-    Weapon     WeaponLoadout
 }
 ```
 
@@ -2308,23 +2478,31 @@ type WeaponLoadout struct {
 ```
 
 ```go
-type RuleSet struct {
-    RuleSetID          string
-    FreezeTime         int
-    RoundTimeLimit     int
-    BombExplodeTime    int
-    BasePlantTime      int
-    BaseDefuseTime     int
-    OvertimeEnabled    bool
-    SideSwitchRound    int
-    WinRounds          int
-    MaxRoundTimeline   int
-    MaxDecisionCount   int
-    MaxEncounterPulses int
+type WeaponSpec struct {
+    ID                string
+    DisplayName       string
+    Damage            float64
+    RoundsPerMinute   int
+    MagazineSize      int
+    ArmorPenetration  float64
+    RangeModifier     float64
 }
 ```
 
-`RuleSet` 可以由配置表构造默认值，但传给引擎时必须是完整快照。引擎校验缺失或越界字段，返回 `INVALID_MATCH_INPUT` 或更具体的错误码。
+`PlayerProfile` 只保存选手静态档案，不绑定枪械。业务层/回合构建器根据当前阵营与规则生成 `WeaponLoadout`（第一版 T 默认 AK-47、CT 默认 M4A1-S），并保证其中 ID 存在于 `MatchInput.WeaponSpecs`；换边时重新派生，不能写回 Profile。`MapConfigSnapshot` 和 `WeaponSpecs` 都是调用开始时冻结的自包含输入，模拟过程中不得回查 Luban 全局表。
+
+```go
+type RuleSet struct {
+    RuleSetID              string
+    RegulationRoundsPerHalf int
+    RegulationWinRounds     int
+    OvertimeEnabled         bool
+    OvertimeRoundsPerHalf   int
+    OvertimeWinRounds       int
+}
+```
+
+`RuleSet` 只描述整场赛制、换边和加时，不复制或覆盖回合战斗参数。`RoundTimeLimit`、Bomb/Plant/Defuse 时间、Decision/Pulse/Scheduler 上限和全部 clamp 的唯一权威来源是已校验 `MapConfigSnapshot.CombatConstants`。若兼容 RPC DTO 暂时仍带同名旧字段，`match.Service` 必须在进入引擎前丢弃它们或验证与配置快照完全相等；RoundEngine 不读取这些兼容副本。赛制或快照缺失/越界返回 `INVALID_MATCH_INPUT` 或更具体配置错误。
 
 `RoundInput` 是由 `MatchInput + MatchState` 派生的单局快照：
 
@@ -2334,14 +2512,15 @@ type RoundInput struct {
     RoundNumber   int
     MapID         string
     MapVersion    string
-    Seed          int64
+    Seed          int64 // 已由 Match 层派生的 RoundSeed；独立测试时显式提供
     RuleSet       RuleSet
+    MapConfig     MapConfigSnapshot
+    WeaponSpecs   map[string]WeaponSpec
 
     TeamT TeamInput
     TeamCT TeamInput
 
-    ScoreT int
-    ScoreCT int
+    ScoreByTeam map[string]int // TeamID -> 权威队伍比分的只读快照
     StrategyMemory StrategyMemory
 }
 ```
@@ -2353,10 +2532,11 @@ type RoundInput struct {
 | `TeamInput.Players` | 每队必须正好 5 人，`PlayerID` 全局唯一 |
 | `RoleTags` | 可以为空，但非法标签拒绝；角色缺口通过评分自然体现 |
 | `Attributes` | 所有属性 clamp 到 `MinAttribute..MaxAttribute`，默认建议 `0..100` |
-| `WeaponLoadout` | 武器 ID 必须存在于允许列表；非法武器拒绝 |
-| `MapID/MapVersion` | 必须能定位到唯一地图配置版本 |
+| `PlayerProfile` | 必须包含稳定 ID、档案字段和十项 Attributes；不绑定 WeaponLoadout |
+| `WeaponSpecs / Round WeaponLoadout` | 回合装配武器 ID 必须存在于显式 WeaponSpecs，必需数值合法；非法武器拒绝 |
+| `MapID/MapVersion/MapConfig` | ID 与冻结 MapConfigSnapshot 必须一致并通过完整语义校验 |
 | `Seed` | 必须固定；若调用方未传，业务层生成后写回响应，不由引擎隐式生成 |
-| `RuleSet` | 时间、脉冲、决策上限必须大于 0 且不超过配置最大值 |
+| `RuleSet` | 只校验常规赛/加时/换边参数；不得覆盖 CombatConstants 中的时间、脉冲、决策或调度参数 |
 
 #### 输出模型冻结
 
@@ -2369,8 +2549,8 @@ type MatchResult struct {
     RuleSetID  string
 
     TotalRounds int
-    FinalScoreT int
-    FinalScoreCT int
+    FinalScoreTeamA int // 权威队伍比分
+    FinalScoreTeamB int // 权威队伍比分
     WinnerTeamID string
 
     Rounds     []RoundResult
@@ -2390,12 +2570,14 @@ type RoundResult struct {
     WinnerTeamID string
     WinReason   string
 
-    ScoreT  int
-    ScoreCT int
+    ScoreTeamA int // 权威队伍比分
+    ScoreTeamB int // 权威队伍比分
+    ScoreT     int // 由本回合 TeamTID 投影的兼容字段
+    ScoreCT    int // 由本回合 TeamCTID 投影的兼容字段
 
     RouteMain          string
     StrategyTemplateID string
-    Events            []RoundEvent
+    Events            []GameEvent
     PlayerStates      []PlayerPublicState
     Bomb              BombPublicState
     FinalControls     []NodeControlState
@@ -2466,9 +2648,9 @@ type PlayerMatchStats struct {
 |---|---|
 | 事件顺序 | `Timestamp ASC`，同秒按优先级和稳定排序键 |
 | 时间戳 | 回合内秒数，必须单调不下降 |
-| 原因解释 | 关键事件必须有 `Reason.MainFactor` 和可复现的 `ScoreDelta` |
+| 原因解释 | 关键事件必须有 `Reason.Code/MainFactor`、可复现的 float64 `ScoreDelta`、source IDs，以及按适用性保留的 Probability/Formula/Inputs/StateChanges |
 | 玩家状态 | `RoundResult.PlayerStates` 返回回合结束快照；关键事件可带增量快照 |
-| 比分 | `RoundResult.ScoreT/ScoreCT` 是该回合结束后的比分 |
+| 比分 | `RoundResult.ScoreTeamA/ScoreTeamB` 是权威队伍比分；`ScoreT/ScoreCT` 只按该回合 `TeamTID/TeamCTID` 派生用于兼容 |
 | 炸弹状态 | `RoundResult.Bomb` 返回最终炸弹状态；炸弹事件带当时快照 |
 | 控制权 | `FinalControls` 返回给前端；内部 `ActualControl` 不直接泄漏未观察信息 |
 
@@ -2501,6 +2683,8 @@ engine := matchengine.NewService(mapConfig, logger)
 
 选手表是例外：`TbPlayer` 可以用于构造默认 `MatchInput`，但不属于 `matchengine` 的运行时依赖。进入引擎后，选手属性、角色和武器以 `MatchInput` 快照为准。
 
+正式 `de_dust2` 配置的完整覆盖是可验证契约：必须包含六个 `side=T` 战术模板、多个覆盖 A/B/Mid 的 `side=CT` setup 模板、双方同阵营 route_ids/route_allocations、相应 T 进攻路线、CT 开局防守/补防/回防路线、OpeningDuel/MidControl/SiteEntry/Retake/BombResolution 场景族、核心 MapNode/MapEdge、关键 Visibility、A/B 可下包节点，以及每个场景族完整且归一化的十属性权重。缺少任一覆盖项不得以占位配置启动正式模拟。
+
 #### 配置校验
 
 地图配置加载后必须执行完整校验。校验失败时服务端拒绝启动或该地图不可用。
@@ -2508,11 +2692,13 @@ engine := matchengine.NewService(mapConfig, logger)
 | 校验项 | 错误码 | 策略 |
 |---|---|---|
 | `RouteTemplate.id` 重复 | `CONFIG_DUP_ROUTE_TEMPLATE` | 拒绝加载 |
-| `RouteTemplate.scenario_ids` 不存在 | `CONFIG_BAD_TEMPLATE_SCENARIO` | 拒绝加载 |
-| `RouteTemplate.recommended_min > recommended_max` | `CONFIG_BAD_TEMPLATE_LIMIT` | 拒绝加载 |
+| `RouteTemplate.scenario_ids/route_ids/common_ct_setup_ids` 引用不存在、side 非法或引用 Route 阵营不匹配 | `CONFIG_BAD_TEMPLATE_SCENARIO` | 拒绝加载 |
+| `RouteTemplate.recommended_min > recommended_max`、route_allocations 总人数不等于队伍人数或逐路线违反 min/max | `CONFIG_BAD_TEMPLATE_LIMIT` | 拒绝加载 |
 | `Scenario.id` 重复 | `CONFIG_DUP_SCENARIO` | 拒绝加载 |
 | `Scenario.route/site/phase` 非法 | `CONFIG_BAD_SCENARIO_TAG` | 拒绝加载 |
 | `Scenario.map_tag_ids` 不存在 | `CONFIG_BAD_SCENARIO_MAP_TAG` | 拒绝加载 |
+| 正式 Dust2 缺少必需战术、路线、阶段场景、核心图节点/边、关键视线或 A/B 下包覆盖 | `CONFIG_INCOMPLETE_DUST2_COVERAGE` | 拒绝加载 |
+| 任一场景族十属性权重缺项、非有限数或总和超出允许容差 | `CONFIG_BAD_SCENARIO_WEIGHT` | 拒绝加载 |
 | `MapTag.id` 重复 | `CONFIG_DUP_MAP_TAG` | 拒绝加载 |
 | `MapTag.map_id/category/value` 非法 | `CONFIG_BAD_MAP_TAG` | 拒绝加载 |
 | `EncounterModifier.scenario_id` 不存在 | `CONFIG_BAD_ENCOUNTER_MODIFIER` | 拒绝加载 |
@@ -2523,7 +2709,7 @@ engine := matchengine.NewService(mapConfig, logger)
 | `MapNode.shape` 非法 | `CONFIG_BAD_NODE_SHAPE` | 拒绝加载 |
 | `MapNode.shape = Circle` 但缺少合法 `radius` | `CONFIG_BAD_NODE_CIRCLE` | 拒绝加载 |
 | `MapNode.shape = Polygon` 但顶点少于 3 个或格式非法 | `CONFIG_BAD_NODE_POLYGON` | 拒绝加载 |
-| 关键 `MapNode` 缺少 `KillSample` 区域几何 | `CONFIG_MISSING_KILL_SAMPLE` | 允许加载但输出告警，运行时回退 `x/y` |
+| 被事件位置解析器选作 `KillSample` 来源的节点具有合法 `x/y`，但缺少可用 `KillSample` 区域几何 | `CONFIG_MISSING_KILL_SAMPLE` | 允许加载但输出告警，运行时回退该节点 `x/y`；缺少 `x/y` 仍是 `CONFIG_BAD_NODE_COORD` |
 | `MapEdge.from_node/to_node` 不存在 | `CONFIG_BAD_EDGE_NODE` | 拒绝加载 |
 | `MapEdge.risk_points` 风险热点引用不存在或对应 `MapNode` 缺少坐标 | `CONFIG_BAD_RISK_POINT` | 拒绝加载 |
 | `MapEdge.intercept_nodes` 不存在 | `CONFIG_BAD_INTERCEPT_NODE` | 拒绝加载 |
@@ -2531,13 +2717,14 @@ engine := matchengine.NewService(mapConfig, logger)
 | `Route.nodes` 引用不存在 | `CONFIG_BAD_ROUTE_NODE` | 拒绝加载 |
 | `Route.nodes` 不连通 | `CONFIG_ROUTE_NOT_CONNECTED` | 拒绝加载 |
 | `Route.min_players > max_players` | `CONFIG_BAD_ROUTE_LIMIT` | 拒绝加载 |
-| 开局分配人数超出 `min/max` | `INVALID_OPENING_PLAN` | 重新生成计划，失败后回退默认战术 |
+| T 开局或 CT setup 分配人数超出 `min/max`、模板阵营错误或不可达 | `INVALID_OPENING_PLAN` | 两方保持相同 MatchInput/root seed，分别以 `OpeningPlanSeed` / `CTSetupSeed` 和 `AttemptOrdinal=0` 确定性生成，仅以 `AttemptOrdinal=1` 重试一次；T 仍失败使用 `DefaultStrategyTemplateID`，CT 仍失败使用 `DefaultCTSetupTemplateID`，默认模板仍非法则返回错误 |
 | 包点缺少可下包节点 | `CONFIG_NO_PLANT_SITE` | 拒绝加载 |
 | `CombatConst.key` 重复 | `CONFIG_DUP_COMBAT_CONST` | 拒绝加载 |
 | `CombatConst.value_type/value` 不匹配 | `CONFIG_BAD_COMBAT_CONST_TYPE` | 拒绝加载 |
 | 常量超出 `min_value/max_value` | `CONFIG_BAD_COMBAT_CONST_RANGE` | 拒绝加载 |
 | 必配常量缺失 | `CONFIG_MISSING_COMBAT_CONST` | 拒绝加载 |
 | 炸弹参数小于最小值 | `CONFIG_BAD_BOMB_CONST` | 拒绝加载 |
+| 第一版 `CommunicationDelay != 0` | `CONFIG_UNSUPPORTED_COMMUNICATION_DELAY` | 拒绝加载；第一版只支持即时队内共享 |
 | 图中存在孤立关键点 | `CONFIG_UNREACHABLE_NODE` | 拒绝加载 |
 
 运行时路径不可达：
@@ -2564,62 +2751,94 @@ type DecisionEngine interface {
 
 ```go
 type DecisionContext struct {
-    RoundState *RoundState
-    MatchScore MatchScore
+    View           DecisionView
+    MatchScore     MatchScore
     StrategyMemory StrategyMemory
-    Templates  []RouteTemplate
-    Scenarios  []Scenario
-    MapTags    MapSemanticTags
-    VisibleInfo VisibleInfo
-    RNG         *rand.Rand
+    Templates      []RouteTemplate
+    Scenarios      []Scenario
+    MapTags        MapSemanticTags
+    DecisionSeed   uint64
+}
+
+type DecisionView struct {
+    Team               Side
+    Phase              RoundPhase
+    Timeline           int
+    RoundTimeRemaining int
+    BombTimeRemaining  int
+    OwnPlayers         []PlayerSnapshot
+    KnownControl       []KnownControlState
+    TeamIntel          []IntelRecord
+    BombIntel          BombIntel
 }
 ```
+
+`DecisionView` 是只读投影，按稳定 ID 顺序构造。它不得包含敌方 Intent、敌方 ActionQueue、未观察敌方位置、全局 `ActualControl` 或可回溯到完整 `RoundState` 的引用。决策器从 `DecisionSeed` 为每个候选/roll 派生局部随机源，禁止持有或共享可变 `*rand.Rand`。
 
 ### 4.5 遭遇战结算接口
 
 ```go
 type EncounterResolver interface {
-    Resolve(ctx *EncounterContext) EncounterResult
+    Start(ctx EncounterStartContext) EncounterSchedule
+    ResolvePulse(ctx CombatPulseContext) CombatPulseResult
 }
 ```
 
 ```go
-type EncounterContext struct {
-    Encounter EncounterPlan
-    Scenario  Scenario
-    Attackers []*PlayerState
-    Defenders []*PlayerState
-    MapTags   MapSemanticTags
+type EncounterStartContext struct {
+    Encounter    EncounterPlan
+    Scenario     Scenario
+    Attackers    []PlayerCombatSnapshot
+    Defenders    []PlayerCombatSnapshot
+    MapTags      MapSemanticTags
 
-    MomentumT int
-    MomentumCT int
-    RNG *rand.Rand
+    MomentumT    int
+    MomentumCT   int
+    EncounterSeed uint64
 }
 ```
 
 ```go
-type EncounterResult struct {
-    Events        []RoundEvent
-    UpdatedStates []PlayerState
-    MomentumDelta int
-    TimeCost      int
-    Reason        EventReason
+type EncounterSchedule struct {
+    CombatDuration int
+    PulseActions   []ScheduledAction
+    EndAction      ScheduledAction
+    ReasonRecords  []ReasonRecord
 }
 ```
+
+```go
+type CombatPulseContext struct {
+    EncounterID string
+    PulseIndex  int
+    ResolveAt   int
+    Scenario    Scenario
+    Attackers   []PlayerCombatSnapshot
+    Defenders   []PlayerCombatSnapshot
+    MapTags     MapSemanticTags
+    PulseSeed   uint64
+}
+
+type CombatPulseResult struct {
+    Effects       []Effect
+    ReasonRecords []ReasonRecord
+}
+```
+
+`Start` 只安排未来 pulse/end action，不返回未来事件或伤亡。`CombatPulseContext` 只包含该 pulse 开始时的不可变战斗快照；`ResolvePulse` 使用 `PulseSeed/ActorID/TargetID/RollKind` 派生每次 roll，并返回待原子应用的 Effect。resolver 不得直接修改权威 `PlayerState`，也不得消费共享可变 RNG。
 
 ### 4.6 回合时间推进
 
-时间推进由状态机统一处理。业务阶段只返回 `TimeCost`，不得直接修改计时器。
+时间推进只由 scheduler 统一处理。resolver/planner MAY 计算 action `Duration`，scheduler 将其冻结为绝对 `ResolveAt`；任何阶段、resolver 或单个 action 都不得自行推进 Timeline、递减计时器或等待整个 Encounter 完成。
 
 ```text
-AdvanceTime(TimeCost):
-    Timeline += TimeCost
+nextAt = min(NextValidAction.ResolveAt, ActiveRoundDeadline, ActiveBombDeadline)
+AdvanceTime(nextAt - Timeline):
+    Timeline = nextAt
+    update queryable OnEdge progress and expiry candidates
 
-    if Phase in [OpeningDeploy, Advance, Clash, RotateDecision, SiteContest, Planting]:
-        RoundTimer -= TimeCost
-
-    if Phase == PostPlant:
-        BombTimer -= TimeCost
+RoundTimer = max(0, RoundDeadline - Timeline)  // pre-plant projection
+BombTimer  = max(0, BombDeadline - Timeline)  // post-plant projection
 ```
 
 下包前检查 `RoundTimer`：
@@ -2648,13 +2867,14 @@ Bomb.ExplodeAt = Timeline + BombExplodeTime
 
 ### 4.7 随机性与可回放
 
-所有随机数来自单场 Seed。整场入口使用 `MatchInput.Seed`，单回合测试入口使用 `RoundInput.Seed`。
+所有随机数都以输入 Seed 为根派生。整场入口使用 `MatchInput.Seed`，单回合测试入口使用 `RoundInput.Seed`；根 seed 本身只作为不可变输入，不对应一个由全流程顺序消费的随机流。
 
 ```go
-rng := rand.New(rand.NewSource(input.Seed))
+rootSeed := uint64(input.Seed)
+roundSeed := DeriveSeed(rootSeed, mapVersion, ruleSetID, roundNumber)
 ```
 
-禁止使用全局随机源。相同输入和 Seed 必须生成相同战报。
+禁止全局随机源、每场共享可变 `*rand.Rand` 或跨 action 顺序消费同一随机流。每次采样只能临时使用完整身份派生 seed；相同输入和 Seed 必须生成相同战报。
 
 #### 稳定排序
 
@@ -2679,12 +2899,13 @@ ActionID ASC
 | 属性评分相同 | 使用稳定排序后，再用 Seed 派生随机扰动 |
 | 目标优先级相同 | 按 `ThreatScore`、距离、`PlayerID` 排序 |
 | 行动评分相同 | 按模板优先级，再按稳定排序键 |
-| 同一秒同优先级事件 | 按 `ResolveAt/Priority/ActionType/MinActorID/ActionID` |
+| 同一秒同优先级 action | 按 `ResolveAt/Priority/ActionType/MinActorID/ActionID` |
+| 同一 action 派生的公开事件 | 按 `Timestamp/Priority/ActionType/MinActorID/SourceActionID/SourceEffectID/EventID` |
 
 随机扰动必须有边界：
 
 ```text
-RandomNoise = rng.Range(-NoiseLimit, +NoiseLimit)
+RandomNoise = DerivedRNG(DecisionSeed, CandidateID, "noise").Range(-NoiseLimit, +NoiseLimit)
 NoiseLimit = BaseNoise * (1 - DisciplineFactor)
 ```
 
@@ -2696,14 +2917,19 @@ NoiseLimit = BaseNoise * (1 - DisciplineFactor)
 
 ```text
 RoundSeed = Hash(MatchSeed, MapVersion, RuleSetID, RoundNumber)
-DecisionSeed = Hash(RoundSeed, "decision", Phase, Timeline)
-EncounterSeed = Hash(RoundSeed, "encounter", EncounterID, PulseIndex)
-BombSeed = Hash(RoundSeed, "bomb", Bomb.Status, Timeline)
+OpeningPlanSeed = Hash(RoundSeed, "opening_plan", AttemptOrdinal)
+CTSetupSeed = Hash(RoundSeed, "ct_setup", AttemptOrdinal)
+DecisionSeed = Hash(RoundSeed, "decision", Phase, Timeline, DecisionOrdinal)
+ActionSeed = Hash(RoundSeed, "action", ActionID)
+EncounterSeed = Hash(RoundSeed, "encounter", EncounterID)
+PulseSeed = Hash(EncounterSeed, PulseIndex, ResolveAt)
+ActorRollSeed = Hash(PulseSeed, ActorID, TargetID, RollKind)
+BombSeed = Hash(RoundSeed, "bomb", BombActionID)
 MemorySeed = Hash(RoundSeed, "match_memory", StrategyTemplateID)
 LocationSeed = Hash(RoundSeed, "event_location", EventID, SourceObjectID)
 ```
 
-同一输入、同一 Seed、同一配置版本必须输出相同事件列表。
+T 方 `OpeningPlan` 与 CT 方 setup 分别使用 `OpeningPlanSeed` 和 `CTSetupSeed`，初次生成固定使用 `AttemptOrdinal=0`，仅一次重试固定使用 `AttemptOrdinal=1`。CT setup 选择上下文不得包含本回合 T 已选模板或隐藏行动。两方都保持相同 root seed 和可复现性，但不会因为重复消费完全相同的随机流而必然生成同一个非法计划。所有子系统只能使用自己的身份派生 seed，不得共享可变全局 RNG。同一输入、同一 Seed、同一配置版本必须输出相同事件列表。
 
 ### 4.8 可测试算法规则
 
@@ -2714,10 +2940,11 @@ Go 实现必须把算法方向落实成可单测的规则。测试不只验证�
 | 规则 | 验证方式 |
 |---|---|
 | 属性权重和为 `1.0` | 加载配置时校验；单测覆盖每个场景族 |
-| `PlayerCombatScore` 计算顺序固定 | golden case 输入固定属性和修正项，断言输出分数 |
+| `PlayerCombatScore` 计算顺序固定且团队局势不重复计分 | golden case 输入固定十属性和 Role/Weapon/Posture/Visibility/TeamSupport/Stamina/Damage/Suppression，断言唯一冻结公式；Utility/Momentum/TimePressure 只进入团队级 EncounterScore |
+| `TargetSurvivalScore` 计算顺序固定 | golden case 断言 `Positioning + Reaction + Cover + TeamSupport + Focus - MovementExposure - DamagePenalty`，不得额外引入 `WeightedSurvivalAttributes` 或 `SuppressionPenalty` |
 | 团队修正可解释 | 每个 `TeamModifier` 必须生成 reason code 或 debug key |
 | 同样输入不依赖 map 遍历顺序 | 多次运行同一 seed，事件列表完全一致 |
-| 明显优势不被噪声反转 | 构造 `delta >= DecisiveScoreGap` 用例，断言胜负趋势稳定 |
+| 明显优势不被噪声反转 | 构造确定性 `delta >= DecisiveScoreGap` 用例，断言 `RandomNoise` 不能翻转评分排序；命中/伤害采样仍可产生小概率爆冷，测试不得预设 Encounter 胜方 |
 
 #### Clamp 边界规则
 
@@ -2727,7 +2954,7 @@ Go 实现必须把算法方向落实成可单测的规则。测试不只验证�
 | `Stamina/Focus` | 不允许负数；不得超过上限 |
 | `Momentum` | clamp 到 `-100..100` |
 | `HitChance` | clamp 到 `MinHitChance..MaxHitChance` |
-| `KillChance` | clamp 到 `0..MaxKillChance` |
+| `KillChance` | clamp 到 `0..min(MaxKillChance, HitChance)`，且公式中不使用 `TargetHPFactor` |
 | `PlantTime/DefuseTime/MoveTime` | 修正后仍在最小/最大耗时内 |
 | `StrategyScore` | clamp 到 `MinStrategyWeight..MaxStrategyWeight` 后再参与随机选择 |
 
@@ -2736,10 +2963,11 @@ Go 实现必须把算法方向落实成可单测的规则。测试不只验证�
 | 场景 | 规则 |
 |---|---|
 | 完全同分 | 先稳定排序，再使用派生 seed 做有界随机 |
-| 近似同分 | `abs(delta) < CloseScoreGap` 时允许随机影响胜负 |
-| 明显分差 | `abs(delta) >= DecisiveScoreGap` 时随机不能反转主要结果 |
+| 近似同分 | `abs(delta) < CloseScoreGap` 时允许 `RandomNoise` 影响候选评分排序 |
+| 明显分差 | `abs(delta) >= DecisiveScoreGap` 时 `RandomNoise` 不能翻转评分排序；后续实际概率采样仍然执行 |
 | 多候选战术同分 | 按模板优先级、最近使用惩罚、稳定排序键处理 |
-| 多事件同秒 | 按 `ResolveAt/Priority/ActionType/MinActorID/ActionID` |
+| 多 action 同秒 | 按 `ResolveAt/Priority/ActionType/MinActorID/ActionID` |
+| 同 action 派生多事件 | 按 `Timestamp/Priority/ActionType/MinActorID/SourceActionID/SourceEffectID/EventID` |
 
 #### 回合阶段优先级规则
 
@@ -2821,16 +3049,16 @@ Go 实现必须把算法方向落实成可单测的规则。测试不只验证�
 
 | 阶段 | 内容 |
 |---|---|
-| 1 | 配置 `Dust2` 的 `RouteTemplate / Scenario / MapTag / EncounterModifier / CombatConst` |
-| 2 | 实现 `PlayerProfile`、`PlayerState`、资源 clamp |
-| 3 | 实现 `SelectStrategyTemplate` 和 `AssignRoles` |
-| 4 | 实现 `EncounterResolver`，输出 `KILL` 和 `EventReason` |
-| 5 | 实现 `MidRoundDecision`，支持继续打、转点、强攻 |
-| 6 | 实现 `BombResolver`，覆盖下包、掉包、捡包、拆包、爆炸 |
-| 7 | 实现 `ExplainableReport`，前端先展示 `KILL` |
-| 8 | 实现批量模拟和 `4.9` 标定指标统计 |
-| 9 | 补充 `MapNode / MapEdge / Visibility` 用于坐标采样、耗时和可选拦截 |
-| 10 | 根据标定结果调整配置表，不优先修改公式 |
+| 1 | 配置 `Dust2` 的六个 T RouteTemplate、多个独立 CT setup RouteTemplate、双方 Route、Scenario、MapTag、EncounterModifier、CombatConst、MapNode、MapEdge 与 Visibility，先通过阵营、人数闭合、完整覆盖、引用、权重和常量校验 |
+| 2 | 实现 `PlayerProfile`、`PlayerState`、Bomb、Control、Intel 与资源 clamp |
+| 3 | 实现语义 `map_graph` 的可达性、移动耗时、运行时边上位置和拦截候选 |
+| 4 | 实现 Action/Effect、Scheduler、deadline、批次事务、打断和纯终局判定 |
+| 5 | 实现只读 `DecisionView`、`SelectStrategyTemplate`、`AssignRoles` 和 OpeningPlan 确定性重试 |
+| 6 | 实现 Opening/Mid/Site/Bomb Planner，支持继续打、转点、强攻、补防和并发行动 |
+| 7 | 实现 `EncounterResolver` 与原子 `CombatPulse`，由 DamageEffect 自然产生 `KILL` 和状态变化 |
+| 8 | 实现 `BombResolver`，覆盖下包、掉包、捡包、拆包、爆炸和同秒边界 |
+| 9 | 实现完整事件投影、`EventReason` 与 `ExplainableReport`，前端可以先只展示 `KILL` |
+| 10 | 接回 MR12/换边/加时，完成端到端、不变量、确定性和批量标定；根据标定结果优先调整配置表，不通过预定结果改公式 |
 
 ### 4.11 非目标
 
@@ -2839,10 +3067,10 @@ Go 实现必须把算法方向落实成可单测的规则。测试不只验证�
 | 真实弹道 | 不模拟 |
 | 实时操作 | 不支持 |
 | 玩家回合内下指令 | 不支持 |
-| 完整 pathfinding | 第一版不做，转点由模板耗时和可选路径标签表达 |
+| 完整 pathfinding | 不构建物理导航网格或连续空间寻路；第一版仍必须在配置的 `MapNode/MapEdge/Route` 语义图上执行有界确定性可达性与路径选择 |
 | 复杂 visibility 传播 | 不做链式视野合并，只作为场景修正或高级扩展 |
-| 细粒度中途拦截 | 第一版用风险热点 `risk_points` / 场景风险标签抽象 |
-| 类实时 Action 调度器 | 第一版只保留离散事件能力，不做实时行动生命周期深挖 |
+| 细粒度中途拦截 | 不做逐帧碰撞；第一版用 `OnEdgeLocation`、`InterceptCheck`、`risk_points/intercept_nodes` 和实际 Encounter 抽象 |
+| 类实时 Action 调度器 | 第一版实现本文要求的轻量离散事件队列、互斥占用、版本失效和抽象 OnEdgeLocation；不做固定 tick、网络同步、逐帧动画、通用实时 ECS 或复杂行为树 |
 | 过细 HP/压制模拟 | 保留数值状态，但前端先展示击杀和关键原因 |
 | 完整经济系统 | 暂不接入 |
 | 真实烟闪细节 | 第一版抽象为 `Utility` 和执行质量 |

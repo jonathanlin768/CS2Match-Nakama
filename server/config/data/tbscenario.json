@@ -1,17 +1,202 @@
 [
   {
-    "id": "SCN_A_LONG_ENTRY",
+    "id": "SCN_A_LONG_OPENING",
     "route": "A_Long",
-    "phase": "SiteEntry",
+    "phase": "OpeningDuel",
     "range": "Long",
     "site": "A",
+    "tempo": "FastExecute",
+    "posture": "CT_Holding",
+    "utility_context": "Even",
+    "map_tag_ids": [
+      "D2_LONG_RANGE",
+      "D2_CT_HOLD_ANGLE",
+      "D2_FAST_TIMING"
+    ],
+    "base_time_cost": 5,
+    "base_weight": 14
+  },
+  {
+    "id": "SCN_A_SHORT_OPENING",
+    "route": "A_Short",
+    "phase": "OpeningDuel",
+    "range": "Mid",
+    "site": "A",
+    "tempo": "SlowDefault",
+    "posture": "CT_Holding",
+    "utility_context": "Even",
+    "map_tag_ids": [
+      "D2_MID_CONTROL",
+      "D2_CT_HOLD_ANGLE"
+    ],
+    "base_time_cost": 6,
+    "base_weight": 10
+  },
+  {
+    "id": "SCN_B_TUNNEL_OPENING",
+    "route": "B_Tunnel",
+    "phase": "OpeningDuel",
+    "range": "Close",
+    "site": "B",
+    "tempo": "FastExecute",
+    "posture": "CT_Holding",
+    "utility_context": "Even",
+    "map_tag_ids": [
+      "D2_CLOSE_RANGE",
+      "D2_CT_HOLD_ANGLE",
+      "D2_FAST_TIMING"
+    ],
+    "base_time_cost": 4,
+    "base_weight": 13
+  },
+  {
+    "id": "SCN_MID_CONTROL",
+    "route": "Mid",
+    "phase": "MidControl",
+    "range": "Mid",
+    "site": "None",
+    "tempo": "SlowDefault",
+    "posture": "CT_Holding",
+    "utility_context": "Even",
+    "map_tag_ids": [
+      "D2_MID_CONTROL",
+      "D2_ROTATE_RISK"
+    ],
+    "base_time_cost": 7,
+    "base_weight": 12
+  },
+  {
+    "id": "SCN_A_SITE_ENTRY",
+    "route": "A_Long",
+    "phase": "SiteEntry",
+    "range": "Mid",
+    "site": "A",
+    "tempo": "FastExecute",
+    "posture": "T_Executing",
+    "utility_context": "T_Advantage",
+    "map_tag_ids": [
+      "D2_SITE_PRESSURE_A",
+      "D2_T_EXECUTE",
+      "D2_FAST_TIMING"
+    ],
+    "base_time_cost": 6,
+    "base_weight": 14
+  },
+  {
+    "id": "SCN_A_SHORT_ENTRY",
+    "route": "A_Short",
+    "phase": "SiteEntry",
+    "range": "Close",
+    "site": "A",
+    "tempo": "FastExecute",
+    "posture": "T_Executing",
+    "utility_context": "Even",
+    "map_tag_ids": [
+      "D2_SITE_PRESSURE_A",
+      "D2_CLOSE_RANGE",
+      "D2_T_EXECUTE"
+    ],
+    "base_time_cost": 5,
+    "base_weight": 12
+  },
+  {
+    "id": "SCN_B_SITE_ENTRY",
+    "route": "B_Tunnel",
+    "phase": "SiteEntry",
+    "range": "Close",
+    "site": "B",
+    "tempo": "FastExecute",
+    "posture": "T_Executing",
+    "utility_context": "T_Advantage",
+    "map_tag_ids": [
+      "D2_SITE_PRESSURE_B",
+      "D2_CLOSE_RANGE",
+      "D2_T_EXECUTE"
+    ],
+    "base_time_cost": 5,
+    "base_weight": 14
+  },
+  {
+    "id": "SCN_MID_TO_B_ENTRY",
+    "route": "Mid",
+    "phase": "SiteEntry",
+    "range": "Mid",
+    "site": "B",
     "tempo": "SlowDefault",
     "posture": "T_Executing",
     "utility_context": "Even",
     "map_tag_ids": [
-      "D2_A_LONG_RANGE"
+      "D2_MID_CONTROL",
+      "D2_SITE_PRESSURE_B",
+      "D2_ROTATE_RISK"
     ],
-    "base_time_cost": 12,
+    "base_time_cost": 7,
+    "base_weight": 11
+  },
+  {
+    "id": "SCN_A_RETAKE",
+    "route": "PostPlant_A",
+    "phase": "Retake",
+    "range": "Mid",
+    "site": "A",
+    "tempo": "LowTime",
+    "posture": "CT_Retaking",
+    "utility_context": "CT_Advantage",
+    "map_tag_ids": [
+      "D2_POSTPLANT_A",
+      "D2_LOW_TIME",
+      "D2_SITE_PRESSURE_A"
+    ],
+    "base_time_cost": 8,
+    "base_weight": 12
+  },
+  {
+    "id": "SCN_B_RETAKE",
+    "route": "PostPlant_B",
+    "phase": "Retake",
+    "range": "Close",
+    "site": "B",
+    "tempo": "LowTime",
+    "posture": "CT_Retaking",
+    "utility_context": "CT_Advantage",
+    "map_tag_ids": [
+      "D2_POSTPLANT_B",
+      "D2_LOW_TIME",
+      "D2_SITE_PRESSURE_B"
+    ],
+    "base_time_cost": 7,
+    "base_weight": 12
+  },
+  {
+    "id": "SCN_A_BOMB_RESOLUTION",
+    "route": "PostPlant_A",
+    "phase": "BombResolution",
+    "range": "Close",
+    "site": "A",
+    "tempo": "LowTime",
+    "posture": "T_PostPlant",
+    "utility_context": "Even",
+    "map_tag_ids": [
+      "D2_POSTPLANT_A",
+      "D2_LOW_TIME"
+    ],
+    "base_time_cost": 5,
+    "base_weight": 10
+  },
+  {
+    "id": "SCN_B_BOMB_RESOLUTION",
+    "route": "PostPlant_B",
+    "phase": "BombResolution",
+    "range": "Close",
+    "site": "B",
+    "tempo": "LowTime",
+    "posture": "T_PostPlant",
+    "utility_context": "Even",
+    "map_tag_ids": [
+      "D2_POSTPLANT_B",
+      "D2_LOW_TIME"
+    ],
+    "base_time_cost": 5,
     "base_weight": 10
   }
 ]

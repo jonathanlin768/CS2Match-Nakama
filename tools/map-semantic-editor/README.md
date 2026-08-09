@@ -33,6 +33,8 @@ tools/map-semantic-editor/data/de_dust2.json
 
 顶部 `保存` 只写入这个本地工程文件，不会修改 Luban Excel。覆盖保存前，服务会在 `tools/map-semantic-editor/data/.bak/` 下备份旧工程文件。顶部 `从项目中读取` 会从发布目录 `configs/Datas/<map_id>.json` 读取最近一次写入 Luban 时保存的工程快照，并加载回编辑器内存。
 
+顶部 `读取当前Excel配置` 会直接解析 `configs/Datas/#*.xlsx`（9 张 Luban 表）的当前内容并载入编辑器，替换节点、路径、视野、路线、模板、场景、标签、修正和常量数据；工程元数据（地图名、雷达图、图层、视图）保持不变。每张表的行数与解析警告显示在底部 `读取日志` 页签。
+
 ## 常用编辑
 
 - 创建点位：点击顶部 `点位 (tb_map_node)`，再点击雷达图空白位置。

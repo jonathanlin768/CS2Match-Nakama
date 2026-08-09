@@ -1,24 +1,471 @@
 [
   {
-    "id": "TPL_A_LONG_DEFAULT",
+    "id": "A_Long_Rush",
     "map_id": "de_dust2",
+    "side": "T",
     "target_site": "A",
-    "tempo": "Default",
-    "recommended_min": 2,
+    "tempo": "Fast",
+    "recommended_min": 5,
     "recommended_max": 5,
     "required_roles": [
-      "Entry"
+      "Entry",
+      "Support"
     ],
-    "key_attributes": "entry=10;aim=6",
+    "key_attributes": "aim=0.22;reaction=0.18;teamplay=0.20;utility=0.18;discipline=0.12;awareness=0.10",
+    "route_ids": [
+      "D2_T_A_LONG",
+      "D2_T_MID_CONTROL"
+    ],
+    "route_allocations": [
+      [
+        "D2_T_A_LONG",
+        4
+      ],
+      [
+        "D2_T_MID_CONTROL",
+        1
+      ]
+    ],
     "scenario_ids": [
-      "SCN_A_LONG_ENTRY"
+      "SCN_A_LONG_OPENING",
+      "SCN_A_SITE_ENTRY"
     ],
     "map_tag_ids": [
-      "D2_A_LONG_RANGE"
+      "D2_LONG_RANGE",
+      "D2_CT_HOLD_ANGLE",
+      "D2_FAST_TIMING",
+      "D2_SITE_PRESSURE_A"
+    ],
+    "common_ct_setup_ids": [
+      "CT_2A_1Mid_2B",
+      "CT_3A_1Mid_1B",
+      "CT_1A_1Mid_3B"
     ],
     "success_next_phase": "SiteEntry",
     "failure_fallbacks": [
-      "D2_CAT_SPLIT"
+      "A_Short_Split",
+      "Default_Pick"
+    ]
+  },
+  {
+    "id": "A_Short_Split",
+    "map_id": "de_dust2",
+    "side": "T",
+    "target_site": "A",
+    "tempo": "Default",
+    "recommended_min": 5,
+    "recommended_max": 5,
+    "required_roles": [
+      "Entry",
+      "Support",
+      "AWPer"
+    ],
+    "key_attributes": "teamplay=0.24;awareness=0.18;utility=0.16;aim=0.16;reaction=0.14;discipline=0.12",
+    "route_ids": [
+      "D2_T_A_SHORT",
+      "D2_T_A_LONG",
+      "D2_T_MID_CONTROL"
+    ],
+    "route_allocations": [
+      [
+        "D2_T_A_SHORT",
+        3
+      ],
+      [
+        "D2_T_A_LONG",
+        1
+      ],
+      [
+        "D2_T_MID_CONTROL",
+        1
+      ]
+    ],
+    "scenario_ids": [
+      "SCN_A_SHORT_OPENING",
+      "SCN_MID_CONTROL",
+      "SCN_A_SHORT_ENTRY"
+    ],
+    "map_tag_ids": [
+      "D2_MID_CONTROL",
+      "D2_CT_HOLD_ANGLE",
+      "D2_SITE_PRESSURE_A",
+      "D2_T_EXECUTE"
+    ],
+    "common_ct_setup_ids": [
+      "CT_2A_1Mid_2B",
+      "CT_3A_1Mid_1B",
+      "CT_1A_1Mid_3B"
+    ],
+    "success_next_phase": "SiteEntry",
+    "failure_fallbacks": [
+      "Default_Pick",
+      "Mid_To_B"
+    ]
+  },
+  {
+    "id": "B_Tunnel_Explode",
+    "map_id": "de_dust2",
+    "side": "T",
+    "target_site": "B",
+    "tempo": "Fast",
+    "recommended_min": 5,
+    "recommended_max": 5,
+    "required_roles": [
+      "Entry",
+      "Support"
+    ],
+    "key_attributes": "reaction=0.22;teamplay=0.22;utility=0.20;aim=0.16;composure=0.10;discipline=0.10",
+    "route_ids": [
+      "D2_T_B_TUNNEL",
+      "D2_T_MID_CONTROL"
+    ],
+    "route_allocations": [
+      [
+        "D2_T_B_TUNNEL",
+        4
+      ],
+      [
+        "D2_T_MID_CONTROL",
+        1
+      ]
+    ],
+    "scenario_ids": [
+      "SCN_B_TUNNEL_OPENING",
+      "SCN_B_SITE_ENTRY"
+    ],
+    "map_tag_ids": [
+      "D2_CLOSE_RANGE",
+      "D2_FAST_TIMING",
+      "D2_SITE_PRESSURE_B",
+      "D2_T_EXECUTE"
+    ],
+    "common_ct_setup_ids": [
+      "CT_2A_1Mid_2B",
+      "CT_3A_1Mid_1B",
+      "CT_1A_1Mid_3B"
+    ],
+    "success_next_phase": "SiteEntry",
+    "failure_fallbacks": [
+      "Mid_To_B",
+      "Default_Pick"
+    ]
+  },
+  {
+    "id": "Mid_To_B",
+    "map_id": "de_dust2",
+    "side": "T",
+    "target_site": "B",
+    "tempo": "Default",
+    "recommended_min": 5,
+    "recommended_max": 5,
+    "required_roles": [
+      "Entry",
+      "Lurker",
+      "Support"
+    ],
+    "key_attributes": "awareness=0.24;teamplay=0.20;aim=0.16;discipline=0.16;utility=0.12;reaction=0.12",
+    "route_ids": [
+      "D2_T_MID_B",
+      "D2_T_B_TUNNEL"
+    ],
+    "route_allocations": [
+      [
+        "D2_T_MID_B",
+        3
+      ],
+      [
+        "D2_T_B_TUNNEL",
+        2
+      ]
+    ],
+    "scenario_ids": [
+      "SCN_MID_CONTROL",
+      "SCN_MID_TO_B_ENTRY",
+      "SCN_B_SITE_ENTRY"
+    ],
+    "map_tag_ids": [
+      "D2_MID_CONTROL",
+      "D2_ROTATE_RISK",
+      "D2_SITE_PRESSURE_B"
+    ],
+    "common_ct_setup_ids": [
+      "CT_2A_1Mid_2B",
+      "CT_3A_1Mid_1B",
+      "CT_1A_1Mid_3B"
+    ],
+    "success_next_phase": "SiteEntry",
+    "failure_fallbacks": [
+      "B_Tunnel_Explode",
+      "Default_Pick"
+    ]
+  },
+  {
+    "id": "Default_Pick",
+    "map_id": "de_dust2",
+    "side": "T",
+    "target_site": "None",
+    "tempo": "Slow",
+    "recommended_min": 5,
+    "recommended_max": 5,
+    "required_roles": [
+      "Lurker",
+      "AWPer",
+      "Support"
+    ],
+    "key_attributes": "awareness=0.24;discipline=0.20;positioning=0.16;aim=0.14;teamplay=0.14;composure=0.12",
+    "route_ids": [
+      "D2_T_A_LONG",
+      "D2_T_A_SHORT",
+      "D2_T_B_TUNNEL",
+      "D2_T_MID_CONTROL"
+    ],
+    "route_allocations": [
+      [
+        "D2_T_A_LONG",
+        1
+      ],
+      [
+        "D2_T_A_SHORT",
+        1
+      ],
+      [
+        "D2_T_B_TUNNEL",
+        1
+      ],
+      [
+        "D2_T_MID_CONTROL",
+        2
+      ]
+    ],
+    "scenario_ids": [
+      "SCN_A_LONG_OPENING",
+      "SCN_A_SHORT_OPENING",
+      "SCN_B_TUNNEL_OPENING",
+      "SCN_MID_CONTROL"
+    ],
+    "map_tag_ids": [
+      "D2_LONG_RANGE",
+      "D2_MID_CONTROL",
+      "D2_ROTATE_RISK"
+    ],
+    "common_ct_setup_ids": [
+      "CT_2A_1Mid_2B",
+      "CT_3A_1Mid_1B",
+      "CT_1A_1Mid_3B"
+    ],
+    "success_next_phase": "RotateDecision",
+    "failure_fallbacks": [
+      "A_Long_Rush",
+      "A_Short_Split",
+      "B_Tunnel_Explode",
+      "Mid_To_B"
+    ]
+  },
+  {
+    "id": "Fake_A_Go_B",
+    "map_id": "de_dust2",
+    "side": "T",
+    "target_site": "B",
+    "tempo": "Late",
+    "recommended_min": 5,
+    "recommended_max": 5,
+    "required_roles": [
+      "Lurker",
+      "IGL",
+      "Support"
+    ],
+    "key_attributes": "discipline=0.24;awareness=0.22;teamplay=0.18;utility=0.14;composure=0.12;mobility=0.10",
+    "route_ids": [
+      "D2_T_A_FAKE_PRESSURE",
+      "D2_T_B_TUNNEL",
+      "D2_T_MID_B"
+    ],
+    "route_allocations": [
+      [
+        "D2_T_A_FAKE_PRESSURE",
+        2
+      ],
+      [
+        "D2_T_B_TUNNEL",
+        2
+      ],
+      [
+        "D2_T_MID_B",
+        1
+      ]
+    ],
+    "scenario_ids": [
+      "SCN_A_LONG_OPENING",
+      "SCN_MID_CONTROL",
+      "SCN_MID_TO_B_ENTRY",
+      "SCN_B_SITE_ENTRY"
+    ],
+    "map_tag_ids": [
+      "D2_ROTATE_RISK",
+      "D2_SITE_PRESSURE_B",
+      "D2_LOW_TIME"
+    ],
+    "common_ct_setup_ids": [
+      "CT_2A_1Mid_2B",
+      "CT_3A_1Mid_1B",
+      "CT_1A_1Mid_3B"
+    ],
+    "success_next_phase": "SiteEntry",
+    "failure_fallbacks": [
+      "Default_Pick",
+      "Mid_To_B"
+    ]
+  },
+  {
+    "id": "CT_2A_1Mid_2B",
+    "map_id": "de_dust2",
+    "side": "CT",
+    "target_site": "None",
+    "tempo": "Default",
+    "recommended_min": 5,
+    "recommended_max": 5,
+    "required_roles": [
+      "Anchor",
+      "AWPer"
+    ],
+    "key_attributes": "positioning=0.22;awareness=0.20;reaction=0.18;teamplay=0.16;discipline=0.14;composure=0.10",
+    "route_ids": [
+      "D2_CT_A_LONG_HOLD",
+      "D2_CT_A_SHORT_HOLD",
+      "D2_CT_B_HOLD",
+      "D2_CT_MID_HOLD"
+    ],
+    "route_allocations": [
+      [
+        "D2_CT_A_LONG_HOLD",
+        1
+      ],
+      [
+        "D2_CT_A_SHORT_HOLD",
+        1
+      ],
+      [
+        "D2_CT_B_HOLD",
+        2
+      ],
+      [
+        "D2_CT_MID_HOLD",
+        1
+      ]
+    ],
+    "scenario_ids": [
+      "SCN_A_LONG_OPENING",
+      "SCN_A_SHORT_OPENING",
+      "SCN_B_TUNNEL_OPENING",
+      "SCN_MID_CONTROL"
+    ],
+    "map_tag_ids": [
+      "D2_CT_HOLD_ANGLE",
+      "D2_MID_CONTROL"
+    ],
+    "common_ct_setup_ids": [],
+    "success_next_phase": "Advance",
+    "failure_fallbacks": [
+      "CT_3A_1Mid_1B",
+      "CT_1A_1Mid_3B"
+    ]
+  },
+  {
+    "id": "CT_3A_1Mid_1B",
+    "map_id": "de_dust2",
+    "side": "CT",
+    "target_site": "A",
+    "tempo": "Default",
+    "recommended_min": 5,
+    "recommended_max": 5,
+    "required_roles": [
+      "Anchor",
+      "AWPer"
+    ],
+    "key_attributes": "positioning=0.24;reaction=0.20;awareness=0.18;teamplay=0.14;discipline=0.14;composure=0.10",
+    "route_ids": [
+      "D2_CT_A_LONG_HOLD",
+      "D2_CT_A_SHORT_HOLD",
+      "D2_CT_B_HOLD",
+      "D2_CT_MID_HOLD"
+    ],
+    "route_allocations": [
+      [
+        "D2_CT_A_LONG_HOLD",
+        2
+      ],
+      [
+        "D2_CT_A_SHORT_HOLD",
+        1
+      ],
+      [
+        "D2_CT_B_HOLD",
+        1
+      ],
+      [
+        "D2_CT_MID_HOLD",
+        1
+      ]
+    ],
+    "scenario_ids": [
+      "SCN_A_LONG_OPENING",
+      "SCN_A_SHORT_OPENING",
+      "SCN_MID_CONTROL"
+    ],
+    "map_tag_ids": [
+      "D2_CT_HOLD_ANGLE",
+      "D2_SITE_PRESSURE_A"
+    ],
+    "common_ct_setup_ids": [],
+    "success_next_phase": "Advance",
+    "failure_fallbacks": [
+      "CT_2A_1Mid_2B"
+    ]
+  },
+  {
+    "id": "CT_1A_1Mid_3B",
+    "map_id": "de_dust2",
+    "side": "CT",
+    "target_site": "B",
+    "tempo": "Default",
+    "recommended_min": 5,
+    "recommended_max": 5,
+    "required_roles": [
+      "Anchor",
+      "Support"
+    ],
+    "key_attributes": "positioning=0.22;reaction=0.20;teamplay=0.18;awareness=0.16;utility=0.14;discipline=0.10",
+    "route_ids": [
+      "D2_CT_A_LONG_HOLD",
+      "D2_CT_B_HOLD",
+      "D2_CT_MID_HOLD"
+    ],
+    "route_allocations": [
+      [
+        "D2_CT_A_LONG_HOLD",
+        1
+      ],
+      [
+        "D2_CT_B_HOLD",
+        3
+      ],
+      [
+        "D2_CT_MID_HOLD",
+        1
+      ]
+    ],
+    "scenario_ids": [
+      "SCN_B_TUNNEL_OPENING",
+      "SCN_MID_CONTROL"
+    ],
+    "map_tag_ids": [
+      "D2_CT_HOLD_ANGLE",
+      "D2_SITE_PRESSURE_B"
+    ],
+    "common_ct_setup_ids": [],
+    "success_next_phase": "Advance",
+    "failure_fallbacks": [
+      "CT_2A_1Mid_2B"
     ]
   }
 ]

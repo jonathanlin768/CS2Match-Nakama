@@ -6,6 +6,7 @@ import { toExportTables } from '../src/lib/exportTables'
 import { parseProject } from '../src/lib/model'
 import { hasBlockingIssues, validateProject } from '../src/lib/validation'
 import { readLubanSummary, writeExportTables } from './excel'
+import { importLubanProject } from './importTables'
 import { isGenConfigRunning, runGenConfig } from './genConfig'
 import { readProject, readPublishedProject, saveProject, savePublishedProject } from './projectFiles'
 import { radarRoot, resolveInside } from './paths'
@@ -59,6 +60,14 @@ async function route(request: http.IncomingMessage, response: http.ServerRespons
   if (request.method === 'GET' && url.pathname === '/api/luban/project') {
     const result = await readPublishedProject(url.searchParams.get('name') ?? 'de_dust2.json')
     json(response, 200, { ok: true, file: result.file, project: result.project })
+    return
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/luban/import') {
+    const body = await readJson(request)
+    const project = parseProject(body.project)
+    const result = await importLubanProject(project)
+    json(response, 200, { ok: true, project: result.project, summary: result.summary, warnings: result.warnings })
     return
   }
 

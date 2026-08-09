@@ -10,6 +10,7 @@ export default function MatchPage() {
   const navigate = useNavigate()
   const { session } = useAuth()
   const [loading, setLoading] = useState(false)
+  const [loadingPhase, setLoadingPhase] = useState<"idle" | "matching" | "simulating" | "entering">("idle")
 
   const handleStartMatch = async () => {
     if (!session) {
@@ -18,17 +19,31 @@ export default function MatchPage() {
     }
 
     setLoading(true)
+    setLoadingPhase("matching")
     try {
+      await new Promise((resolve) => setTimeout(resolve, 250))
+      setLoadingPhase("simulating")
       const report: MatchReport = await debugSimuMatch(session, "de_dust2")
-      // 把战报通过 router state 传递到 BattlePage
+      setLoadingPhase("entering")
+      await new Promise((resolve) => setTimeout(resolve, 250))
       navigate("/battle", { state: { report } })
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       toast.error(`模拟战斗失败，请重试：${message}`)
     } finally {
       setLoading(false)
+      setLoadingPhase("idle")
     }
   }
+
+  const buttonLabel =
+    loadingPhase === "matching"
+      ? "匹配中"
+      : loadingPhase === "simulating"
+        ? "正在模拟比赛"
+        : loadingPhase === "entering"
+          ? "进入战场"
+          : "开始匹配"
 
   return (
     // Full viewport wrapper that centers the fixed 1920x900 game frame
@@ -45,7 +60,7 @@ export default function MatchPage() {
           disabled={loading}
           className="absolute bottom-[60px] right-[80px] rounded-md bg-gradient-to-r from-gold to-gold/80 px-12 py-4 text-xl font-bold text-background shadow-lg transition-all hover:from-gold/90 hover:to-gold/70 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {loading ? "匹配中..." : "开始匹配"}
+          {buttonLabel}
         </button>
       </main>
     </div>

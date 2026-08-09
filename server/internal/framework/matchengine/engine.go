@@ -3,321 +3,530 @@ package matchengine
 import (
 	"context"
 	"fmt"
-	"math/rand"
+	"math"
 	"sort"
 	"time"
 )
 
-// MatchEngine 是单场比赛的推演实例。
 type MatchEngine struct {
-	input  *MatchInput
-	rng    *rand.Rand
-	state  *MatchState
-	events []*GameEvent
+	input          *MatchInput
+	state          *MatchScoreState
+	roundSimulator roundSimulator
+	stats          map[string]*playerStatAccumulator
+	roster         map[string]PlayerProfile
+	strategyMemory map[string]StrategyMemory
 }
 
-// NewMatchEngine 创建一个新的比赛推演实例。
-func NewMatchEngine(input *MatchInput) *MatchEngine {
-	seed := input.Seed
-	if seed == 0 {
-		seed = time.Now().UnixNano()
-	}
-	return &MatchEngine{
-		input: input,
-		rng:   rand.New(rand.NewSource(seed)),
-		state: &MatchState{},
-	}
+type playerStatAccumulator struct {
+	PlayerID   string
+	PlayerName string
+	TeamID     string
+	Side       string
+	Kills      int
+	Deaths     int
+	Damage     int
+	FK         int
+	MK         int
+	Plants     int
+	Defuses    int
 }
 
-// StartMatch 执行完整推演并返回结果。MVP 阶段只推演一回合。
-func (e *MatchEngine) StartMatch(ctx context.Context) (*MatchResult, error) {
-	nowMs := time.Now().UnixMilli()
-	matchInfo := &MatchInfo{
-		MatchID:     e.input.MatchID,
-		MapID:       e.input.MapID,
-		MapName:     DefaultMapName(e.input.MapID),
-		TeamAName:   e.input.TeamA.Name,
-		TeamBName:   e.input.TeamB.Name,
-		StartTime:   nowMs,
-		TotalRounds: 1,
-	}
-
-	round := e.simulateRound(1, SideT)
-	e.state.ScoreT = round.ScoreT
-	e.state.ScoreCT = round.ScoreCT
-
-	winner := SideCT
-	if e.state.ScoreT > e.state.ScoreCT {
-		winner = SideT
-	}
-
-	finalStats := e.buildFinalStats()
-
-	return &MatchResult{
-		MatchInfo:   matchInfo,
-		Rounds:      []*RoundResult{round},
-		FinalStats:  finalStats,
-		Winner:      winner,
-		TotalRounds: 1,
-	}, nil
+func newProductionMatchEngine(input *MatchInput) *MatchEngine {
+	return newMatchEngine(input, nil)
 }
 
-// simulateRound 推演一个回合。
-func (e *MatchEngine) simulateRound(roundNumber int, sideAttacking string) *RoundResult {
-	route := dust2AttackRoutes[e.rng.Intn(len(dust2AttackRoutes))]
+func newMatchEngine(input *MatchInput, simulator roundSimulator) *MatchEngine {
+	engine := &MatchEngine{input: input, roundSimulator: simulator}
+	if engine.roundSimulator == nil {
+		engine.roundSimulator = &causalRoundEngine{owner: engine}
+	}
+	return engine
+}
 
-	// 复制一份选手状态用于本回合。
-	all := e.combatants()
-	aliveT := filterBySide(all, SideT)
-	aliveCT := filterBySide(all, SideCT)
+func (e *MatchEngine) simulateMatch(ctx context.Context) (*MatchResult, error) {
+	if err := e.validateInput(); err != nil {
+		return nil, err
+	}
 
-	e.events = nil
+	startTime := e.input.StartTime
+	if startTime == 0 {
+		startTime = time.Now().UnixMilli()
+	}
+	var err error
+	e.state, err = NewMatchScoreState(e.input.TeamA.TeamID, e.input.TeamB.TeamID, e.input.InitialSideByTeam)
+	if err != nil {
+		return nil, err
+	}
+	e.roster = e.buildRoster()
+	e.stats = e.buildStats()
+	e.strategyMemory = map[string]StrategyMemory{
+		e.input.TeamA.TeamID: newStrategyMemory(),
+		e.input.TeamB.TeamID: newStrategyMemory(),
+	}
 
-	// ROUND_START 事件
-	e.addEvent(&GameEvent{
+	result := &MatchResult{
+		MatchInfo: &MatchInfo{
+			MatchID:    e.input.MatchID,
+			MapID:      e.input.MapID,
+			MapName:    e.input.MapName,
+			MapVersion: e.input.MapVersion,
+			RuleSetID:  e.input.RuleSet.RuleSetID,
+			Seed:       e.input.Seed,
+			TeamAID:    e.input.TeamA.TeamID,
+			TeamBID:    e.input.TeamB.TeamID,
+			TeamAName:  e.input.TeamA.Name,
+			TeamBName:  e.input.TeamB.Name,
+			StartTime:  startTime,
+		},
+	}
+
+	if result.MatchInfo.MapName == "" {
+		result.MatchInfo.MapName = e.input.MapConfig.MapName
+	}
+
+	for roundNumber := 1; roundNumber <= e.input.RuleSet.RegulationMaxRounds; roundNumber++ {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		if roundNumber == e.input.RuleSet.RegulationHalfRounds+1 {
+			e.swapSides()
+		}
+		simulation, err := e.roundSimulator.SimulateRound(ctx, e.buildRoundInput(roundContext{
+			roundNumber:  roundNumber,
+			phase:        "regulation",
+			half:         regulationHalf(e.input.RuleSet, roundNumber),
+			isSideSwitch: roundNumber == e.input.RuleSet.RegulationHalfRounds+1,
+		}))
+		if err != nil {
+			return nil, err
+		}
+		round, err := e.consumeRoundSimulation(simulation)
+		if err != nil {
+			return nil, err
+		}
+		result.Rounds = append(result.Rounds, round)
+		if e.state.RegulationComplete(e.input.RuleSet, len(result.Rounds)) {
+			break
+		}
+	}
+
+	if e.state.ShouldEnterOvertime(e.input.RuleSet, len(result.Rounds)) {
+		if err := e.playOvertime(ctx, result); err != nil {
+			return nil, err
+		}
+	}
+
+	result.TotalRounds = len(result.Rounds)
+	result.MatchInfo.TotalRounds = result.TotalRounds
+	result.FinalScoreTeamA = e.state.Score(e.input.TeamA.TeamID)
+	result.FinalScoreTeamB = e.state.Score(e.input.TeamB.TeamID)
+	result.WinnerTeamID = e.winnerTeamID()
+	result.Winner = e.winnerSide(result.WinnerTeamID)
+	e.addMatchBoundaryEvents(result)
+	result.MatchInfo.FinalScoreTeamA = result.FinalScoreTeamA
+	result.MatchInfo.FinalScoreTeamB = result.FinalScoreTeamB
+	result.MatchInfo.WinnerTeamID = result.WinnerTeamID
+	result.FinalStats = e.buildFinalStats(result.TotalRounds, result.WinnerTeamID)
+	if len(result.Rounds) > 0 {
+		lastRound := result.Rounds[len(result.Rounds)-1]
+		result.FinalStats.ScoreT = lastRound.ScoreT
+		result.FinalStats.ScoreCT = lastRound.ScoreCT
+	}
+	result.FinalStats.ScoreTeamA = result.FinalScoreTeamA
+	result.FinalStats.ScoreTeamB = result.FinalScoreTeamB
+	result.Report = BuildMatchExplainableReport(result.Rounds)
+	return result, nil
+}
+
+func (e *MatchEngine) addMatchBoundaryEvents(result *MatchResult) {
+	if len(result.Rounds) == 0 {
+		return
+	}
+	first := result.Rounds[0]
+	first.Events = append(first.Events, &GameEvent{
 		Timestamp: 0,
-		EventType: "ROUND_START",
-		Message:   fmt.Sprintf("Round %d 开始。T方选择 %s 进攻%s区。", roundNumber, route.Name, route.TargetSite),
+		EventType: EventMatchStart,
+		Message:   fmt.Sprintf("%s vs %s on %s: match started", e.input.TeamA.Name, e.input.TeamB.Name, e.input.MapName),
+		Extra: map[string]interface{}{
+			"seed":        e.input.Seed,
+			"rule_set":    e.input.RuleSet.RuleSetID,
+			"map_version": e.input.MapVersion,
+		},
 	})
+	sortEvents(first.Events)
 
-	// 按综合属性排序，高者先开枪
-	sortCombatantsByPower(aliveT)
-	sortCombatantsByPower(aliveCT)
+	last := result.Rounds[len(result.Rounds)-1]
+	last.Events = append(last.Events, &GameEvent{
+		Timestamp:  int64(e.roundEndTime(last.Events)),
+		EventType:  EventMatchEnd,
+		Message:    fmt.Sprintf("match ended: %s wins %d:%d", e.teamName(result.WinnerTeamID), result.FinalScoreTeamA, result.FinalScoreTeamB),
+		ScoreTeamA: result.FinalScoreTeamA,
+		ScoreTeamB: result.FinalScoreTeamB,
+	})
+	sortEvents(last.Events)
+}
 
-	currentTime := int64(route.BaseTime + e.rng.Intn(5))
-	firstKill := true
-
-	pairs := min(len(aliveT), len(aliveCT))
-	for i := 0; i < pairs; i++ {
-		t := aliveT[i]
-		ct := aliveCT[i]
-		if !t.Alive || !ct.Alive {
-			continue
+func (e *MatchEngine) playOvertime(ctx context.Context, result *MatchResult) error {
+	roundNumber := len(result.Rounds) + 1
+	for block := 1; block <= 20; block++ {
+		for inBlock := 1; inBlock <= e.input.RuleSet.OvertimeBlockRounds; inBlock++ {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			if inBlock == e.input.RuleSet.OvertimeHalfRounds+1 {
+				e.swapSides()
+			}
+			simulation, err := e.roundSimulator.SimulateRound(ctx, e.buildRoundInput(roundContext{
+				roundNumber:          roundNumber,
+				phase:                "overtime",
+				half:                 2 + block,
+				overtimeBlock:        block,
+				overtimeRoundInBlock: inBlock,
+				isSideSwitch:         inBlock == e.input.RuleSet.OvertimeHalfRounds+1,
+			}))
+			if err != nil {
+				return err
+			}
+			round, err := e.consumeRoundSimulation(simulation)
+			if err != nil {
+				return err
+			}
+			result.Rounds = append(result.Rounds, round)
+			roundNumber++
 		}
-
-		winner, loser := e.resolveDuel(t, ct)
-		loser.Alive = false
-		loser.Deaths++
-		winner.Kills++
-		winner.Damage += 100
-
-		weapon := WeaponT
-		location := route.Name
-		loc := RandomRouteLocation(route.ID, e.rng)
-		if winner.Side == SideCT {
-			weapon = WeaponCT
+		if e.state.OvertimeDecided(e.input.RuleSet, e.input.RuleSet.OvertimeBlockRounds) {
+			return nil
 		}
+	}
+	return nil
+}
 
-		if firstKill {
-			winner.FirstKills++
+type roundContext struct {
+	roundNumber          int
+	phase                string
+	half                 int
+	overtimeBlock        int
+	overtimeRoundInBlock int
+	isSideSwitch         bool
+}
+
+func (e *MatchEngine) buildRoundInput(ctx roundContext) *RoundInput {
+	scoreSnapshot := map[string]int{
+		e.input.TeamA.TeamID: e.state.Score(e.input.TeamA.TeamID),
+		e.input.TeamB.TeamID: e.state.Score(e.input.TeamB.TeamID),
+	}
+	return &RoundInput{
+		MatchID:              e.input.MatchID,
+		RoundNumber:          ctx.roundNumber,
+		MapID:                e.input.MapID,
+		MapVersion:           e.input.MapVersion,
+		Seed:                 deriveSeed(e.input.Seed, e.input.MapVersion, e.input.RuleSet.RuleSetID, ctx.roundNumber),
+		RuleSet:              e.input.RuleSet,
+		MapConfig:            e.input.MapConfig,
+		WeaponSpecs:          e.input.WeaponSpecs,
+		SideLoadouts:         e.input.SideLoadouts,
+		TeamT:                e.team(e.state.TeamForSide(SideT)),
+		TeamCT:               e.team(e.state.TeamForSide(SideCT)),
+		TeamAID:              e.input.TeamA.TeamID,
+		TeamBID:              e.input.TeamB.TeamID,
+		ScoreByTeam:          scoreSnapshot,
+		StrategyMemoryT:      cloneStrategyMemory(e.strategyMemory[e.state.TeamForSide(SideT)]),
+		StrategyMemoryCT:     cloneStrategyMemory(e.strategyMemory[e.state.TeamForSide(SideCT)]),
+		phase:                ctx.phase,
+		half:                 ctx.half,
+		overtimeBlock:        ctx.overtimeBlock,
+		overtimeRoundInBlock: ctx.overtimeRoundInBlock,
+		isSideSwitch:         ctx.isSideSwitch,
+	}
+}
+
+func (e *MatchEngine) consumeRoundSimulation(simulation *RoundSimulationResult) (*RoundResult, error) {
+	if simulation == nil || simulation.Round == nil || simulation.Terminal == nil {
+		return nil, newError("SIMULATION_INVARIANT_ERROR", "round simulator returned no round or terminal")
+	}
+	terminal := simulation.Terminal
+	expectedSide := e.state.SideByTeam[terminal.WinnerTeamID]
+	if expectedSide == "" || (terminal.WinnerSide != "" && terminal.WinnerSide != expectedSide) || terminal.WinReason == "" {
+		return nil, newError("SIMULATION_INVARIANT_ERROR", "round terminal is inconsistent with current teams/sides")
+	}
+	if err := e.state.ApplyRoundWinner(terminal.WinnerTeamID); err != nil {
+		return nil, err
+	}
+	round := simulation.Round
+	round.WinnerTeamID = terminal.WinnerTeamID
+	round.Winner = expectedSide
+	round.WinReason = terminal.WinReason
+	round.ScoreTeamA = e.state.Score(e.input.TeamA.TeamID)
+	round.ScoreTeamB = e.state.Score(e.input.TeamB.TeamID)
+	round.ScoreT = e.state.Score(round.TeamTID)
+	round.ScoreCT = e.state.Score(round.TeamCTID)
+	for _, event := range round.Events {
+		if event.State != nil {
+			event.State.ScoreTeamA = round.ScoreTeamA
+			event.State.ScoreTeamB = round.ScoreTeamB
+			event.State.ScoreT = round.ScoreT
+			event.State.ScoreCT = round.ScoreCT
 		}
+		if event.EventType == EventRoundEnd {
+			event.ScoreTeamA = round.ScoreTeamA
+			event.ScoreTeamB = round.ScoreTeamB
+		}
+	}
+	e.aggregateRoundStats(round)
+	e.updateStrategyMemory(round)
+	return round, nil
+}
 
-		e.addEvent(&GameEvent{
-			Timestamp:    currentTime,
-			EventType:    "KILL",
-			AttackerID:   winner.PlayerID,
-			AttackerName: winner.Name,
-			VictimID:     loser.PlayerID,
-			VictimName:   loser.Name,
-			Weapon:       weapon,
-			Location:     loc,
-			IsFirstKill:  firstKill,
-			Message:      fmt.Sprintf("[%s] %s (%s) 击杀了 %s [%s]", formatTime(currentTime), winner.Name, weapon, loser.Name, location),
+func (e *MatchEngine) validateInput() error {
+	if e.input == nil {
+		return newError("INVALID_MATCH_INPUT", "input is nil")
+	}
+	if e.input.MatchID == "" || e.input.MapID == "" {
+		return newError("INVALID_MATCH_INPUT", "match_id and map_id are required")
+	}
+	if e.input.Seed == 0 {
+		return newError("INVALID_MATCH_INPUT", "seed must be non-zero before calling matchengine")
+	}
+	if err := ValidateRuleSet(e.input.RuleSet); err != nil {
+		return err
+	}
+	if err := ValidateMapConfig(e.input.MapConfig); err != nil {
+		return err
+	}
+	if e.input.MapID != e.input.MapConfig.MapID {
+		return newError("INVALID_MATCH_INPUT", "input map %s does not match config %s", e.input.MapID, e.input.MapConfig.MapID)
+	}
+	if err := validateTeam(e.input.TeamA); err != nil {
+		return err
+	}
+	if err := validateTeam(e.input.TeamB); err != nil {
+		return err
+	}
+	seen := map[string]struct{}{}
+	for _, p := range append(e.input.TeamA.Players, e.input.TeamB.Players...) {
+		if _, ok := seen[p.PlayerID]; ok {
+			return newError("INVALID_LINEUP", "duplicate player id: %s", p.PlayerID)
+		}
+		seen[p.PlayerID] = struct{}{}
+	}
+	if e.input.InitialSideByTeam == nil {
+		return newError("INVALID_MATCH_INPUT", "initial side assignment is required")
+	}
+	sideA := e.input.InitialSideByTeam[e.input.TeamA.TeamID]
+	sideB := e.input.InitialSideByTeam[e.input.TeamB.TeamID]
+	if !validSide(sideA) || !validSide(sideB) || sideA == sideB {
+		return newError("INVALID_MATCH_INPUT", "initial sides must assign one T and one CT")
+	}
+	for _, side := range []string{SideT, SideCT} {
+		loadout, ok := e.input.SideLoadouts[side]
+		if !ok || loadout.Primary == "" {
+			return newError("INVALID_MATCH_INPUT", "missing side loadout for %s", side)
+		}
+		if _, ok := e.input.WeaponSpecs[loadout.Primary]; !ok {
+			return newError("INVALID_MATCH_INPUT", "weapon spec missing for %s", loadout.Primary)
+		}
+	}
+	return nil
+}
+
+func validateTeam(team TeamInput) error {
+	if team.TeamID == "" || team.Name == "" {
+		return newError("INVALID_LINEUP", "team id and name are required")
+	}
+	if len(team.Players) != 5 {
+		return newError("INVALID_LINEUP", "team %s must contain exactly 5 players", team.TeamID)
+	}
+	for _, p := range team.Players {
+		if p.PlayerID == "" || p.DisplayName == "" {
+			return newError("INVALID_LINEUP", "player id and display name are required")
+		}
+	}
+	return nil
+}
+
+func (e *MatchEngine) buildFinalStats(totalRounds int, winnerTeamID string) *FinalStats {
+	stats := make([]*PlayerMatchStats, 0, len(e.stats))
+	ids := make([]string, 0, len(e.stats))
+	for id := range e.stats {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		acc := e.stats[id]
+		adr := 0.0
+		if totalRounds > 0 {
+			adr = float64(acc.Damage) / float64(totalRounds)
+		}
+		stats = append(stats, &PlayerMatchStats{
+			PlayerID:   acc.PlayerID,
+			PlayerName: acc.PlayerName,
+			TeamID:     acc.TeamID,
+			Side:       acc.Side,
+			Kills:      acc.Kills,
+			Deaths:     acc.Deaths,
+			Damage:     acc.Damage,
+			ADR:        math.Round(adr*10) / 10,
+			FK:         acc.FK,
+			MK:         acc.MK,
+			Plants:     acc.Plants,
+			Defuses:    acc.Defuses,
 		})
-
-		firstKill = false
-		currentTime += int64(1 + e.rng.Intn(3))
 	}
-
-	// 统计存活
-	survivorsT := countAlive(aliveT)
-	survivorsCT := countAlive(aliveCT)
-
-	var winner, reason string
-	if survivorsT > survivorsCT {
-		winner = SideT
-		reason = "elimination"
-	} else if survivorsCT > survivorsT {
-		winner = SideCT
-		reason = "elimination"
-	} else {
-		// 人数相等时默认 T 方通过下包获胜
-		winner = SideT
-		reason = "bomb_exploded"
-	}
-
-	scoreT, scoreCT := 0, 0
-	if winner == SideT {
-		scoreT = 1
-	} else {
-		scoreCT = 1
-	}
-
-	endTime := currentTime + int64(2+e.rng.Intn(4))
-	if endTime > RoundTimeLimit {
-		endTime = RoundTimeLimit
-	}
-
-	winnerText := "T方"
-	if winner == SideCT {
-		winnerText = "CT方"
-	}
-	e.addEvent(&GameEvent{
-		Timestamp: endTime,
-		EventType: "ROUND_END",
-		Message:   fmt.Sprintf("%s获胜（%s）。比分 T %d - %d CT", winnerText, reason, scoreT, scoreCT),
-	})
-
-	return &RoundResult{
-		RoundNumber:   roundNumber,
-		SideAttacking: sideAttacking,
-		Winner:        winner,
-		WinReason:     reason,
-		ScoreT:        scoreT,
-		ScoreCT:       scoreCT,
-		RouteMain:     route.ID,
-		RouteSub:      "",
-		Events:        append([]*GameEvent(nil), e.events...),
-		PlayerStates:  buildPlayerStates(all),
-	}
+	return &FinalStats{WinnerTeamID: winnerTeamID, PlayerStats: stats}
 }
 
-// resolveDuel 比较两名选手综合属性，高者获胜；相等时随机。
-func (e *MatchEngine) resolveDuel(a, b *Combatant) (winner, loser *Combatant) {
-	powerA := combatPower(a)
-	powerB := combatPower(b)
-	if powerA > powerB {
-		return a, b
+func (e *MatchEngine) buildRoster() map[string]PlayerProfile {
+	roster := map[string]PlayerProfile{}
+	for _, p := range append(e.input.TeamA.Players, e.input.TeamB.Players...) {
+		roster[p.PlayerID] = p
 	}
-	if powerB > powerA {
-		return b, a
-	}
-	if e.rng.Intn(2) == 0 {
-		return a, b
-	}
-	return b, a
+	return roster
 }
 
-// combatPower 计算选手综合战力。MVP 阶段使用 Entry + Aim + Firepower。
-func combatPower(c *Combatant) int32 {
-	return c.Entry + c.Aim + c.Firepower
-}
-
-func (e *MatchEngine) addEvent(ev *GameEvent) {
-	e.events = append(e.events, ev)
-}
-
-func (e *MatchEngine) combatants() []*Combatant {
-	var out []*Combatant
-	for _, p := range e.input.TeamA.Players {
-		out = append(out, cloneCombatant(p))
-	}
-	for _, p := range e.input.TeamB.Players {
-		out = append(out, cloneCombatant(p))
-	}
-	return out
-}
-
-func cloneCombatant(c *Combatant) *Combatant {
-	return &Combatant{
-		PlayerID:  c.PlayerID,
-		Name:      c.Name,
-		Side:      c.Side,
-		Entry:     c.Entry,
-		Aim:       c.Aim,
-		Trade:     c.Trade,
-		Clutch:    c.Clutch,
-		Firepower: c.Firepower,
-		Gamesense: c.Gamesense,
-		Alive:     true,
-	}
-}
-
-func filterBySide(all []*Combatant, side string) []*Combatant {
-	var out []*Combatant
-	for _, c := range all {
-		if c.Side == side {
-			out = append(out, c)
+func (e *MatchEngine) buildStats() map[string]*playerStatAccumulator {
+	stats := map[string]*playerStatAccumulator{}
+	for _, team := range []TeamInput{e.input.TeamA, e.input.TeamB} {
+		for _, p := range team.Players {
+			stats[p.PlayerID] = &playerStatAccumulator{
+				PlayerID:   p.PlayerID,
+				PlayerName: p.DisplayName,
+				TeamID:     team.TeamID,
+				Side:       e.input.InitialSideByTeam[team.TeamID],
+			}
 		}
 	}
-	return out
-}
-
-func sortCombatantsByPower(list []*Combatant) {
-	sort.Slice(list, func(i, j int) bool {
-		return combatPower(list[i]) > combatPower(list[j])
-	})
-}
-
-func countAlive(list []*Combatant) int {
-	n := 0
-	for _, c := range list {
-		if c.Alive {
-			n++
-		}
-	}
-	return n
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func buildPlayerStates(all []*Combatant) []*PlayerState {
-	states := make([]*PlayerState, 0, len(all))
-	for _, c := range all {
-		states = append(states, &PlayerState{
-			PlayerID:   c.PlayerID,
-			PlayerName: c.Name,
-			Side:       c.Side,
-			IsAlive:    c.Alive,
-			Kills:      c.Kills,
-			Deaths:     c.Deaths,
-			Damage:     c.Damage,
-		})
-	}
-	return states
-}
-
-func (e *MatchEngine) buildFinalStats() *FinalStats {
-	stats := &FinalStats{}
-	for _, c := range e.input.TeamA.Players {
-		stats.PlayerStats = append(stats.PlayerStats, buildPlayerMatchStats(c, SideT))
-	}
-	for _, c := range e.input.TeamB.Players {
-		stats.PlayerStats = append(stats.PlayerStats, buildPlayerMatchStats(c, SideCT))
-	}
-	stats.ScoreT = e.state.ScoreT
-	stats.ScoreCT = e.state.ScoreCT
 	return stats
 }
 
-func buildPlayerMatchStats(c *Combatant, side string) *PlayerMatchStats {
-	mk := 0
-	if c.Kills >= 3 {
-		mk = 1
+func (e *MatchEngine) swapSides() {
+	for teamID, memory := range e.strategyMemory {
+		e.strategyMemory[teamID] = DecayStrategyMemoryForSideSwitch(memory)
 	}
-	adr := 0.0
-	if c.Damage > 0 {
-		adr = float64(c.Damage) // 1 回合，直接等于总伤害
-	}
-	return &PlayerMatchStats{
-		PlayerID:   c.PlayerID,
-		PlayerName: c.Name,
-		Side:       side,
-		Kills:      c.Kills,
-		Deaths:     c.Deaths,
-		ADR:        adr,
-		FK:         c.FirstKills,
-		MK:         mk,
-	}
+	e.state.SwitchSides()
 }
 
-func formatTime(seconds int64) string {
-	m := seconds / 60
-	s := seconds % 60
-	return fmt.Sprintf("%d:%02d", m, s)
+func (e *MatchEngine) winnerTeamID() string {
+	if e.state.Score(e.input.TeamA.TeamID) > e.state.Score(e.input.TeamB.TeamID) {
+		return e.input.TeamA.TeamID
+	}
+	if e.state.Score(e.input.TeamB.TeamID) > e.state.Score(e.input.TeamA.TeamID) {
+		return e.input.TeamB.TeamID
+	}
+	return ""
+}
+
+func (e *MatchEngine) winnerSide(teamID string) string {
+	if teamID == "" {
+		return ""
+	}
+	return e.state.SideByTeam[teamID]
+}
+
+func (e *MatchEngine) teamName(teamID string) string {
+	if teamID == e.input.TeamA.TeamID {
+		return e.input.TeamA.Name
+	}
+	if teamID == e.input.TeamB.TeamID {
+		return e.input.TeamB.Name
+	}
+	return teamID
+}
+
+func (e *MatchEngine) team(teamID string) TeamInput {
+	if teamID == e.input.TeamA.TeamID {
+		return e.input.TeamA
+	}
+	return e.input.TeamB
+}
+
+func (e *MatchEngine) roundEndTime(events []*GameEvent) int {
+	maxTimestamp := 1
+	for _, ev := range events {
+		if int(ev.Timestamp) > maxTimestamp {
+			maxTimestamp = int(ev.Timestamp)
+		}
+	}
+	return maxTimestamp + 2
+}
+
+func regulationHalf(rule RuleSet, roundNumber int) int {
+	if roundNumber <= rule.RegulationHalfRounds {
+		return 1
+	}
+	return 2
+}
+
+func validSide(side string) bool {
+	return side == SideT || side == SideCT
+}
+
+func sortEvents(events []*GameEvent) {
+	priority := map[string]int{
+		EventMatchStart:  0,
+		EventRoundStart:  0,
+		EventHalfTime:    1,
+		EventSideSwitch:  1,
+		EventOvertime:    1,
+		EventKill:        5,
+		EventBombPlant:   6,
+		EventBombDefuse:  7,
+		EventBombExplode: 8,
+		EventRoundEnd:    9,
+		EventMatchEnd:    10,
+	}
+	sort.SliceStable(events, func(i, j int) bool {
+		a, b := events[i], events[j]
+		if a.Timestamp != b.Timestamp {
+			return a.Timestamp < b.Timestamp
+		}
+		aPriority, bPriority := a.sortPriority, b.sortPriority
+		if aPriority == 0 {
+			aPriority = -priority[a.EventType]
+		}
+		if bPriority == 0 {
+			bPriority = -priority[b.EventType]
+		}
+		if aPriority != bPriority {
+			return aPriority > bPriority
+		}
+		if a.sortActionType != b.sortActionType {
+			return a.sortActionType < b.sortActionType
+		}
+		if a.sortMinActorID != b.sortMinActorID {
+			return a.sortMinActorID < b.sortMinActorID
+		}
+		if a.SourceActionID != b.SourceActionID {
+			return a.SourceActionID < b.SourceActionID
+		}
+		if a.SourceEffectID != b.SourceEffectID {
+			return a.SourceEffectID < b.SourceEffectID
+		}
+		if a.EventID != b.EventID {
+			return a.EventID < b.EventID
+		}
+		if a.EventType != b.EventType {
+			return a.EventType < b.EventType
+		}
+		return a.Message < b.Message
+	})
+}
+
+func clampInt(v, min, max int) int {
+	if v < min {
+		return min
+	}
+	if v > max {
+		return max
+	}
+	return v
+}
+
+func clampFloat(v, min, max float64) float64 {
+	if v < min {
+		return min
+	}
+	if v > max {
+		return max
+	}
+	return v
 }

@@ -25,11 +25,15 @@ export default function Scoreboard({
   teamB,
   round,
   maxRounds,
+  phaseLabel,
+  winnerName,
 }: {
   teamA: BattleTeam
   teamB: BattleTeam
   round: number
-  maxRounds: number
+  maxRounds?: number
+  phaseLabel?: string
+  winnerName?: string
 }) {
   return (
     <div className="flex shrink-0 items-center justify-center gap-6 px-[40px] py-2">
@@ -47,8 +51,9 @@ export default function Scoreboard({
           <span className={SIDE_TEXT[teamB.side]}>{teamB.score}</span>
         </div>
         <span className="mt-1 text-xs tracking-wide text-muted">
-          第 {round} / {maxRounds} 回合
+          第 {round}{maxRounds ? ` / ${maxRounds}` : ""} 回合{phaseLabel ? ` · ${phaseLabel}` : ""}
         </span>
+        {winnerName && <span className="mt-1 text-xs font-semibold text-gold">{winnerName} 获胜</span>}
       </div>
 
       {/* 右队：队标 + 队名 */}

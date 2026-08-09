@@ -18,6 +18,9 @@ func NewService(logger runtime.Logger) *Service {
 
 // Simulate 接收输入并执行完整推演，返回 MatchResult。
 func (s *Service) Simulate(ctx context.Context, input *MatchInput) (*MatchResult, error) {
-	engine := NewMatchEngine(input)
-	return engine.StartMatch(ctx)
+	if input == nil {
+		return nil, newError("INVALID_MATCH_INPUT", "input is nil")
+	}
+	engine := newProductionMatchEngine(input)
+	return engine.simulateMatch(ctx)
 }

@@ -23,6 +23,11 @@ export type MapNode = z.infer<typeof mapNodeSchema>
 export type MapEdge = z.infer<typeof mapEdgeSchema>
 export type Visibility = z.infer<typeof visibilitySchema>
 export type Route = z.infer<typeof routeSchema>
+export type RouteTemplate = z.infer<typeof routeTemplateSchema>
+export type Scenario = z.infer<typeof scenarioSchema>
+export type MapTag = z.infer<typeof mapTagSchema>
+export type EncounterModifier = z.infer<typeof encounterModifierSchema>
+export type CombatConst = z.infer<typeof combatConstSchema>
 export type MapProject = z.infer<typeof mapProjectSchema>
 export type RangeDraft = {
   nodeId: string
@@ -78,7 +83,7 @@ export const visibilitySchema = z.object({
   visible: z.boolean().default(true),
   range: z.enum(['Close', 'Mid', 'Long']).default('Mid'),
   angle_advantage: z.enum(['T', 'CT', 'None']).default('None'),
-  elevation: z.enum(['HighToLow', 'LowToHigh', 'SameLevel', 'HeightBlocked']).default('SameLevel'),
+  elevation: z.enum(['HighToLow', 'LowToHigh', 'SameLevel', 'Same', 'HeightBlocked']).default('SameLevel'),
   cover_modifier: z.number().int().default(0),
   exposure_modifier: z.number().int().default(0),
 })
@@ -97,14 +102,18 @@ export const routeSchema = z.object({
 export const routeTemplateSchema = z.object({
   id: z.string().min(1),
   map_id: z.string().min(1),
+  side: z.enum(['T', 'CT']).default('T'),
   target_site: z.enum(sites).default('None'),
   tempo: z.enum(['Fast', 'Default', 'Slow', 'Late']).default('Default'),
   recommended_min: z.number().int().min(1).max(5).default(1),
   recommended_max: z.number().int().min(1).max(5).default(5),
   required_roles: z.array(z.string()).default([]),
   key_attributes: z.string().default(''),
+  route_ids: z.array(z.string()).default([]),
+  route_allocations: z.record(z.string(), z.number().int().min(0)).default({}),
   scenario_ids: z.array(z.string()).default([]),
   map_tag_ids: z.array(z.string()).default([]),
+  common_ct_setup_ids: z.array(z.string()).default([]),
   success_next_phase: z.string().default(''),
   failure_fallbacks: z.array(z.string()).default([]),
 })
@@ -209,6 +218,12 @@ export function cellToPoints(value: string): Point[] {
 
 export function listToCell(values: string[]): string {
   return values.join(',')
+}
+
+export function allocationsToCell(allocations: Record<string, number>): string {
+  return Object.entries(allocations)
+    .map(([key, value]) => `${key},${value}`)
+    .join(',')
 }
 
 export function round(value: number): number {

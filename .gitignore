@@ -52,6 +52,7 @@ nakama/data/
 
 # Luban-generated config files are committed as source code
 # (server/config/, client/src/config/, client/public/data/)
+/configs/Datas/.bak/
 
 # OpenSpecConfig
 # (archives are committed as project documentation)
@@ -64,3 +65,5 @@ coverage/
 .cache/
 tmp/
 temp/
+
+.codex-tmp/

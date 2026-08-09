@@ -1,8 +1,8 @@
 [
   {
-    "id": "player_niko",
-    "name": "NiKo",
-    "team": "NAVI",
+    "id": "player_apex",
+    "name": "豆豆",
+    "team": "Vitality",
     "nationality": "BA",
     "entry": 72,
     "aim": 70,
@@ -10,16 +10,25 @@
     "clutch": 63,
     "firepower": 61,
     "gamesense": 89,
+    "reaction": 71,
+    "positioning": 89,
+    "awareness": 89,
+    "teamplay": 69,
+    "utility": 79,
+    "composure": 63,
+    "mobility": 71,
+    "endurance": 62,
+    "discipline": 89,
     "positions": [
-      "Support"
+      "IGL"
     ],
     "rarity": "S",
-    "portrait": "portraits/player_niko.png"
+    "portrait": "portraits/player_apex.jpg"
   },
   {
-    "id": "player_s1mple",
-    "name": "s1mple",
-    "team": "G2",
+    "id": "player_flamez",
+    "name": "火仔",
+    "team": "Vitality",
     "nationality": "BA",
     "entry": 60,
     "aim": 68,
@@ -27,16 +36,25 @@
     "clutch": 87,
     "firepower": 93,
     "gamesense": 56,
+    "reaction": 64,
+    "positioning": 56,
+    "awareness": 56,
+    "teamplay": 69,
+    "utility": 63,
+    "composure": 87,
+    "mobility": 64,
+    "endurance": 90,
+    "discipline": 56,
     "positions": [
       "Anchor"
     ],
     "rarity": "SS",
-    "portrait": "portraits/player_s1mple.png"
+    "portrait": "portraits/player_flamez.jpg"
   },
   {
     "id": "player_zywoo",
-    "name": "ZywOo",
-    "team": "Liquid",
+    "name": "载物",
+    "team": "Vitality",
     "nationality": "DK",
     "entry": 83,
     "aim": 92,
@@ -44,17 +62,25 @@
     "clutch": 55,
     "firepower": 65,
     "gamesense": 82,
+    "reaction": 88,
+    "positioning": 82,
+    "awareness": 82,
+    "teamplay": 72,
+    "utility": 77,
+    "composure": 55,
+    "mobility": 88,
+    "endurance": 60,
+    "discipline": 82,
     "positions": [
-      "IGL",
       "AWPer"
     ],
     "rarity": "B",
-    "portrait": "portraits/player_zywoo.png"
+    "portrait": "portraits/player_zywoo.jpg"
   },
   {
-    "id": "player_device",
-    "name": "device",
-    "team": "MOUZ",
+    "id": "player_mezii",
+    "name": "妹子",
+    "team": "Vitality",
     "nationality": "UA",
     "entry": 60,
     "aim": 79,
@@ -62,17 +88,26 @@
     "clutch": 77,
     "firepower": 77,
     "gamesense": 93,
+    "reaction": 70,
+    "positioning": 93,
+    "awareness": 93,
+    "teamplay": 61,
+    "utility": 77,
+    "composure": 77,
+    "mobility": 70,
+    "endurance": 77,
+    "discipline": 93,
     "positions": [
       "Entry",
       "Lurker"
     ],
     "rarity": "SS",
-    "portrait": "portraits/player_device.png"
+    "portrait": "portraits/player_mezii.jpg"
   },
   {
     "id": "player_ropz",
-    "name": "ropz",
-    "team": "NAVI",
+    "name": "车主",
+    "team": "Vitality",
     "nationality": "FI",
     "entry": 79,
     "aim": 60,
@@ -80,17 +115,26 @@
     "clutch": 73,
     "firepower": 95,
     "gamesense": 94,
+    "reaction": 70,
+    "positioning": 94,
+    "awareness": 94,
+    "teamplay": 90,
+    "utility": 92,
+    "composure": 73,
+    "mobility": 70,
+    "endurance": 84,
+    "discipline": 94,
     "positions": [
       "Support",
       "AWPer"
     ],
     "rarity": "C",
-    "portrait": "portraits/player_ropz.png"
+    "portrait": "portraits/player_ropz.jpg"
   },
   {
-    "id": "player_rain",
-    "name": "rain",
-    "team": "G2",
+    "id": "player_kyousuke",
+    "name": "京介",
+    "team": "Falcons",
     "nationality": "US",
     "entry": 69,
     "aim": 73,
@@ -98,17 +142,26 @@
     "clutch": 69,
     "firepower": 61,
     "gamesense": 79,
+    "reaction": 71,
+    "positioning": 79,
+    "awareness": 79,
+    "teamplay": 60,
+    "utility": 70,
+    "composure": 69,
+    "mobility": 71,
+    "endurance": 65,
+    "discipline": 79,
     "positions": [
       "Lurker",
       "IGL"
     ],
     "rarity": "B",
-    "portrait": "portraits/player_rain.png"
+    "portrait": "portraits/player_kyousuke.jpg"
   },
   {
-    "id": "player_apex",
-    "name": "apEX",
-    "team": "MOUZ",
+    "id": "player_kyxsan",
+    "name": "K3",
+    "team": "Falcons",
     "nationality": "NO",
     "entry": 68,
     "aim": 72,
@@ -116,16 +169,25 @@
     "clutch": 93,
     "firepower": 95,
     "gamesense": 65,
+    "reaction": 70,
+    "positioning": 65,
+    "awareness": 65,
+    "teamplay": 59,
+    "utility": 62,
+    "composure": 93,
+    "mobility": 70,
+    "endurance": 94,
+    "discipline": 65,
     "positions": [
-      "AWPer"
+      "IGL"
     ],
     "rarity": "S",
-    "portrait": "portraits/player_apex.png"
+    "portrait": "portraits/player_kyxsan.jpg"
   },
   {
-    "id": "player_xyp9x",
-    "name": "Xyp9x",
-    "team": "Liquid",
+    "id": "player_monesy",
+    "name": "孩神",
+    "team": "Falcons",
     "nationality": "SE",
     "entry": 95,
     "aim": 90,
@@ -133,16 +195,25 @@
     "clutch": 75,
     "firepower": 58,
     "gamesense": 69,
+    "reaction": 93,
+    "positioning": 69,
+    "awareness": 69,
+    "teamplay": 69,
+    "utility": 69,
+    "composure": 75,
+    "mobility": 93,
+    "endurance": 67,
+    "discipline": 69,
     "positions": [
-      "IGL"
+      "AWPer"
     ],
     "rarity": "S",
-    "portrait": "portraits/player_xyp9x.png"
+    "portrait": "portraits/player_monesy.jpg"
   },
   {
-    "id": "player_karrigan",
-    "name": "karrigan",
-    "team": "Astralis",
+    "id": "player_niko",
+    "name": "老尼",
+    "team": "Falcons",
     "nationality": "UA",
     "entry": 68,
     "aim": 91,
@@ -150,17 +221,26 @@
     "clutch": 68,
     "firepower": 86,
     "gamesense": 80,
+    "reaction": 80,
+    "positioning": 80,
+    "awareness": 80,
+    "teamplay": 75,
+    "utility": 78,
+    "composure": 68,
+    "mobility": 80,
+    "endurance": 77,
+    "discipline": 80,
     "positions": [
       "AWPer",
       "IGL"
     ],
     "rarity": "B",
-    "portrait": "portraits/player_karrigan.png"
+    "portrait": "portraits/player_niko.jpg"
   },
   {
-    "id": "player_broky",
-    "name": "broky",
-    "team": "FaZe",
+    "id": "player_teses",
+    "name": "龙哥",
+    "team": "Falcons",
     "nationality": "RU",
     "entry": 90,
     "aim": 89,
@@ -168,11 +248,20 @@
     "clutch": 92,
     "firepower": 82,
     "gamesense": 92,
+    "reaction": 90,
+    "positioning": 92,
+    "awareness": 92,
+    "teamplay": 71,
+    "utility": 82,
+    "composure": 92,
+    "mobility": 90,
+    "endurance": 87,
+    "discipline": 92,
     "positions": [
       "IGL",
       "AWPer"
     ],
     "rarity": "B",
-    "portrait": "portraits/player_broky.png"
+    "portrait": "portraits/player_teses.jpg"
   }
 ]
