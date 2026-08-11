@@ -77,77 +77,34 @@ CS2 模拟器前端页面规格 — 登录页、首页仪表盘、对战页面�
 - **AND** 图标从 Eye 切换为 EyeOff
 
 ### Requirement: Home 首页
-
-Home 页面 SHALL 在认证后展示固定 1600×900 的游戏大厅界面，替代原有的响应式仪表盘布局。
+系统 SHALL 提供响应式 Home 主界面，一级内容只包含调整阵容、好友对战、匹配对战。调整阵容与好友对战 SHALL 显示未开放，匹配对战 SHALL 可进入电脑模拟。Home SHALL 承载首次体验 Modal，但主界面本身不得依赖 Modal 才可操作。
 
 #### Scenario: 首页渲染
+- **GIVEN** 身份初始化成功
+- **WHEN** 用户访问 `/`
+- **THEN** 页面显示三个核心入口及低层级账号状态
+- **AND** 调整阵容与好友对战标识为未开放，匹配对战可操作
+- **AND** 不显示旧管理手游仪表盘、资产面板或活动入口
 
-- **WHEN** 已认证用户访问 `/home`
-- **THEN** 页面渲染一个水平垂直居中、固定 1600×900 的游戏大厅画幅
-- **AND** 画幅内自上而下显示 TopBar、PromoBar、三列内容区、BottomNav
-- **AND** 三列内容区从左到右显示 LeftPanel、CenterStage、RightPanel
-- **AND** 所有数据使用硬编码 mock 数据正常渲染
-
-#### Scenario: 画幅裁剪策略
-
-- **WHEN** 浏览器视口小于 1600×900
-- **THEN** 大厅画幅保持 1600×900 不变
-- **AND** 画幅在视口中居中显示
-- **AND** 超出视口的部分被裁剪，不可滚动缩放
+#### Scenario: 窄屏渲染
+- **GIVEN** 用户使用手机视口访问 `/`
+- **WHEN** 页面渲染
+- **THEN** 三个入口无需缩放页面文字即可阅读和触控
 
 ### Requirement: MatchPage 对战页面
+Match 页面 SHALL 作为对战模式选择与请求状态页面。第一阶段匹配对战 SHALL 明确提供“电脑对战”并调用现有模拟 RPC；“路人匹配”和权威“好友对战”若尚未实现 SHALL 显示真实的未开放状态，不得使用假倒计时冒充真实匹配。
 
-MatchPage SHALL 展示模拟对战的比赛界面，包含比分栏、双方阵容、战术地图、回合事件、玩家数据和战术部署。当前阶段使用 stub hook（不连接 WebSocket），显示空状态界面。
+#### Scenario: 选择电脑对战
+- **GIVEN** 用户拥有有效 Guest 或正式 Session
+- **WHEN** 用户选择电脑对战并确认开始
+- **THEN** 页面显示 RPC 请求阶段反馈
+- **AND** 成功收到战报后导航到 Battle 页面
 
-#### Scenario: 对战页面渲染（未连接状态）
-
-- **WHEN** 用户访问 `/match`
-- **THEN** 页面顶部显示红色"未连接"状态指示器
-- **AND** MatchScoreBar 显示双方队名、Logo、比分和倒计时
-- **AND** 左右两侧显示 TeamRoster（T 方和 CT 方，空阵容）
-- **AND** 中间显示 TacticalMap（Dust2 地图）
-- **AND** 底部显示 RoundEvents（暂无事件）、PlayerStats（空表格）、RoundTactics（暂无战术）
-
-#### Scenario: 回合事件展示
-
-- **WHEN** 没有模拟事件发生（stub 返回空数组）
-- **THEN** RoundEvents 显示"暂无事件"
-- **AND** RoundTactics 显示"暂无战术信息"
-
-### Requirement: GachaPage 抽卡页面
-
-GachaPage SHALL 展示抽卡系统界面，包含卡包选择侧边栏、卡牌轮播、保底面板和卡池预览。
-
-#### Scenario: 抽卡页面渲染
-
-- **WHEN** 用户访问 `/gacha`
-- **THEN** 左侧显示 PackSidebar（默认选中"传奇之路"）
-- **AND** 中间显示 CardCarousel（玩家卡牌轮播）
-- **AND** 右侧显示 PityPanel（幸运值进度条、保底机制、掉落概率）
-- **AND** 底部显示 PoolPreview（卡池可选卡牌一览）
-
-#### Scenario: 切换卡包类别
-
-- **WHEN** 用户在 PackSidebar 点击不同的卡包类别
-- **THEN** 选中项高亮显示（`bg-primary/10 border-l-primary`）
-- **AND** `selectedPack` 状态更新
-
-### Requirement: RankingPage 排行页面
-
-RankingPage SHALL 展示排行榜系统界面，包含排行榜类别侧边栏、排行表格和右侧信息面板。
-
-#### Scenario: 排行页面渲染
-
-- **WHEN** 用户访问 `/ranking`
-- **THEN** 左侧显示 RankingSidebar（默认选中"玩家排行榜"）
-- **AND** 中间显示 RankingTable（玩家排行列表，含排名、头像、ELO、综合分等列）
-- **AND** 右侧显示 RankingInfoPanel（排行榜说明、奖励信息、个人详情）
-
-#### Scenario: 移动端表格适配
-
-- **WHEN** 用户在移动端访问排行页面
-- **THEN** RankingTable 表格列缩减为排名、玩家名和综合分
-- **AND** 其余列（ELO、胜场、胜率、K/D、资产、阵容）隐藏
+#### Scenario: 选择未实现的路人匹配
+- **GIVEN** 本期未注册真实 Matchmaker
+- **WHEN** 用户查看路人匹配选项
+- **THEN** 页面将其标识为尚未开放或后续能力
+- **AND** 不显示伪造的匹配玩家结果
 
 ### Requirement: 全局暗金主题
 
@@ -162,58 +119,19 @@ RankingPage SHALL 展示排行榜系统界面，包含排行榜类别侧边栏�
 - **AND** 边框色为 `#2a3444`（`border-border`）
 
 ### Requirement: ProfilePage 好友列表渲染
+好友页面 SHALL 复用 Nakama `listFriends` 的真实好友、已发送申请和收到申请状态，并在桌面和移动端以新 App Shell 展示。好友详情 SHALL 提供好友对战状态入口和联系方式交换入口，但只有正式好友可发起交换。
 
-ProfilePage 的好友部分 SHALL 使用 Nakama `listFriends` API 返回的真实好友数据渲染好友列表，替代硬编码的 `mockFriends` 数据。
+#### Scenario: 查看正式好友
+- **GIVEN** `useFriends` 已加载 state=FRIEND 的好友
+- **WHEN** 用户选择该好友
+- **THEN** 详情显示系统玩家标识、在线状态、好友对战入口状态和联系方式交换状态
+- **AND** 不显示自由文本聊天输入框
 
-#### Scenario: 好友列表加载中
-
-- **WHEN** 用户切换到"我的好友"菜单
-- **AND** `useFriends` hook 正在从 Nakama 获取好友数据（status="loading"）
-- **THEN** 好友列表区域显示加载指示器（spinner）
-- **AND** 好友搜索框和添加按钮仍然可见
-
-#### Scenario: 好友列表渲染（有好友）
-
-- **WHEN** 用户切换到"我的好友"菜单
-- **AND** `useFriends` hook 成功返回好友列表（status="success"）
-- **THEN** 左侧好友列表按分组展示（我的好友、已发送请求、收到的请求）
-- **AND** 每个分组显示可折叠标题（含在线/总数统计）
-- **AND** "收到的请求"分组标题旁显示红色数字徽章（未处理请求数量）
-- **AND** 没有成员的分组自动隐藏（如"已发送请求"为空时不显示该分组）
-- **AND** 每个好友项显示用户头像（avatar_url 或首字母 Fallback）、用户名、个性签名（display_name 或 `-`）
-- **AND** 在线状态指示器根据 `online` 字段显示绿色（在线）或灰色（离线）
-
-#### Scenario: 好友列表为空
-
-- **WHEN** 用户切换到"我的好友"菜单
-- **AND** `useFriends` hook 返回空列表（status="success", friends=[]）
-- **THEN** 左侧好友列表显示 Empty 组件："暂无好友"
-- **AND** 搜索框和添加按钮仍然可见
-
-#### Scenario: 好友列表加载失败
-
-- **WHEN** 用户切换到"我的好友"菜单
-- **AND** Nakama API 返回错误（status="error"）
-- **THEN** 好友列表区域显示错误提示："加载失败，请稍后重试"
-- **AND** 提供"重试"按钮重新加载
-
-#### Scenario: 点击好友查看详情
-
-- **GIVEN** 好友列表已加载
-- **WHEN** 用户点击某个好友
-- **THEN** `selectedFriendId` 更新为该好友的 `id`
-- **AND** 右侧详情面板显示该好友的详细信息：
-  - 头像（avatar_url）、用户名（username）、在线状态（online）
-  - 用户 ID（id）、所在地（location 或 `-`）
-  - 不可用字段（signature、level、age、birthday、likes、gender）显示为 `-` 或隐藏
-- **AND** 选中的好友项高亮（`bg-primary/10`）
-
-#### Scenario: 搜索过滤好友
-
-- **GIVEN** 好友列表已加载
-- **WHEN** 用户在搜索框中输入关键词
-- **THEN** 好友列表实时过滤，仅显示用户名或 displayName 匹配关键词的好友（大小写不敏感）
-- **AND** 分组标题在过滤状态下根据匹配结果动态调整
+#### Scenario: 查看待处理好友请求
+- **GIVEN** 选中记录是 INVITE_SENT 或 INVITE_RECEIVED
+- **WHEN** 详情面板渲染
+- **THEN** 页面显示对应接受、拒绝或取消操作
+- **AND** 不允许发起联系方式交换
 
 ### Requirement: ProfilePage 添加好友
 
@@ -381,34 +299,6 @@ MessagesTab SHALL 使用 `useFriendDM` hook 获取真实 DM 会话列表，不�
 - **AND** 右侧聊天区域切换为该好友的消息历史
 - **AND** 该会话的未读计数重置为 0
 
-### Requirement: MessagesTab 发送文本消息
-
-MessagesTab SHALL 支持通过输入框发送文本消息到当前选中的 DM 频道。
-
-#### Scenario: 发送消息
-
-- **GIVEN** 用户选中了好友 A 的会话
-- **AND** 输入框中输入了文本 "Hello World"
-- **WHEN** 用户点击"发送"按钮（或按 Enter 键，Shift+Enter 换行）
-- **THEN** 调用 `useFriendDM.sendMessage(selectedId, "Hello World")`
-- **AND** 消息乐观更新到当前聊天消息列表（isSelf=true，状态为发送中）
-- **AND** 输入框清空
-- **AND** 发送成功后消息状态更新为已发送（显示时间戳）
-
-#### Scenario: 空消息阻止发送
-
-- **GIVEN** 输入框内容为空或仅包含空白字符
-- **WHEN** 用户点击"发送"按钮
-- **THEN** 消息不发送
-- **AND** 输入框保持原状
-
-#### Scenario: 发送失败显示错误状态
-
-- **GIVEN** 发送消息时发生网络错误
-- **WHEN** `sendMessage` 抛出异常
-- **THEN** 乐观更新的消息气泡显示错误状态（红色边框或错误图标）
-- **AND** 用户可点击该消息的"重发"按钮重新尝试发送
-
 ### Requirement: MessagesTab 实时接收新消息
 
 MessagesTab SHALL 通过 WebSocket 实时接收新消息，并自动更新 UI。
@@ -474,23 +364,53 @@ MessagesTab SHALL 在选中会话时加载该频道的消息历史。
 - **AND** 不显示错误或异常状态
 
 ### Requirement: MessagesTab 聊天 UI 结构
+原 MessagesTab SHALL 迁移为好友事件与联系方式交换卡片视图。桌面端 MAY 使用好友列表与详情双栏，移动端 SHALL 使用列表到详情的层级导航；任何视口都 SHALL NOT 渲染自由文本、多媒体或链接消息输入工具。
 
-MessagesTab SHALL 保持现有的左右分栏布局结构，但对接真实数据。
+#### Scenario: 桌面端交换视图
+- **GIVEN** 视口宽度不小于 1024px 且选中一名正式好友
+- **WHEN** 交换视图渲染
+- **THEN** 左侧显示好友/事件列表，右侧显示结构化交换卡片和操作
+- **AND** 不显示文本输入框
 
-#### Scenario: 桌面端布局
+#### Scenario: 移动端交换视图
+- **GIVEN** 视口宽度小于 1024px
+- **WHEN** 用户从好友列表打开交换详情
+- **THEN** 页面以单栏详情呈现并提供返回好友列表操作
 
-- **WHEN** 用户在桌面端（≥1024px）访问 MessagesTab
-- **THEN** 左右分栏显示：左侧会话列表（w-72） + 右侧聊天区域（flex-1）
-- **AND** 左侧顶部显示搜索框和新建按钮（Plus 按钮预留，本阶段可隐藏）
-- **AND** 右侧顶部显示当前会话的好友用户名、头像和在线状态指示器（绿色圆点+文字"在线"/灰色圆点+文字"离线"）
-- **AND** 右侧中间显示消息列表（flex-1，overflow-y-auto）
-- **AND** 右侧底部显示输入工具栏（表情/附件/语音等按钮 + 文本输入框 + 发送按钮）
-- **AND** 输入工具栏中仅"发送"按钮实际可用，其余按钮显示但 disabled/不响应
+### Requirement: TutorialPage 使用完整选手卡面进行阵容选择
 
-#### Scenario: 移动端布局
+TutorialPage SHALL 在候选选手区域展示未裁切的完整 `2:3` 卡面，同时保留当前费用、阵容名额和选择规则。
 
-- **WHEN** 用户在移动端（<1024px）访问 MessagesTab
-- **THEN** 默认显示会话列表（全宽）
-- **AND** 点击会话后切换为聊天区域（全宽）
-- **AND** 聊天区域顶部显示"返回"按钮回到会话列表
+#### Scenario: 展示候选选手完整卡面
+
+- **GIVEN** 候选 Player 配置了可读取的 `cardImage`
+- **WHEN** 用户进入新手战斗选人页面
+- **THEN** 每个候选项以稳定的 `2:3` 画幅完整展示卡面
+- **AND** 卡面不使用战斗头像的 `5:7` 裁切参数
+- **AND** 页面仍清晰显示选手名、战队、价格和选中状态
+
+#### Scenario: 使用卡面选择选手
+
+- **GIVEN** 用户正在浏览某个费用档的候选选手
+- **WHEN** 用户点击完整卡面或其选择控件
+- **THEN** 页面沿用现有预算、人数、费用档和重复选择约束
+- **AND** 卡面展示不会改变 TutorialBattle 的业务校验规则
+
+#### Scenario: 完整卡面不可用时显示回退资源
+
+- **GIVEN** 候选 Player 未配置有效 `cardImage`
+- **WHEN** TutorialPage 渲染该候选项
+- **THEN** 页面回退显示现有 `portrait`
+- **AND** `portrait` 也不可用时显示默认选手图
+- **AND** 用户仍可识别并选择该候选选手
+
+#### Scenario: 不同视口下保持完整卡面可用
+
+- **GIVEN** TutorialPage 在桌面端或移动端显示
+- **WHEN** 候选卡片根据可用宽度重新排布
+- **THEN** 卡面容器始终保持 `2:3` 比例
+- **AND** 桌面端候选区每行固定显示 5 名选手，移动端每行显示 2 名选手
+- **AND** 每张卡片通过价格角标表达所属费用档，不依赖独占整行的费用档标题
+- **AND** 页面内容超过可用高度时由主内容区显示纵向滚动条并允许滚动到底部
+- **AND** 图片、名称、价格和选择状态不互相遮挡
 

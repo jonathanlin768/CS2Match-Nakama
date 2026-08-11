@@ -21,6 +21,8 @@ type Tables struct {
 	TbRoute             *TbRoute
 	TbRouteTemplate     *TbRouteTemplate
 	TbScenario          *TbScenario
+	TbTeam              *TbTeam
+	TbTutorialBattle    *TbTutorialBattle
 	TbVisibility        *TbVisibility
 }
 
@@ -87,6 +89,18 @@ func NewTables(loader JsonLoader) (*Tables, error) {
 		return nil, err
 	}
 	if tables.TbScenario, err = NewTbScenario(buf); err != nil {
+		return nil, err
+	}
+	if buf, err = loader("tbteam"); err != nil {
+		return nil, err
+	}
+	if tables.TbTeam, err = NewTbTeam(buf); err != nil {
+		return nil, err
+	}
+	if buf, err = loader("tbtutorialbattle"); err != nil {
+		return nil, err
+	}
+	if tables.TbTutorialBattle, err = NewTbTutorialBattle(buf); err != nil {
 		return nil, err
 	}
 	if buf, err = loader("tbvisibility"); err != nil {

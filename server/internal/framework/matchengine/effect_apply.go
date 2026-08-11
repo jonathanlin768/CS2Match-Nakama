@@ -134,7 +134,8 @@ func ApplyCombatPulseCommit(state *RoundState, action ScheduledAction, effects [
 		batch.Effects = append(batch.Effects, AppliedEffect{Effect: death, AppliedAmount: 1})
 		killerSide := state.Players[death.ActorID].Side
 		isTrade := lastKillSide != "" && lastKillSide != killerSide && state.Timeline-lastKillAt <= 5
-		batch.Events = append(batch.Events, killEvent(state, action, death, firstKill, isTrade))
+		assistIDs := assistIDsForKill(state.Events, contributions[targetID], death.ActorID, targetID)
+		batch.Events = append(batch.Events, killEvent(state, action, death, assistIDs, firstKill, isTrade))
 		firstKill = false
 		lastKillSide, lastKillAt = killerSide, state.Timeline
 
@@ -281,7 +282,7 @@ func damageEvent(state *RoundState, action ScheduledAction, contribution damageC
 	return event
 }
 
-func killEvent(state *RoundState, action ScheduledAction, death Effect, firstKill, trade bool) *GameEvent {
+func killEvent(state *RoundState, action ScheduledAction, death Effect, assistIDs []string, firstKill, trade bool) *GameEvent {
 	attacker := state.Players[death.ActorID]
 	victim := state.Players[death.TargetID]
 	eventID := NewEventID(actionSeed(state), action.ID, death.ID, EventKill, 0)
@@ -295,8 +296,36 @@ func killEvent(state *RoundState, action ScheduledAction, death Effect, firstKil
 		Weapon: death.StringValue, IsFirstKill: firstKill, IsTrade: trade, Message: "player killed", Location: eventLocation(state, victim.Location, eventID, death.ID),
 		Reason: reason, Bomb: projectBombState(state.Bomb), sortPriority: PriorityCombatPulseCommit, sortActionType: string(action.Type) + "/10Kill", sortMinActorID: action.MinActorID(),
 	}
+	if len(assistIDs) > 0 {
+		event.Extra = map[string]interface{}{"assist_ids": assistIDs}
+	}
 	event.State = snapshotForEvent(state)
 	return event
+}
+
+func assistIDsForKill(previousEvents []*GameEvent, current []damageContribution, killerID, victimID string) []string {
+	seen := map[string]bool{}
+	add := func(attackerID string) {
+		if attackerID != "" && attackerID != killerID && attackerID != victimID {
+			seen[attackerID] = true
+		}
+	}
+	for _, event := range previousEvents {
+		if event != nil && event.EventType == EventDamage && event.VictimID == victimID && eventDamageAmount(event) > 0 {
+			add(event.AttackerID)
+		}
+	}
+	for _, contribution := range current {
+		if contribution.applied > 0 {
+			add(contribution.effect.ActorID)
+		}
+	}
+	ids := make([]string, 0, len(seen))
+	for id := range seen {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	return ids
 }
 
 func projectEffectReason(effect Effect) *EventReason {

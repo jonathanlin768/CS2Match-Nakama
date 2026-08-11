@@ -24,6 +24,8 @@ logger:
 runtime:
   # Go 插件从 modules 目录加载
   path: "/nakama/data/modules"
+  env:
+    - "SOCIAL_CONTACT_EXCHANGE_ENABLED=true"
 
 # Session 配置
 session:

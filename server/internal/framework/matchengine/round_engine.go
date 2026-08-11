@@ -10,6 +10,7 @@ type causalRoundRuntime struct {
 	input              *RoundInput
 	state              *RoundState
 	decisionCandidates map[string]DecisionCandidate
+	forcedDecisionUsed map[string]bool
 	ordinal            int
 }
 
@@ -34,7 +35,7 @@ func runCausalRound(ctx context.Context, input *RoundInput) (*RoundSimulationRes
 	if err != nil {
 		return nil, err
 	}
-	runtime := &causalRoundRuntime{input: input, state: state, decisionCandidates: map[string]DecisionCandidate{}}
+	runtime := &causalRoundRuntime{input: input, state: state, decisionCandidates: map[string]DecisionCandidate{}, forcedDecisionUsed: map[string]bool{}}
 	runtime.appendRoundStart(reasons, tSelection.Score, ctSelection.Score)
 	if _, err := DeployOpeningActions(state); err != nil {
 		return nil, err
@@ -192,11 +193,12 @@ func (runtime *causalRoundRuntime) appendDecisionEvent(action ScheduledAction, c
 	}
 	reason, _ := ProjectReasonRecord(record, action.ID, "")
 	eventID := NewEventID(runtime.state.Seed, action.ID, "", eventType, 0)
-	event := &GameEvent{EventID: eventID, SourceActionID: action.ID, Timestamp: int64(runtime.state.Timeline), EventType: eventType, Message: "decision resolved into real actions", Reason: reason, Extra: map[string]interface{}{"decision_type": string(candidate.Type), "target_node": candidate.TargetNode}, sortPriority: action.Priority, sortActionType: string(action.Type), sortMinActorID: action.MinActorID()}
+	event := &GameEvent{EventID: eventID, SourceActionID: action.ID, Timestamp: int64(runtime.state.Timeline), EventType: eventType, Message: fmt.Sprintf("%s executes %s toward %s", candidate.Side, candidate.Type, candidate.TargetNode), Reason: reason, Extra: map[string]interface{}{"decision_type": string(candidate.Type), "target_node": candidate.TargetNode}, sortPriority: action.Priority, sortActionType: string(action.Type), sortMinActorID: action.MinActorID()}
 	if len(candidate.ActorIDs) > 0 {
 		if actor := runtime.state.Players[candidate.ActorIDs[0]]; actor != nil {
 			event.AttackerID, event.AttackerName, event.AttackerTeamID = actor.Profile.PlayerID, actor.Profile.DisplayName, actor.TeamID
 			event.Location = eventLocation(runtime.state, actor.Location, eventID, action.ID)
+			event.Message = fmt.Sprintf("%s executes %s toward %s", actor.TeamID, candidate.Type, candidate.TargetNode)
 		}
 	}
 	runtime.state.Events = append(runtime.state.Events, event)
@@ -586,8 +588,16 @@ func (runtime *causalRoundRuntime) scenarioForContact(nodeID string) string {
 
 func (runtime *causalRoundRuntime) scheduleDecisions() error {
 	state := runtime.state
+	if runtime.forcedDecisionUsed == nil {
+		runtime.forcedDecisionUsed = map[string]bool{}
+	}
+	maxDecisions := state.constants.Int("MaxDecisionCount", 0)
 	for _, side := range []string{SideT, SideCT} {
 		if hasPendingDecision(state, side, runtime.decisionCandidates) {
+			continue
+		}
+		atDecisionLimit := state.DecisionCount >= maxDecisions
+		if atDecisionLimit && runtime.forcedDecisionUsed[side] {
 			continue
 		}
 		view, err := BuildDecisionView(state, side)
@@ -603,6 +613,9 @@ func (runtime *causalRoundRuntime) scheduleDecisions() error {
 			return err
 		}
 		runtime.decisionCandidates[action.ID] = normalized
+		if atDecisionLimit {
+			runtime.forcedDecisionUsed[side] = true
+		}
 	}
 	return nil
 }

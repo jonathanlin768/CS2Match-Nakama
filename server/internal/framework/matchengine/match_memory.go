@@ -75,6 +75,11 @@ func (e *MatchEngine) aggregateRoundStats(round *RoundResult) {
 			if victim := e.stats[event.VictimID]; victim != nil {
 				victim.Deaths++
 			}
+			for _, assistantID := range eventAssistIDs(event) {
+				if assistant := e.stats[assistantID]; assistant != nil && assistantID != event.AttackerID && assistantID != event.VictimID {
+					assistant.Assists++
+				}
+			}
 		case EventBombPlant:
 			if planter := e.stats[event.AttackerID]; planter != nil {
 				planter.Plants++
@@ -89,6 +94,26 @@ func (e *MatchEngine) aggregateRoundStats(round *RoundResult) {
 		if kills >= 2 {
 			e.stats[playerID].MK++
 		}
+	}
+}
+
+func eventAssistIDs(event *GameEvent) []string {
+	if event == nil || event.Extra == nil {
+		return nil
+	}
+	switch values := event.Extra["assist_ids"].(type) {
+	case []string:
+		return append([]string(nil), values...)
+	case []interface{}:
+		ids := make([]string, 0, len(values))
+		for _, value := range values {
+			if id, ok := value.(string); ok && id != "" {
+				ids = append(ids, id)
+			}
+		}
+		return ids
+	default:
+		return nil
 	}
 }
 

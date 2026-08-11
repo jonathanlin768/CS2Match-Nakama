@@ -13,7 +13,7 @@ const SIDE_BADGE: Record<Side, string> = {
 function TeamBadge({ tag, side }: { tag: string; side: Side }) {
   return (
     <div
-      className={`grid h-12 min-w-12 place-items-center rounded-md px-2 font-display text-base font-black tracking-wide ring-1 ${SIDE_BADGE[side]}`}
+      className={`battle-team-badge grid h-12 min-w-12 place-items-center rounded-md px-2 font-display text-base font-black tracking-wide ring-1 ${SIDE_BADGE[side]}`}
     >
       {tag}
     </div>
@@ -36,15 +36,15 @@ export default function Scoreboard({
   winnerName?: string
 }) {
   return (
-    <div className="flex shrink-0 items-center justify-center gap-6 px-[40px] py-2">
+    <div className="battle-scoreboard flex shrink-0 items-center justify-center gap-6 px-[40px] py-2">
       {/* 左队：队名 + 队标 */}
-      <div className="flex flex-1 items-center justify-end gap-3">
-        <span className="truncate font-display text-2xl font-bold text-foreground">{teamA.name}</span>
+      <div className="battle-team-side flex flex-1 items-center justify-end gap-3">
+        <span className="battle-team-name truncate font-display text-2xl font-bold text-foreground">{teamA.name}</span>
         <TeamBadge tag={teamA.tag} side={teamA.side} />
       </div>
 
       {/* 比分 */}
-      <div className="flex flex-col items-center">
+      <div className="battle-score-center flex flex-col items-center">
         <div className="flex items-center gap-4 font-display text-4xl font-black tabular-nums leading-none">
           <span className={SIDE_TEXT[teamA.side]}>{teamA.score}</span>
           <span className="text-white/30">:</span>
@@ -57,9 +57,9 @@ export default function Scoreboard({
       </div>
 
       {/* 右队：队标 + 队名 */}
-      <div className="flex flex-1 items-center gap-3">
+      <div className="battle-team-side flex flex-1 items-center gap-3">
         <TeamBadge tag={teamB.tag} side={teamB.side} />
-        <span className="truncate font-display text-2xl font-bold text-foreground">{teamB.name}</span>
+        <span className="battle-team-name truncate font-display text-2xl font-bold text-foreground">{teamB.name}</span>
       </div>
     </div>
   )

@@ -5,10 +5,12 @@ import { useNakamaAuth } from "../hooks/useNakamaAuth";
 interface AuthContextValue {
   status: "restoring" | "authenticated" | "guest";
   session: Session | null;
+  kind: "guest" | "account";
+  isGuest: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);

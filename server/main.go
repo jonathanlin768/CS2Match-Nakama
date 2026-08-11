@@ -4,12 +4,15 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/heroiclabs/nakama-common/runtime"
 	cfg "windypath.com/cs2match/config"
 	"windypath.com/cs2match/server/internal/framework/matchengine"
+	"windypath.com/cs2match/server/internal/identity"
 	"windypath.com/cs2match/server/internal/match"
+	"windypath.com/cs2match/server/internal/social"
 )
 
 // InitModule 是 Nakama Go Plugin 的入口函数。
@@ -37,6 +40,19 @@ func InitModule(
 	if err != nil {
 		return err
 	}
+	if err := identity.Register(initializer); err != nil {
+		logger.Error("Failed to register identity hooks: %v", err)
+		return err
+	}
+	socialEnabled := true
+	if env, ok := ctx.Value(runtime.RUNTIME_CTX_ENV).(map[string]string); ok {
+		socialEnabled = !strings.EqualFold(strings.TrimSpace(env["SOCIAL_CONTACT_EXCHANGE_ENABLED"]), "false")
+	}
+	if err := social.Register(initializer, social.NewService(nk), socialEnabled); err != nil {
+		logger.Error("Failed to register social subsystem: %v", err)
+		return err
+	}
+	logger.Info("Social contact exchange enabled=%t", socialEnabled)
 
 	return nil
 }
@@ -57,6 +73,11 @@ func registerRpcFunc(initializer runtime.Initializer, logger runtime.Logger) err
 		return err
 	}
 	logger.Info("DebugSimuMatch RPC registered")
+	if err := initializer.RegisterRpc("SimuMatch", match.RPCSimuMatch(matchService)); err != nil {
+		logger.Error("Failed to register SimuMatch RPC: %v", err)
+		return err
+	}
+	logger.Info("SimuMatch RPC registered")
 	return nil
 }
 

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Radio } from "lucide-react"
 import {
   Dialog,
@@ -9,18 +9,17 @@ import {
 } from "../../legacy/components/ui/dialog"
 import { Button } from "../../legacy/components/ui/button"
 import type { GameEvent } from "../../types/match-report"
-import type { FinalStats } from "../../types/match-report"
+import { formatBattleEvent, type BattleEventContext } from "../../pages/battle-playback"
 import type { BattleTeam } from "./data/battle"
 
 interface EventFeedProps {
   events: GameEvent[]
   teamA: BattleTeam
   teamB: BattleTeam
-  finalStats?: FinalStats
+  eventContext: BattleEventContext
 }
 
-function StatsTable({ team, finalStats }: { team: BattleTeam; finalStats?: FinalStats }) {
-  const rows = finalStats?.player_stats.filter((p) => team.players.some((player) => player.id === p.player_name)) ?? []
+function StatsTable({ team }: { team: BattleTeam }) {
   return (
     <div className="rounded-md bg-panel/60 ring-1 ring-white/10">
       <div className="border-b border-white/10 px-3 py-2 text-sm font-semibold text-foreground">
@@ -36,18 +35,16 @@ function StatsTable({ team, finalStats }: { team: BattleTeam; finalStats?: Final
           </tr>
         </thead>
         <tbody>
-          {(rows.length > 0 ? rows : team.players).map((p) => {
-            const playerName = "player_name" in p ? p.player_name : p.id
-            const alive = "alive" in p ? p.alive : true
+          {team.players.map((player) => {
             return (
             <tr
-              key={playerName}
-              className={`border-t border-white/5 ${alive ? "text-foreground" : "text-foreground/40"}`}
+              key={player.id}
+              className={`border-t border-white/5 ${player.alive ? "text-foreground" : "text-foreground/40"}`}
             >
-              <td className="px-3 py-1.5">{playerName}</td>
-              <td className="px-2 py-1.5 text-center tabular-nums">{p.kills}</td>
-              <td className="px-2 py-1.5 text-center tabular-nums">{p.deaths}</td>
-              <td className="px-2 py-1.5 text-center tabular-nums">{"adr" in p ? p.adr.toFixed(1) : p.assists}</td>
+              <td className="px-3 py-1.5">{player.id}</td>
+              <td className="px-2 py-1.5 text-center tabular-nums">{player.kills}</td>
+              <td className="px-2 py-1.5 text-center tabular-nums">{player.deaths}</td>
+              <td className="px-2 py-1.5 text-center tabular-nums">{player.assists}</td>
             </tr>
             )
           })}
@@ -61,8 +58,15 @@ function StatsTable({ team, finalStats }: { team: BattleTeam; finalStats?: Final
  * 服务器战报事件流：按时间顺序逐条展示 HLTV 风格事件。
  * 父组件通过控制传入的 events 长度实现“每 1 秒显示一条”的播放效果。
  */
-export default function EventFeed({ events, teamA, teamB, finalStats }: EventFeedProps) {
+export default function EventFeed({ events, teamA, teamB, eventContext }: EventFeedProps) {
   const [open, setOpen] = useState(false)
+  const eventListRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const eventList = eventListRef.current
+    if (!eventList) return
+    eventList.scrollTop = eventList.scrollHeight
+  }, [events])
 
   return (
     <div className="flex h-[200px] shrink-0 flex-col overflow-hidden rounded-md bg-panel/80 ring-1 ring-white/10">
@@ -85,25 +89,29 @@ export default function EventFeed({ events, teamA, teamB, finalStats }: EventFee
               <DialogTitle className="text-base">数据统计</DialogTitle>
             </DialogHeader>
             <div className="max-h-[70vh] space-y-4 overflow-y-auto px-5 pb-5">
-              <StatsTable team={teamA} finalStats={finalStats} />
-              <StatsTable team={teamB} finalStats={finalStats} />
+              <StatsTable team={teamA} />
+              <StatsTable team={teamB} />
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
       {/* 事件列表：时间顺序，新事件追加在底部 */}
-      <div className="scrollbar-hide flex-1 space-y-1 overflow-y-auto px-3 py-2 text-sm">
+      <div
+        ref={eventListRef}
+        data-testid="event-feed-list"
+        className="scrollbar-hide flex-1 space-y-1 overflow-y-auto px-3 py-2 text-sm"
+      >
         {events.map((ev, idx) => (
           <div
-            key={idx}
+            key={ev.event_id ?? `${ev.timestamp}-${ev.event_type}-${idx}`}
             className={`leading-5 ${
               ev.event_type === "ROUND_START" || ev.event_type === "ROUND_END"
                 ? "font-semibold text-primary"
                 : "text-foreground/90"
             }`}
           >
-            {ev.message}
+            {formatBattleEvent(ev, eventContext)}
           </div>
         ))}
       </div>

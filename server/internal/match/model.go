@@ -12,6 +12,20 @@ type DebugSimuMatchRequest struct {
 	Seed  int64  `json:"seed,omitempty"`
 }
 
+// SimuMatchRequest is the production battle entry. Client-provided attributes,
+// prices and outcomes are intentionally not part of this contract.
+type SimuMatchRequest struct {
+	Mode             string   `json:"mode"`
+	TutorialConfigID string   `json:"tutorial_config_id,omitempty"`
+	ConfigVersion    int32    `json:"config_version,omitempty"`
+	PlayerIDs        []string `json:"player_ids,omitempty"`
+}
+
+type SimuMatchResponse struct {
+	*matchengine.MatchResult
+	DebugEnabled bool `json:"debug_enabled"`
+}
+
 // DebugSimuMatchResponse 在框架战报外附加业务层调试配置。
 type DebugSimuMatchResponse struct {
 	*matchengine.MatchResult

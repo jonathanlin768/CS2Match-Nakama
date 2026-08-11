@@ -5,46 +5,44 @@ React Router v7 前端路由系统规格 — 页面导航、路由守卫、Heade
 ## Purpose
 
 定义前端 SPA 的路由结构、页面组织方式和导航行为。LoginPage 为独立入口（无 AppLayout），其他页面由 AppLayout（Header + Footer）包裹。
-
 ## Requirements
-
 ### Requirement: React Router 路由系统
+前端项目 SHALL 继续使用 react-router-dom v7 的 `createBrowserRouter` 与 `RouterProvider`。`/` SHALL 显示新主界面；`/onboarding/lineup`、`/match/computer`、`/battle` SHALL 允许 Guest Session；`/friends` SHALL 要求正式登录；`/lineup` 与 `/match/friend` SHALL 显示未开放状态。旧 `/home` SHALL 重定向到 `/`，旧非本期玩法路由 SHALL 重定向到主界面或显示已下线状态。
 
-前端项目 SHALL 使用 react-router-dom v7 的 `createBrowserRouter` + `RouterProvider` 模式管理页面路由。路由结构包含一个独立的登录页和四个由 AppLayout 包裹的内部页面。
+#### Scenario: 访问根路径
+- **GIVEN** 身份初始化已经完成
+- **WHEN** 用户访问 `/`
+- **THEN** 系统显示响应式三入口主界面
+- **AND** 不强制先显示独立 LoginPage
 
-#### Scenario: 用户访问根路径显示登录页
+#### Scenario: 访客访问教学战
+- **GIVEN** 当前身份是有效 Guest Session
+- **WHEN** 用户访问 `/onboarding/lineup` 或 `/match/computer`
+- **THEN** 路由允许渲染对应页面
 
-- **WHEN** 用户在浏览器中访问 `/`
-- **THEN** 系统显示 LoginPage 登录页面
-- **AND** 不显示 Header 和 Footer
+#### Scenario: 访客访问好友页
+- **GIVEN** 当前身份是 Guest Session
+- **WHEN** 用户访问 `/friends`
+- **THEN** 路由显示登录/注册 Modal 或认证说明
+- **AND** 认证成功后返回 `/friends`
 
-#### Scenario: 登录后跳转到首页
-
-- **WHEN** 用户在 LoginPage 点击登录按钮（无需真实认证）
-- **THEN** 系统导航到 `/home`
-- **AND** 页面显示 AppLayout（包含 Header、Footer 和 Home 页面内容）
-
-#### Scenario: 导航栏路由跳转
-
-- **WHEN** 用户点击 Header 导航栏中的"对战"链接
-- **THEN** 系统导航到 `/match` 并显示 MatchPage
-- **WHEN** 用户点击"抽卡"链接
-- **THEN** 系统导航到 `/gacha` 并显示 GachaPage
-- **WHEN** 用户点击"排行"链接
-- **THEN** 系统导航到 `/ranking` 并显示 RankingPage
-
-#### Scenario: SPA 路由回退（由 Nginx 处理）
-
-- **WHEN** 用户直接访问 `/home` 等子路由
+#### Scenario: SPA 子路由回退
+- **GIVEN** Nginx 托管生产构建
+- **WHEN** 用户直接访问任一有效子路由
 - **THEN** Nginx 返回 `index.html`
-- **AND** React Router 解析 URL 并渲染对应页面
+- **AND** React Router 解析并渲染目标页面
 
 ### Requirement: 路由与 Header 导航联动
+新 App Shell 的导航 SHALL 反映当前主操作，并提供一致的返回主界面方式；导航项 SHALL 不包含抽卡、排行榜、活动、任务、背包或邮件。窄屏导航 SHALL 不依赖桌面 Header 的固定横向空间。
 
-Header 组件中的导航链接 SHALL 使用 `NavLink` 组件，当前活跃路由对应的导航项 SHALL 高亮显示。
+#### Scenario: 打开未开放阵容入口
+- **GIVEN** 任意身份访问 `/lineup`
+- **WHEN** 未开放页面渲染
+- **THEN** 页面说明调整阵容尚未开放
+- **AND** 玩家可在一次明确操作内返回主界面
 
-#### Scenario: 导航高亮
-
-- **WHEN** 用户当前在 `/match` 页面
-- **THEN** Header 中"对战"链接显示为活跃状态（`text-foreground`）
-- **AND** 其他导航链接显示为非活跃状态（`text-muted-foreground`）
+#### Scenario: 手机端导航
+- **GIVEN** 视口宽度小于 640px
+- **WHEN** App Shell 渲染
+- **THEN** 导航使用适合窄屏的返回按钮、菜单或底部动作
+- **AND** 不产生水平溢出

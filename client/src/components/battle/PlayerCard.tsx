@@ -13,6 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import type { BattlePlayer, GrenadeType, Side } from "./data/battle"
+import PlayerAvatarCrop from "../player/PlayerAvatarCrop"
 
 /** 阵营配色：CT 蓝、T 金 */
 const SIDE_STYLE: Record<Side, { text: string; bar: string }> = {
@@ -67,16 +68,8 @@ export default function PlayerCard({
       <span className={`w-1 shrink-0 ${sideStyle.bar} ${dead ? "opacity-40" : ""}`} />
 
       {/* 头像 */}
-      <div className="relative h-full w-[84px] shrink-0 overflow-hidden bg-black/40">
-        <img
-          src={player.avatar}
-          alt={player.id}
-          onError={(event) => {
-            event.currentTarget.onerror = null
-            event.currentTarget.src = "/images/star-player.png"
-          }}
-          className={`h-full w-full scale-125 object-cover object-top ${dead ? "grayscale" : ""}`}
-        />
+      <div className="relative h-full aspect-[5/7] shrink-0 overflow-hidden bg-black/40">
+        <PlayerAvatarCrop cardImage={player.cardImage} portrait={player.portrait || player.avatar} crop={player.avatarCrop} alt={player.id} className={`h-full w-full ${dead ? "grayscale" : ""}`} />
         {dead && (
           <div className="absolute inset-0 grid place-items-center bg-black/50">
             <Skull size={28} className="text-muted" />

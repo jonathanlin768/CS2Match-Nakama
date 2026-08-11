@@ -76,6 +76,18 @@ func TestDebugSimuMatchUsesPlayersFromLubanTableAndSeed(t *testing.T) {
 		if state.PlayerID == "player_niko" && state.Portrait != "portraits/player_niko.jpg" {
 			t.Fatalf("portrait not copied from TbPlayer: %q", state.Portrait)
 		}
+		if state.PlayerID == "player_niko" {
+			if state.CardImage != "player-cards/niko2.png" || state.AvatarCrop == nil || !state.AvatarCrop.Valid() {
+				t.Fatalf("card crop not copied from TbPlayer: card=%q crop=%+v", state.CardImage, state.AvatarCrop)
+			}
+		}
+	}
+}
+
+func TestPlayerFromConfigRejectsInvalidAvatarCrop(t *testing.T) {
+	profile := playerFromConfig(&cfg.Player{Id: "p", Name: "P", Portrait: "portraits/p.png", CardImage: "player-cards/p.png", AvatarCropX: 0.8, AvatarCropWidth: 0.6, AvatarCropHeight: 0.2})
+	if profile.CardImage != "player-cards/p.png" || profile.AvatarCrop != nil || profile.Portrait != "portraits/p.png" {
+		t.Fatalf("invalid crop should preserve source paths and omit crop: %+v", profile)
 	}
 }
 
@@ -101,6 +113,70 @@ func TestDebugSimuMatchWeaponsFollowSideSwitch(t *testing.T) {
 	}
 	if weaponForTeam(round13, "team_a") != matchengine.WeaponM4A1S {
 		t.Fatalf("team_a should use M4A1-S on CT side in round 13")
+	}
+}
+
+func TestSimuMatchComputerUsesConfiguredTeams(t *testing.T) {
+	if err := cfg.Init(); err != nil {
+		t.Fatalf("config init failed: %v", err)
+	}
+	service := NewService(matchengine.NewService(nil), nil)
+	res, err := service.SimuMatch(context.Background(), "user", SimuMatchRequest{Mode: "computer"})
+	if err != nil {
+		t.Fatalf("computer simulation failed: %v", err)
+	}
+	if res.MatchInfo.TeamAID != defaultTeamAID || res.MatchInfo.TeamBID != defaultTeamBID {
+		t.Fatalf("unexpected configured teams: %s vs %s", res.MatchInfo.TeamAID, res.MatchInfo.TeamBID)
+	}
+	if res.MatchInfo.TeamAName != defaultTeamAName || res.MatchInfo.TeamBName != defaultTeamBName {
+		t.Fatalf("unexpected team names: %s vs %s", res.MatchInfo.TeamAName, res.MatchInfo.TeamBName)
+	}
+	if !res.DebugEnabled {
+		t.Fatal("production SimuMatch response lost the configured battle report debug flag")
+	}
+}
+
+func TestSimuMatchTutorialValidatesAuthoritativeRoster(t *testing.T) {
+	if err := cfg.Init(); err != nil {
+		t.Fatalf("config init failed: %v", err)
+	}
+	service := NewService(matchengine.NewService(nil), nil)
+	valid := []string{"player_donk", "player_sh1ro", "player_zont1x", "player_magixx", "player_chopper"}
+	res, err := service.SimuMatch(context.Background(), "guest-user", SimuMatchRequest{Mode: "tutorial", TutorialConfigID: "tutorial_default", ConfigVersion: 1, PlayerIDs: valid})
+	if err != nil {
+		t.Fatalf("tutorial simulation failed: %v", err)
+	}
+	if res.MatchInfo.TeamAID != "tutorial_players" || res.MatchInfo.TeamBID != "team_vitality" {
+		t.Fatalf("unexpected tutorial matchup: %s vs %s", res.MatchInfo.TeamAID, res.MatchInfo.TeamBID)
+	}
+	seen := map[string]bool{}
+	for _, state := range res.Rounds[0].PlayerStates {
+		seen[state.PlayerID] = true
+	}
+	for _, id := range valid {
+		if !seen[id] {
+			t.Fatalf("selected player %s missing from match input", id)
+		}
+	}
+
+	cases := []struct {
+		name    string
+		request SimuMatchRequest
+		code    string
+	}{
+		{"version", SimuMatchRequest{Mode: "tutorial", TutorialConfigID: "tutorial_default", ConfigVersion: 2, PlayerIDs: valid}, "CONFIG_VERSION_MISMATCH"},
+		{"duplicate", SimuMatchRequest{Mode: "tutorial", TutorialConfigID: "tutorial_default", ConfigVersion: 1, PlayerIDs: []string{"player_donk", "player_donk", "player_zont1x", "player_magixx", "player_chopper"}}, "INVALID_LINEUP"},
+		{"budget", SimuMatchRequest{Mode: "tutorial", TutorialConfigID: "tutorial_default", ConfigVersion: 1, PlayerIDs: []string{"player_donk", "player_monesy", "player_b1t", "player_sh1ro", "player_niko"}}, "BUDGET_EXCEEDED"},
+		{"unknown", SimuMatchRequest{Mode: "tutorial", TutorialConfigID: "missing", ConfigVersion: 1, PlayerIDs: valid}, "INVALID_TUTORIAL_CONFIG"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, gotErr := service.SimuMatch(context.Background(), "guest-user", tc.request)
+			typed, ok := gotErr.(*MatchError)
+			if !ok || typed.Code != tc.code {
+				t.Fatalf("expected %s, got %v", tc.code, gotErr)
+			}
+		})
 	}
 }
 

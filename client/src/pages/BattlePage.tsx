@@ -1,15 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useLocation } from "react-router-dom"
-import { Pause, Play, SkipForward } from "lucide-react"
+import { Pause, Play, SkipForward, Swords } from "lucide-react"
 import SubPageHeader from "../components/SubPageHeader"
 import Scoreboard from "../components/battle/Scoreboard"
 import TeamRoster from "../components/battle/TeamRoster"
 import MapView from "../components/battle/MapView"
-import KillFeed from "../components/battle/KillFeed"
 import EventFeed from "../components/battle/EventFeed"
-import { battleState, type BattlePlayer, type BattleTeam } from "../components/battle/data/battle"
+import type { BattlePlayer, BattleTeam } from "../components/battle/data/battle"
 import type { BombPublicState, MatchReport, PlayerState, RoundReport } from "../types/match-report"
-import { authoritativeScoreAtPlayback, latestBombAtPlayback } from "./battle-playback"
+import {
+  authoritativeScoreAtPlayback,
+  cumulativePlayerStatsAtPlayback,
+  latestBombAtPlayback,
+  playerVitalsAtPlayback,
+  selectedRoundInitialEventCount,
+  type CumulativePlayerStats,
+  type PlaybackPlayerVitals,
+} from "./battle-playback"
 
 interface BattleLocationState {
   report?: MatchReport
@@ -101,22 +108,23 @@ function phaseLabel(round: RoundReport) {
 
 function buildBattlePlayer(
   state: PlayerState,
-  aliveMap: Map<string, boolean>,
-  killsMap: Map<string, number>,
-  deathsMap: Map<string, number>
+  vitals: PlaybackPlayerVitals,
+  stats: CumulativePlayerStats,
 ): BattlePlayer {
-  const alive = aliveMap.get(state.player_id) ?? true
   return {
     id: state.player_name || state.display_name,
     avatar: portraitUrl(state.portrait),
-    alive,
-    health: alive ? state.hp || 100 : 0,
+    portrait: state.portrait,
+    cardImage: state.card_image,
+    avatarCrop: state.avatar_crop,
+    alive: vitals.alive,
+    health: vitals.alive ? vitals.hp : 0,
     armor: state.weapon.armor ? 100 : 0,
     helmet: state.weapon.helmet,
     money: 0,
-    kills: killsMap.get(state.player_id) ?? 0,
-    deaths: deathsMap.get(state.player_id) ?? 0,
-    assists: 0,
+    kills: stats.kills,
+    deaths: stats.deaths,
+    assists: stats.assists,
     weapon: state.weapon.primary === "AK47" ? "AK-47" : state.weapon.primary === "M4A1S" ? "M4A1-S" : state.weapon.primary,
     defuseKit: state.weapon.has_kit,
     grenades: [],
@@ -205,26 +213,17 @@ export default function BattlePage() {
 
   const playback = useMemo(() => {
     if (!report || !currentRound) return null
-    const alive = new Map<string, boolean>()
-    const kills = new Map<string, number>()
-    const deaths = new Map<string, number>()
-    currentRound.player_states.forEach((p) => alive.set(p.player_id, true))
-    visibleEvents.forEach((ev) => {
-      if (ev.event_type !== "KILL") return
-      if (ev.victim_id) {
-        alive.set(ev.victim_id, false)
-        deaths.set(ev.victim_id, (deaths.get(ev.victim_id) ?? 0) + 1)
-      }
-      if (ev.attacker_id) kills.set(ev.attacker_id, (kills.get(ev.attacker_id) ?? 0) + 1)
-    })
-
     const score = authoritativeScoreAtPlayback(report, currentRound, roundIndex, visibleEvents)
+    const cumulativeStats = cumulativePlayerStatsAtPlayback(report, roundIndex, visibleEvents)
+    const playerVitals = playerVitalsAtPlayback(currentRound, visibleEvents)
+    const playerStats = (playerID: string) => cumulativeStats[playerID] ?? { kills: 0, deaths: 0, assists: 0 }
+    const vitals = (playerID: string) => playerVitals[playerID] ?? { alive: true, hp: 100 }
     const teamAPlayers = currentRound.player_states
       .filter((p) => p.team_id === report.match_info.team_a_id)
-      .map((p) => buildBattlePlayer(p, alive, kills, deaths))
+      .map((p) => buildBattlePlayer(p, vitals(p.player_id), playerStats(p.player_id)))
     const teamBPlayers = currentRound.player_states
       .filter((p) => p.team_id === report.match_info.team_b_id)
-      .map((p) => buildBattlePlayer(p, alive, kills, deaths))
+      .map((p) => buildBattlePlayer(p, vitals(p.player_id), playerStats(p.player_id)))
     const sideA = sideToUi(teamSide(currentRound, report.match_info.team_a_id))
     const sideB = sideToUi(teamSide(currentRound, report.match_info.team_b_id))
     return {
@@ -235,22 +234,11 @@ export default function BattlePage() {
   }, [report, currentRound, roundIndex, visibleEvents])
 
   if (!report || !currentRound || !playback) {
-    const { title, round: mockRound, maxRounds, teamA: mockA, teamB: mockB, killFeed } = battleState
     return (
-      <div className="flex min-h-screen w-screen items-center justify-center overflow-hidden bg-black">
-        <main className="flex h-[900px] w-[1920px] shrink-0 flex-col overflow-hidden bg-background">
-          <SubPageHeader title={title} hideBack />
-          <div className="px-[40px] pt-3 text-sm text-muted">暂无模拟战报，显示训练预览。</div>
-          <Scoreboard teamA={mockA} teamB={mockB} round={mockRound} maxRounds={maxRounds} />
-          <div className="flex min-h-0 flex-1 gap-4 px-[40px] pb-[24px] pt-2">
-            <TeamRoster team={mockA} align="left" />
-            <div className="flex min-h-0 flex-1 flex-col gap-3">
-              <MapView />
-              <KillFeed events={killFeed} />
-            </div>
-            <TeamRoster team={mockB} align="right" />
-          </div>
-        </main>
+      <div className="battle-empty">
+        <Swords size={38} /><h1>还没有比赛战报</h1>
+        <p>请从匹配对战或 15 元教学进入。回放页不会使用虚构比分或假选手数据。</p>
+        <button className="primary-button" onClick={() => window.history.back()}>返回选择比赛</button>
       </div>
     )
   }
@@ -259,8 +247,8 @@ export default function BattlePage() {
   const visibleRounds = fullMatchRevealed ? report.rounds : report.rounds.slice(0, furthestRoundIndex + 1)
 
   return (
-    <div className="flex min-h-screen w-screen items-center justify-center overflow-hidden bg-black">
-      <main className="flex h-[900px] w-[1920px] shrink-0 flex-col overflow-hidden bg-background">
+    <div className="battle-shell">
+      <main className="battle-stage flex h-full w-full min-w-0 flex-col overflow-hidden bg-background">
         <SubPageHeader title={fullMatchRevealed ? "比赛结束" : "比赛进行中"} hideBack />
 
         <Scoreboard
@@ -309,7 +297,7 @@ export default function BattlePage() {
                   type="button"
                   onClick={() => {
                     setRoundIndex(idx)
-                    setVisibleEventCount(round.events.length)
+                    setVisibleEventCount(selectedRoundInitialEventCount(round))
                     setPlaying(false)
                   }}
                   className={`h-9 min-w-11 rounded-md px-2 text-xs font-bold tabular-nums ring-1 transition ${
@@ -340,7 +328,18 @@ export default function BattlePage() {
               events={visibleEvents}
               teamA={teamA}
               teamB={teamB}
-              finalStats={fullMatchRevealed ? report.final_stats : undefined}
+              eventContext={{
+                teamAID: report.match_info.team_a_id,
+                teamAName: report.match_info.team_a_name,
+                teamBID: report.match_info.team_b_id,
+                teamBName: report.match_info.team_b_name,
+                teamTID: currentRound.team_t_id,
+                teamCTID: currentRound.team_ct_id,
+                winnerTeamID: currentRound.winner_team_id,
+                winReason: currentRound.win_reason,
+                strategyTemplateID: currentRound.strategy_template_id,
+                ctSetupTemplateID: currentRound.ct_setup_template_id,
+              }}
             />
           </div>
 

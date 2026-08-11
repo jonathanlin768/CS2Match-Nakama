@@ -192,6 +192,40 @@ func TestSameSeedProducesSameMatch(t *testing.T) {
 	}
 }
 
+func TestPlayerVisualFieldsDoNotChangeSimulation(t *testing.T) {
+	plain := makeTestInput(24680)
+	visual := makeTestInput(24680)
+	for _, team := range []*TeamInput{&visual.TeamA, &visual.TeamB} {
+		for playerIndex := range team.Players {
+			team.Players[playerIndex].Portrait = "portraits/fallback.png"
+			team.Players[playerIndex].CardImage = "player-cards/card.png"
+			team.Players[playerIndex].AvatarCrop = &ImageCrop{X: 0.2, Y: 0.08, Width: 0.6, Height: 0.56}
+		}
+	}
+	plainResult, err := newProductionMatchEngine(plain).simulateMatch(context.Background())
+	if err != nil {
+		t.Fatalf("plain simulate failed: %v", err)
+	}
+	visualResult, err := newProductionMatchEngine(visual).simulateMatch(context.Background())
+	if err != nil {
+		t.Fatalf("visual simulate failed: %v", err)
+	}
+	if plainResult.WinnerTeamID != visualResult.WinnerTeamID || plainResult.TotalRounds != visualResult.TotalRounds || len(plainResult.Rounds) != len(visualResult.Rounds) {
+		t.Fatal("visual-only fields changed match summary")
+	}
+	for index := range plainResult.Rounds {
+		left, right := plainResult.Rounds[index], visualResult.Rounds[index]
+		if left.WinnerTeamID != right.WinnerTeamID || left.ScoreTeamA != right.ScoreTeamA || left.ScoreTeamB != right.ScoreTeamB || len(left.Events) != len(right.Events) {
+			t.Fatalf("visual-only fields changed round %d", index+1)
+		}
+		for eventIndex := range left.Events {
+			if left.Events[eventIndex].Timestamp != right.Events[eventIndex].Timestamp || left.Events[eventIndex].Message != right.Events[eventIndex].Message {
+				t.Fatalf("visual-only fields changed event %d in round %d", eventIndex, index+1)
+			}
+		}
+	}
+}
+
 func TestRoundTerminalStateMatchesWinReason(t *testing.T) {
 	seenReasons := map[string]bool{}
 	for seed := int64(1); seed <= 40; seed++ {

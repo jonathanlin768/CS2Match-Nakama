@@ -5,9 +5,7 @@ CS2 模拟器前端 WebSocket 聊天系统规格 — 共享 Socket 连接、DM �
 ## Purpose
 
 定义客户端聊天相关的 API 封装、Hook 和 WebSocket 事件管理。useSocket 提供模块级共享 Socket 单例，useFriendDM 管理好友私聊的完整生命周期（加入频道、发送消息、实时接收、在线状态感知）。
-
 ## Requirements
-
 ### Requirement: useSocket — Shared WebSocket Connection
 
 系统 SHALL 提供一个 `useSocket(session)` React Hook，管理共享的 Nakama WebSocket 连接，返回连接状态和 Socket 实例。Socket 实例为模块级单例，所有 `useSocket` 调用共享同一连接。自动重连采用指数退避策略。
@@ -52,25 +50,6 @@ CS2 模拟器前端 WebSocket 聊天系统规格 — 共享 Socket 连接、DM �
 - **WHEN** 其中一个组件卸载
 - **THEN** socket 保持连接状态（其他组件仍依赖）
 - **AND** 该组件的 socket 事件监听器（如 onchannelmessage）被正确清理
-
-### Requirement: writeChatMessage API 封装
-
-系统 SHALL 提供一个纯函数 `writeChatMessage(socket, channelId, content)`，通过 WebSocket 向指定频道发送文本消息。
-
-#### Scenario: 成功发送消息
-
-- **GIVEN** socket 已连接且用户已加入 DM 频道
-- **WHEN** 调用 `writeChatMessage(socket, channelId, "Hello!")`
-- **THEN** 函数调用 `socket.writeChatMessage(channelId, { content: "Hello!" })`
-- **AND** 返回一个 ChannelMessageAck（包含 message_id、channel_id、create_time 等）
-- **AND** 服务器端消息持久化到 PostgreSQL
-
-#### Scenario: Socket 未连接时发送
-
-- **GIVEN** socket 尚未连接或已断开
-- **WHEN** 调用 `writeChatMessage(socket, channelId, "Hello!")`
-- **THEN** Nakama SDK 抛出错误
-- **AND** 调用方可捕获并提示"消息发送失败，请检查网络连接"
 
 ### Requirement: listChannelMessages API 封装
 
@@ -123,102 +102,6 @@ CS2 模拟器前端 WebSocket 聊天系统规格 — 共享 Socket 连接、DM �
 - **WHEN** 调用 `joinDMChannel(socket, friendUserId)`
 - **THEN** Nakama SDK 抛出错误
 - **AND** 调用方可捕获并处理
-
-### Requirement: useFriendDM Hook
-
-系统 SHALL 提供一个 `useFriendDM(session, friends: Friend[])` React Hook，管理好友私聊的完整状态：自动加入 DM 频道、加载历史消息、发送新消息、实时接收推送。仅处理 `state=FRIEND(0)` 的好友。
-
-#### Scenario: 初始化 — 自动加入频道
-
-- **GIVEN** 用户已认证且有 3 个好友（state=FRIEND）
-- **WHEN** `useFriendDM` hook 首次执行且 socket 已连接
-- **THEN** 并行调用 `joinDMChannel` 加入每个好友的 DM 频道
-- **AND** 返回 `conversations: Conversation[]`（按最近消息时间降序排列）
-- **AND** 返回 `status: "loading"` 直到所有频道加入完成
-
-#### Scenario: 加入频道后初始化在线状态与历史
-
-- **GIVEN** 所有频道加入完成
-- **WHEN** `status` 变为 `"success"`
-- **THEN** 每个 `conversation` 的 `isFriendOnline` 根据 `joinChat` 返回的 `Channel.presences` 初始化（好友的 Presence 在列表中 → `true`，否则 → `false`）
-- **AND** 每个 `conversation` 包含 `lastMessage`（最新一条消息摘要）
-- **AND** 每个 `conversation` 包含 `unreadCount`（本地计算的未读计数）
-- **AND** 当前选中会话 `selectedConversation` 的完整消息列表已加载
-
-#### Scenario: 发送消息
-
-- **GIVEN** 用户选中了好友 A 的会话并输入消息 "Hi!"
-- **WHEN** 用户点击发送（或按 Enter）
-- **THEN** 调用 `writeChatMessage(socket, channelId, "Hi!")`
-- **AND** 消息立即追加到本地消息列表（乐观更新，isSelf=true）
-- **AND** 发送成功后消息更新为已确认状态（message_id 已分配）
-- **AND** 会话列表的 `lastMessage` 更新为新消息摘要
-- **AND** 输入框清空
-
-#### Scenario: 实时接收新消息
-
-- **GIVEN** socket 已连接且已加入好友 A 的 DM 频道
-- **WHEN** 服务器通过 WebSocket 推送好友 A 发来的新消息（onchannelmessage）
-- **THEN** 如果当前正在查看好友 A 的聊天，消息立即追加到消息列表
-- **AND** 如果正在查看其他会话或未选中会话，好友 A 的 `unreadCount` 增加
-- **AND** 好友 A 的会话在列表中的位置更新（按最新消息时间排序）
-- **AND** 好友 A 的 `lastMessage` 更新
-
-#### Scenario: 切换会话
-
-- **GIVEN** 会话列表中有好友 A 和好友 B
-- **WHEN** 用户点击好友 B 的会话
-- **THEN** `selectedConversation` 更新为好友 B
-- **AND** 右侧聊天区域显示好友 B 的完整消息历史（从本地缓存或加载）
-- **AND** 好友 B 的 `unreadCount` 重置为 0
-
-#### Scenario: 好友列表为空
-
-- **GIVEN** 用户没有好友（friends 为空或没有 state=FRIEND 的好友）
-- **WHEN** `useFriendDM` hook 执行
-- **THEN** `conversations` 为空数组
-- **AND** `status` 为 `"success"`（不发起任何 API 调用）
-- **AND** 不创建任何 socket 频道连接
-
-#### Scenario: Session 为 null 时挂起
-
-- **GIVEN** session 为 null
-- **WHEN** `useFriendDM(null, friends)` 执行
-- **THEN** `status` 为 `"guest"`
-- **AND** `conversations` 为空数组
-- **AND** 不发起任何 API 调用
-
-#### Scenario: 发送消息失败
-
-- **GIVEN** 用户发送消息时网络断开
-- **WHEN** `writeChatMessage` 抛出错误
-- **THEN** 本地乐观更新的消息显示错误状态（红色感叹号或"发送失败"标记）
-- **AND** 提供"重发"按钮
-
-#### Scenario: 频道加入失败容错
-
-- **GIVEN** 用户有 3 个好友，其中 1 个加入频道失败
-- **WHEN** 所有 `joinDMChannel` 完成（`Promise.allSettled`）
-- **THEN** 成功的 2 个好友出现在会话列表中
-- **AND** 失败的 1 个好友不出现，但也不阻塞其他功能
-- **AND** 无全局错误提示（静默跳过）
-
-#### Scenario: 好友删除后退出频道
-
-- **GIVEN** 用户有好友 A 的 DM 频道已 join
-- **WHEN** 好友 A 从好友列表中被删除（`friends` prop 中不再包含好友 A）
-- **THEN** `useFriendDM` 在 `useEffect` 中检测到好友 A 被移除
-- **AND** 调用 `leaveDMChannel(socket, channelId)` 退出好友 A 的 DM 频道
-- **AND** 好友 A 的会话从 `conversations` 中移除
-- **AND** 好友 A 的消息缓存从 `messages` map 中清除
-
-#### Scenario: onchannelpresence 更新在线状态
-
-- **GIVEN** socket 已连接且已注册 onchannelpresence 监听器
-- **WHEN** 收到好友 A 的 `joins` Presence 事件
-- **THEN** 好友 A 的 `conversation.isFriendOnline` 更新为 `true`
-- **WHEN** 收到好友 A 的 `leaves` Presence 事件
-- **THEN** 好友 A 的 `conversation.isFriendOnline` 更新为 `false`
 
 ### Requirement: leaveChat API 封装
 
@@ -305,3 +188,48 @@ CS2 模拟器前端 WebSocket 聊天系统规格 — 共享 Socket 连接、DM �
 - **WHEN** 收到 `onchannelpresence` 事件
 - **THEN** 处理函数过滤掉 `user_id === 当前用户ID` 的 Presence（自身从另一设备加入/离开）
 - **AND** 仅对好友的 Presence 变化更新 `isFriendOnline`
+
+### Requirement: 客户端以结构化类型解析社交卡片
+客户端 SHALL 只将受支持版本的服务端结构化消息解析为联系方式交换卡片。卡片内容 SHALL 以 `request_id` 查询 Social RPC 获得的权威状态为准；未知、畸形或客户端自造消息 SHALL NOT 被渲染为已授权状态。
+
+#### Scenario: 收到有效请求卡片
+- **GIVEN** Socket 收到包含受支持 `type`、`request_id`、`action` 和 `version` 的服务端消息
+- **WHEN** 社交事件 hook 处理该消息
+- **THEN** 客户端按 request ID 获取最新交换状态
+- **AND** 渲染待接受、已接受、已拒绝或已失效卡片
+
+#### Scenario: 收到未知消息类型
+- **GIVEN** DM 历史或实时事件包含未知 `type`
+- **WHEN** 客户端解析消息
+- **THEN** 客户端忽略该消息或显示不可操作的兼容提示
+- **AND** 不把其正文当作聊天文本展示
+
+### Requirement: 交换卡片历史和实时事件复用共享 Socket
+客户端 SHALL 继续复用现有单例 Socket、DM 加入、历史分页、重连和多监听器分发能力，但会话摘要和未读状态 SHALL 从受支持的结构化卡片派生。重连后 SHALL 通过 RPC 刷新卡片状态，不能仅相信本地缓存。
+
+#### Scenario: 断线后恢复
+- **GIVEN** 用户查看好友交换卡片时 Socket 断线
+- **WHEN** 共享 Socket 重连并重新加入 DM 频道
+- **THEN** 客户端恢复历史与实时监听
+- **AND** 对可见 request ID 重新读取权威交换状态
+
+#### Scenario: 非当前好友收到卡片
+- **GIVEN** 用户正在查看好友 A
+- **WHEN** 好友 B 的频道收到有效交换卡片
+- **THEN** 好友 B 的事件摘要和未读数更新
+- **AND** 当前好友 A 的详情不被错误替换
+
+### Requirement: 客户端不暴露任意频道写入操作
+生产客户端 SHALL 不导出或调用面向 UI 的 `writeChatMessage(text)` 能力，也 SHALL NOT 渲染文本、多媒体或自定义 payload 输入控件。发起和响应交换只能调用 Social RPC。
+
+#### Scenario: 用户发起交换
+- **GIVEN** 当前选中对象是正式好友
+- **WHEN** 用户点击“请求交换联系方式”并确认渠道
+- **THEN** 客户端调用 `SocialRequestContactExchange`
+- **AND** 不调用 Socket `writeChatMessage`
+
+#### Scenario: 服务端拒绝交换
+- **GIVEN** 好友关系已经失效但客户端尚未刷新
+- **WHEN** Social RPC 返回 `NOT_FRIENDS`
+- **THEN** 卡片显示请求不可用并刷新好友状态
+- **AND** 客户端不回退到发送普通频道消息

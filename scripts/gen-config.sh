@@ -35,6 +35,14 @@ echo -e "${GREEN}[OK] Docker 已就绪${NC}"
 echo ""
 echo "[2/4] 构建 Luban 镜像..."
 cd "$PROJECT_DIR"
+MANUAL_DIR="$(mktemp -d)"
+trap 'rm -rf "$MANUAL_DIR"' EXIT
+for manual in server/config/go.mod server/config/loader.go server/config/config_test.go client/src/config/index.ts; do
+    if [ -f "$manual" ]; then
+        mkdir -p "$MANUAL_DIR/$(dirname "$manual")"
+        cp "$manual" "$MANUAL_DIR/$manual"
+    fi
+done
 docker build -t "$IMAGE" tools/luban/ > /dev/null 2>&1
 echo -e "${GREEN}[OK] Luban 镜像已就绪${NC}"
 
@@ -91,6 +99,13 @@ docker run --rm -v "$(pwd):/workspace" "$IMAGE" \
     -x outputCodeDir=client/src/config \
     -x outputDataDir=client/public/data/config
 echo -e "${GREEN}[OK] Client 配置生成完成${NC}"
+
+# Luban clears outputCodeDir; restore the hand-written integration files captured above.
+for manual in server/config/go.mod server/config/loader.go server/config/config_test.go client/src/config/index.ts; do
+    if [ -f "$MANUAL_DIR/$manual" ]; then
+        cp "$MANUAL_DIR/$manual" "$manual"
+    fi
+done
 
 # 补回手写文件（Luban 清空 outputCodeDir 时可能被删）
 if [ ! -f server/config/go.mod ]; then
@@ -226,6 +241,17 @@ export async function loadConfig(): Promise<Tables> {
 TSEOF
   echo -e "${YELLOW}[POST] Recreated client/src/config/index.ts${NC}"
 fi
+
+# Keep generated artifacts deterministic and free of formatting-only diffs.
+gofmt -w server/config/*.go
+for generated in server/config/go.mod client/src/config/schema.ts client/src/config/index.ts; do
+  if [ -f "$generated" ]; then
+    sed -i 's/[[:space:]]*$//' "$generated"
+    # sed preserves internal blank lines; collapse only trailing blank lines.
+    awk 'NF { for (i = 1; i <= blank; i++) print ""; blank = 0; print; next } { blank++ } END { print "" }' "$generated" > "$generated.tmp"
+    mv "$generated.tmp" "$generated"
+  fi
+done
 
 echo ""
 echo "=============================================="

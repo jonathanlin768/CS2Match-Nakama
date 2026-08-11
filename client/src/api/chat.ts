@@ -1,4 +1,4 @@
-import type { Session, Socket, Channel, ChannelMessageAck, ChannelMessageList } from "@heroiclabs/nakama-js";
+import type { Session, Socket, Channel, ChannelMessageList } from "@heroiclabs/nakama-js";
 import client from "../nakama";
 
 /**
@@ -19,26 +19,6 @@ export async function joinDMChannel(
 ): Promise<Channel> {
   // type=2 DirectMessage, persistence=true, hidden=false
   return socket.joinChat(targetUserId, 2, true, false);
-}
-
-/**
- * 向指定频道发送文本消息。
- *
- * 调用 socket.writeChatMessage 发送消息到指定频道。
- * Nakama 会将消息广播给频道内所有成员（包括发送者自己）通过 onchannelmessage 推送。
- * 消息内容格式为 { text: string }，便于未来扩展富媒体。
- *
- * @param socket - 已连接的 Nakama WebSocket 实例
- * @param channelId - 目标频道 ID
- * @param content - 消息文本内容
- * @returns ChannelMessageAck（含 message_id、channel_id、create_time 等）
- */
-export async function writeChatMessage(
-  socket: Socket,
-  channelId: string,
-  content: string,
-): Promise<ChannelMessageAck> {
-  return socket.writeChatMessage(channelId, { text: content });
 }
 
 /**

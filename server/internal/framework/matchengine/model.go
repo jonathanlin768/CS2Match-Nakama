@@ -3,6 +3,8 @@
 // 业务子系统（如 internal/match）负责把 Nakama RPC 请求转换为 MatchInput。
 package matchengine
 
+import "math"
+
 const (
 	SideT  = "T"
 	SideCT = "CT"
@@ -56,11 +58,36 @@ type TeamInput struct {
 
 // PlayerProfile 表示选手静态档案。武器不属于该档案，需按回合阵营派生。
 type PlayerProfile struct {
-	PlayerID    string           `json:"player_id"`           // 选手唯一标识。
-	DisplayName string           `json:"display_name"`        // 战报和客户端使用的显示名称。
-	Portrait    string           `json:"portrait,omitempty"`  // 头像资源路径或 URL。
-	RoleTags    []string         `json:"role_tags,omitempty"` // 选手位置、职责等角色标签。
-	Attributes  PlayerAttributes `json:"attributes"`          // 参与模拟计算的静态能力值。
+	PlayerID    string           `json:"player_id"`             // 选手唯一标识。
+	DisplayName string           `json:"display_name"`          // 战报和客户端使用的显示名称。
+	Portrait    string           `json:"portrait,omitempty"`    // 头像资源路径或 URL。
+	CardImage   string           `json:"card_image,omitempty"`  // 完整选手卡面资源路径或 URL。
+	AvatarCrop  *ImageCrop       `json:"avatar_crop,omitempty"` // 从完整卡面裁切战斗头像的归一化矩形。
+	RoleTags    []string         `json:"role_tags,omitempty"`   // 选手位置、职责等角色标签。
+	Attributes  PlayerAttributes `json:"attributes"`            // 参与模拟计算的静态能力值。
+}
+
+// ImageCrop 表示基于原图自然尺寸的归一化裁切矩形。完整卡面固定为 2:3，裁切输出固定为 5:7。
+type ImageCrop struct {
+	X      float64 `json:"x"`
+	Y      float64 `json:"y"`
+	Width  float64 `json:"width"`
+	Height float64 `json:"height"`
+}
+
+// Valid 判断裁切矩形是否有界，并在 2:3 源图上保持 5:7 像素比例。
+func (c ImageCrop) Valid() bool {
+	values := []float64{c.X, c.Y, c.Width, c.Height}
+	for _, value := range values {
+		if math.IsNaN(value) || math.IsInf(value, 0) {
+			return false
+		}
+	}
+	if c.X < 0 || c.Y < 0 || c.Width <= 0 || c.Height <= 0 || c.X+c.Width > 1.000001 || c.Y+c.Height > 1.000001 {
+		return false
+	}
+	pixelAspect := (c.Width * 2) / (c.Height * 3)
+	return math.Abs(pixelAspect-5.0/7.0) <= 0.005
 }
 
 // PlayerAttributes 表示选手的静态能力评分，默认有效范围由战斗常量约束。
@@ -291,6 +318,8 @@ type PlayerState struct {
 	PlayerName  string        `json:"player_name"`            // 兼容旧战报消费者的选手名称。
 	DisplayName string        `json:"display_name"`           // 客户端优先使用的选手显示名称。
 	Portrait    string        `json:"portrait,omitempty"`     // 头像资源路径或 URL。
+	CardImage   string        `json:"card_image,omitempty"`   // 完整选手卡面资源路径或 URL。
+	AvatarCrop  *ImageCrop    `json:"avatar_crop,omitempty"`  // 归一化 5:7 头像裁切矩形。
 	TeamID      string        `json:"team_id"`                // 本回合所属队伍 ID。
 	Side        string        `json:"side"`                   // 本回合所属 T/CT 阵营。
 	IsAlive     bool          `json:"is_alive"`               // 兼容旧战报消费者的存活标记。
@@ -335,6 +364,7 @@ type PlayerMatchStats struct {
 	Side       string  `json:"side"`        // 选手开局时的初始阵营，仅作摘要展示。
 	Kills      int     `json:"kills"`       // 整场击杀数。
 	Deaths     int     `json:"deaths"`      // 整场死亡数。
+	Assists    int     `json:"assists"`     // 整场助攻数。
 	Damage     int     `json:"damage"`      // 整场造成的总伤害。
 	ADR        float64 `json:"adr"`         // 场均回合伤害，即总伤害除以总回合数。
 	FK         int     `json:"fk"`          // 整场首杀次数。

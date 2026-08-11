@@ -112,6 +112,26 @@ func TestCausalRoundEngineSupportsRepeatedClashAndDecisionPhases(t *testing.T) {
 	}
 }
 
+func TestDecisionLimitAllowsOnlyOneForcedFallbackPerSide(t *testing.T) {
+	state := makeTestRoundState(t, 1440)
+	state.DecisionCount = state.constants.Int("MaxDecisionCount", 0)
+	runtime := &causalRoundRuntime{state: state, decisionCandidates: map[string]DecisionCandidate{}, forcedDecisionUsed: map[string]bool{}}
+	if err := runtime.scheduleDecisions(); err != nil {
+		t.Fatal(err)
+	}
+	if !runtime.forcedDecisionUsed[SideT] || !runtime.forcedDecisionUsed[SideCT] {
+		t.Fatalf("decision limit did not record one fallback per side: %+v", runtime.forcedDecisionUsed)
+	}
+	state.Scheduler.actions = nil
+	runtime.decisionCandidates = map[string]DecisionCandidate{}
+	if err := runtime.scheduleDecisions(); err != nil {
+		t.Fatal(err)
+	}
+	if len(state.Scheduler.actions) != 0 {
+		t.Fatalf("decision limit kept scheduling fallback actions: %+v", state.Scheduler.actions)
+	}
+}
+
 func TestScenarioSelectionUsesCurrentContactPhase(t *testing.T) {
 	state := makeTestRoundState(t, 1441)
 	state.scenarios = map[string]Scenario{

@@ -338,6 +338,28 @@ func TestCombatPulseSnapshotAftermathAndNaturalFirstKill(t *testing.T) {
 	}
 }
 
+func TestKillEventIncludesActualDamageAssistContributors(t *testing.T) {
+	state := makeTestRoundState(t, 8051)
+	killerID, assistantID, victimID := "team_a_p2", "team_a_p3", "team_b_p1"
+	action := combatAction(state, "assist-attribution", killerID, assistantID, victimID)
+	batch, err := ApplyCombatPulseCommit(state, action, []Effect{
+		{ID: NewEffectID(state.Seed, action.ID, EffectDamage, 0), SourceActionID: action.ID, Type: EffectDamage, Priority: 100, Timestamp: 0, ActorID: assistantID, TargetID: victimID, Amount: 40, StringValue: WeaponAK47},
+		{ID: NewEffectID(state.Seed, action.ID, EffectDamage, 1), SourceActionID: action.ID, Type: EffectDamage, Priority: 100, Timestamp: 0, ActorID: killerID, TargetID: victimID, Amount: 70, StringValue: WeaponAK47},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range batch.Events {
+		if event.EventType == EventKill {
+			if event.AttackerID != killerID || !reflect.DeepEqual(eventAssistIDs(event), []string{assistantID}) {
+				t.Fatalf("kill/assist attribution mismatch: %+v", event)
+			}
+			return
+		}
+	}
+	t.Fatal("lethal pulse produced no KILL event")
+}
+
 func TestResolveCombatPulseUsesOneSnapshotAndUpdatesResources(t *testing.T) {
 	state := makeTestRoundState(t, 806)
 	candidate, _ := BuildEncounterCandidate(state, "contact", "SCN_A", "A_SITE", []string{"team_a_p2", "team_a_p3", "team_b_p1", "team_b_p2"})

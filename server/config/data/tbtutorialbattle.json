@@ -1,0 +1,43 @@
+[
+  {
+    "id": "tutorial_default",
+    "version": 1,
+    "enabled": true,
+    "budget": 15,
+    "rosterSize": 5,
+    "mapId": "de_dust2",
+    "tier5PlayerIds": [
+      "player_donk",
+      "player_monesy",
+      "player_b1t"
+    ],
+    "tier4PlayerIds": [
+      "player_sh1ro",
+      "player_niko",
+      "player_w0nderful"
+    ],
+    "tier3PlayerIds": [
+      "player_zont1x",
+      "player_kyousuke",
+      "player_im"
+    ],
+    "tier2PlayerIds": [
+      "player_magixx",
+      "player_teses",
+      "player_makazze"
+    ],
+    "tier1PlayerIds": [
+      "player_chopper",
+      "player_kyxsan",
+      "player_aleksib"
+    ],
+    "opponentTeamId": "team_vitality",
+    "opponentPlayerIds": [
+      "player_apex",
+      "player_flamez",
+      "player_zywoo",
+      "player_mezii",
+      "player_ropz"
+    ]
+  }
+]

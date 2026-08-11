@@ -95,7 +95,7 @@ MVP 阶段 `matchengine` 内建的每条 `RouteConfig` SHALL 关联一个雷达�
 
 ### Requirement: Engine computes final player stats
 
-`MatchResult.FinalStats.PlayerStats` SHALL 包含每名选手整场比赛的击杀、死亡、ADR、首杀数和多杀次数。
+`MatchResult.FinalStats.PlayerStats` SHALL 包含每名选手整场比赛的击杀、死亡、助攻、ADR、首杀数和多杀次数。
 
 #### Scenario: Stats after one round
 
@@ -159,7 +159,7 @@ MVP 阶段 `matchengine` 内建的每条 `RouteConfig` SHALL 关联一个雷达�
 
 ### Requirement: 引擎聚合全回合选手统计
 
-`MatchResult.FinalStats` SHALL 跨所有模拟回合聚合击杀、死亡、伤害、ADR、首杀、多杀、下包和拆包。
+`MatchResult.FinalStats` SHALL 跨所有模拟回合聚合击杀、死亡、助攻、伤害、ADR、首杀、多杀、下包和拆包。对同一受害者造成过实际伤害、但未获得该次击杀的同队选手 SHALL 计为助攻。
 
 #### Scenario: ADR 除以总回合数
 - **GIVEN** 某选手在 30 回合比赛中造成 2400 点伤害

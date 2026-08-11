@@ -35,7 +35,7 @@ func TestStatsAggregateOnlyActualEventDamageAndBombActions(t *testing.T) {
 	round := &RoundResult{Events: []*GameEvent{
 		{EventType: EventDamage, AttackerID: "team_a_p1", Extra: map[string]interface{}{"damage": 70}},
 		{EventType: EventDamage, AttackerID: "team_a_p1", Extra: map[string]interface{}{"damage": 30}},
-		{EventType: EventKill, AttackerID: "team_a_p1", VictimID: "team_b_p1", IsFirstKill: true},
+		{EventType: EventKill, AttackerID: "team_a_p1", VictimID: "team_b_p1", IsFirstKill: true, Extra: map[string]interface{}{"assist_ids": []string{"team_a_p2"}}},
 		{EventType: EventBombPlant, AttackerID: "team_a_p2"},
 		{EventType: EventBombDefuse, AttackerID: "team_b_p2"},
 	}}
@@ -43,7 +43,7 @@ func TestStatsAggregateOnlyActualEventDamageAndBombActions(t *testing.T) {
 	if got := engine.stats["team_a_p1"]; got.Damage != 100 || got.Kills != 1 || got.FK != 1 || got.MK != 0 {
 		t.Fatalf("damage/kill aggregation mismatch: %+v", got)
 	}
-	if engine.stats["team_b_p1"].Deaths != 1 || engine.stats["team_a_p2"].Plants != 1 || engine.stats["team_b_p2"].Defuses != 1 {
+	if engine.stats["team_b_p1"].Deaths != 1 || engine.stats["team_a_p2"].Assists != 1 || engine.stats["team_a_p2"].Plants != 1 || engine.stats["team_b_p2"].Defuses != 1 {
 		t.Fatalf("death/bomb aggregation mismatch: stats=%+v", engine.stats)
 	}
 }

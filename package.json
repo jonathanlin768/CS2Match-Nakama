@@ -3,7 +3,9 @@
   "private": true,
   "scripts": {
     "map-editor": "npm --prefix tools/map-semantic-editor run dev",
+    "config-editor": "npm --prefix tools/map-semantic-editor run dev",
     "map-editor:build": "npm --prefix tools/map-semantic-editor run build",
+    "config-editor:build": "npm --prefix tools/map-semantic-editor run build",
     "map-editor:test": "npm --prefix tools/map-semantic-editor run test"
   }
 }

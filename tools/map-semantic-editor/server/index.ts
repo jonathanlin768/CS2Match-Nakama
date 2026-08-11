@@ -5,7 +5,9 @@ import { URL } from 'node:url'
 import { toExportTables } from '../src/lib/exportTables'
 import { parseProject } from '../src/lib/model'
 import { hasBlockingIssues, validateProject } from '../src/lib/validation'
+import { validateDocuments } from '../src/lib/lubanValidation'
 import { readLubanSummary, writeExportTables } from './excel'
+import { configAssetExists, configAssetFilePath, findReferences, hydrateIncomingDocument, listLubanTables, readEditableDocuments, readLubanTable, saveConfigImage, saveLubanTable, saveLubanTables, syncRecordId } from './configTables'
 import { importLubanProject } from './importTables'
 import { isGenConfigRunning, runGenConfig } from './genConfig'
 import { readProject, readPublishedProject, saveProject, savePublishedProject } from './projectFiles'
@@ -54,6 +56,82 @@ async function route(request: http.IncomingMessage, response: http.ServerRespons
 
   if (request.method === 'GET' && url.pathname === '/api/luban/summary') {
     json(response, 200, { ok: true, tables: await readLubanSummary() })
+    return
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/config/tables') {
+    json(response, 200, { ok: true, tables: await listLubanTables() })
+    return
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/config/table') {
+    const fileName = url.searchParams.get('file')
+    if (!fileName) throw new Error('缺少 table file 参数')
+    json(response, 200, { ok: true, document: await readLubanTable(fileName) })
+    return
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/config/table/save') {
+    const body = await readJson(request)
+    const document = await hydrateIncomingDocument(body.document)
+    const documents = await documentsWithChanges([document])
+    const issues = validateDocuments(documents)
+    if (issues.some((issue) => issue.severity === 'ERROR')) {
+      json(response, 422, { ok: false, error: '校验未通过，已阻止保存', issues })
+      return
+    }
+    const result = await saveLubanTable(document)
+    json(response, 200, { ok: true, result, issues })
+    return
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/config/tables/save') {
+    const body = await readJson(request)
+    if (!Array.isArray(body.documents)) throw new Error('documents 必须是数组')
+    const changed = await Promise.all(body.documents.map((document) => hydrateIncomingDocument(document)))
+    const documents = await documentsWithChanges(changed)
+    const issues = validateDocuments(documents)
+    if (issues.some((issue) => issue.severity === 'ERROR')) {
+      json(response, 422, { ok: false, error: '校验未通过，已阻止批量保存', issues })
+      return
+    }
+    const results = await saveLubanTables(changed)
+    json(response, 200, { ok: true, results, issues })
+    return
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/config/references') {
+    const table = url.searchParams.get('table') ?? ''
+    const id = url.searchParams.get('id') ?? ''
+    if (!table || !id) throw new Error('缺少 table 或 id 参数')
+    json(response, 200, { ok: true, references: await findReferences(table, id) })
+    return
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/config/id-sync') {
+    const body = await readJson(request)
+    const result = await syncRecordId(String(body.fileName ?? ''), String(body.oldId ?? ''), String(body.newId ?? ''))
+    json(response, 200, { ok: true, ...result })
+    return
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/config/image') {
+    const body = await readJson(request, 12 * 1024 * 1024)
+    const kind = body.kind === 'portrait' ? 'portrait' : body.kind === 'team' ? 'team' : body.kind === 'player-card' ? 'player-card' : null
+    if (!kind) throw new Error('图片类型必须是 portrait、team 或 player-card')
+    const result = await saveConfigImage(kind, String(body.fileName ?? ''), String(body.dataBase64 ?? ''), body.overwrite === true)
+    json(response, 200, { ok: true, result })
+    return
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/config/asset') {
+    const assetPath = url.searchParams.get('path') ?? ''
+    json(response, 200, { ok: true, exists: await configAssetExists(assetPath) })
+    return
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/config/asset-file') {
+    await serveConfigAsset(url.searchParams.get('path') ?? '', response)
     return
   }
 
@@ -117,9 +195,34 @@ function json(response: http.ServerResponse, status: number, value: unknown): vo
   response.end(JSON.stringify(value))
 }
 
-async function readJson(request: http.IncomingMessage): Promise<Record<string, unknown>> {
+async function readJson(request: http.IncomingMessage, maxBytes = 2 * 1024 * 1024): Promise<Record<string, unknown>> {
   const chunks: Buffer[] = []
-  for await (const chunk of request) chunks.push(Buffer.from(chunk))
+  let size = 0
+  for await (const chunk of request) {
+    const buffer = Buffer.from(chunk)
+    size += buffer.length
+    if (size > maxBytes) throw new Error('请求内容过大')
+    chunks.push(buffer)
+  }
   if (chunks.length === 0) return {}
   return JSON.parse(Buffer.concat(chunks).toString('utf8')) as Record<string, unknown>
+}
+
+async function serveConfigAsset(relativePath: string, response: http.ServerResponse): Promise<void> {
+  const file = configAssetFilePath(relativePath)
+  if (!file) {
+    json(response, 404, { ok: false, error: '不支持的图片资源路径' })
+    return
+  }
+  const data = await fs.readFile(file)
+  const extension = path.extname(file).toLowerCase()
+  const type = extension === '.png' ? 'image/png' : extension === '.webp' ? 'image/webp' : 'image/jpeg'
+  response.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'no-cache' })
+  response.end(data)
+}
+
+async function documentsWithChanges(changed: Awaited<ReturnType<typeof hydrateIncomingDocument>>[]): Promise<Awaited<ReturnType<typeof readEditableDocuments>>> {
+  const documents = await readEditableDocuments()
+  const byFile = new Map(changed.map((document) => [document.fileName, document]))
+  return documents.map((document) => byFile.get(document.fileName) ?? document)
 }

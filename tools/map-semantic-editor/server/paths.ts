@@ -8,6 +8,9 @@ export const projectRoot = path.resolve(editorRoot, '..', '..')
 export const dataRoot = path.resolve(projectRoot, 'configs', 'Datas')
 export const projectFileRoot = path.resolve(editorRoot, 'data')
 export const radarRoot = path.resolve(projectRoot, 'client', 'public', 'csmaps')
+export const portraitRoot = path.resolve(projectRoot, 'client', 'public', 'portraits')
+export const playerCardRoot = path.resolve(projectRoot, 'client', 'public', 'player-cards')
+export const teamLogoRoot = path.resolve(projectRoot, 'client', 'public', 'teams')
 
 export function resolveInside(root: string, ...segments: string[]): string {
   const target = path.resolve(root, ...segments)

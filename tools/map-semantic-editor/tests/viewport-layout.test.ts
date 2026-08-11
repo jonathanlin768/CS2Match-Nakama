@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 describe('viewport layout constraints', () => {
   const root = resolve(process.cwd())
-  const appSource = readFileSync(resolve(root, 'src/App.tsx'), 'utf8')
+  const appSource = readFileSync(resolve(root, 'src/pages/MapConfigPage.tsx'), 'utf8')
   const styles = readFileSync(resolve(root, 'src/styles.css'), 'utf8')
 
   it('keeps the default workspace columns within the editor minimum viewport', () => {

@@ -11,28 +11,33 @@ package cfg
 import "errors"
 
 type Player struct {
-	Id          string
-	Name        string
-	Team        string
-	Nationality string
-	Entry       int32
-	Aim         int32
-	Trade       int32
-	Clutch      int32
-	Firepower   int32
-	Gamesense   int32
-	Reaction    int32
-	Positioning int32
-	Awareness   int32
-	Teamplay    int32
-	Utility     int32
-	Composure   int32
-	Mobility    int32
-	Endurance   int32
-	Discipline  int32
-	Positions   []string
-	Rarity      string
-	Portrait    string
+	Id               string
+	Name             string
+	TeamId           string
+	Nationality      string
+	Entry            int32
+	Aim              int32
+	Trade            int32
+	Clutch           int32
+	Firepower        int32
+	Gamesense        int32
+	Reaction         int32
+	Positioning      int32
+	Awareness        int32
+	Teamplay         int32
+	Utility          int32
+	Composure        int32
+	Mobility         int32
+	Endurance        int32
+	Discipline       int32
+	Positions        []string
+	Rarity           string
+	Portrait         string
+	CardImage        string
+	AvatarCropX      float32
+	AvatarCropY      float32
+	AvatarCropWidth  float32
+	AvatarCropHeight float32
 }
 
 const TypeId_Player = -1901885695
@@ -79,19 +84,19 @@ func NewPlayer(_buf map[string]interface{}) (_v *Player, err error) {
 	}
 	{
 		var _ok_ bool
-		var __json_team__ interface{}
-		if __json_team__, _ok_ = _buf["team"]; !_ok_ || __json_team__ == nil {
-			err = errors.New("team error")
+		var __json_teamId__ interface{}
+		if __json_teamId__, _ok_ = _buf["teamId"]; !_ok_ || __json_teamId__ == nil {
+			err = errors.New("teamId error")
 			return
 		} else {
 			var __x__ string
 			{
-				if __x__, _ok_ = __json_team__.(string); !_ok_ {
+				if __x__, _ok_ = __json_teamId__.(string); !_ok_ {
 					err = errors.New("__x__ error")
 					return
 				}
 			}
-			_v.Team = __x__
+			_v.TeamId = __x__
 		}
 	}
 	{
@@ -475,6 +480,103 @@ func NewPlayer(_buf map[string]interface{}) (_v *Player, err error) {
 				}
 			}
 			_v.Portrait = __x__
+		}
+	}
+	{
+		var _ok_ bool
+		var __json_cardImage__ interface{}
+		if __json_cardImage__, _ok_ = _buf["cardImage"]; !_ok_ || __json_cardImage__ == nil {
+			err = errors.New("cardImage error")
+			return
+		} else {
+			var __x__ string
+			{
+				if __x__, _ok_ = __json_cardImage__.(string); !_ok_ {
+					err = errors.New("__x__ error")
+					return
+				}
+			}
+			_v.CardImage = __x__
+		}
+	}
+	{
+		var _ok_ bool
+		var __json_avatarCropX__ interface{}
+		if __json_avatarCropX__, _ok_ = _buf["avatarCropX"]; !_ok_ || __json_avatarCropX__ == nil {
+			err = errors.New("avatarCropX error")
+			return
+		} else {
+			var __x__ float32
+			{
+				var _ok_ bool
+				var _x_ float64
+				if _x_, _ok_ = __json_avatarCropX__.(float64); !_ok_ {
+					err = errors.New("__x__ error")
+					return
+				}
+				__x__ = float32(_x_)
+			}
+			_v.AvatarCropX = __x__
+		}
+	}
+	{
+		var _ok_ bool
+		var __json_avatarCropY__ interface{}
+		if __json_avatarCropY__, _ok_ = _buf["avatarCropY"]; !_ok_ || __json_avatarCropY__ == nil {
+			err = errors.New("avatarCropY error")
+			return
+		} else {
+			var __x__ float32
+			{
+				var _ok_ bool
+				var _x_ float64
+				if _x_, _ok_ = __json_avatarCropY__.(float64); !_ok_ {
+					err = errors.New("__x__ error")
+					return
+				}
+				__x__ = float32(_x_)
+			}
+			_v.AvatarCropY = __x__
+		}
+	}
+	{
+		var _ok_ bool
+		var __json_avatarCropWidth__ interface{}
+		if __json_avatarCropWidth__, _ok_ = _buf["avatarCropWidth"]; !_ok_ || __json_avatarCropWidth__ == nil {
+			err = errors.New("avatarCropWidth error")
+			return
+		} else {
+			var __x__ float32
+			{
+				var _ok_ bool
+				var _x_ float64
+				if _x_, _ok_ = __json_avatarCropWidth__.(float64); !_ok_ {
+					err = errors.New("__x__ error")
+					return
+				}
+				__x__ = float32(_x_)
+			}
+			_v.AvatarCropWidth = __x__
+		}
+	}
+	{
+		var _ok_ bool
+		var __json_avatarCropHeight__ interface{}
+		if __json_avatarCropHeight__, _ok_ = _buf["avatarCropHeight"]; !_ok_ || __json_avatarCropHeight__ == nil {
+			err = errors.New("avatarCropHeight error")
+			return
+		} else {
+			var __x__ float32
+			{
+				var _ok_ bool
+				var _x_ float64
+				if _x_, _ok_ = __json_avatarCropHeight__.(float64); !_ok_ {
+					err = errors.New("__x__ error")
+					return
+				}
+				__x__ = float32(_x_)
+			}
+			_v.AvatarCropHeight = __x__
 		}
 	}
 	return

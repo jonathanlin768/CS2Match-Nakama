@@ -66,27 +66,6 @@ MVP 阶段虽然采用简化战斗，但回合时间上限、一回合固定长�
 - **THEN** 响应顶层 `debug_enabled` 为 `true`
 - **AND** 框架的 `MatchInput` 和 `MatchResult` 不增加业务调试字段
 
-### Requirement: Match 服务从 TbPlayer 构建默认队伍
-
-`match.Service` SHALL 提供默认调试阵容：直接读取 `configs/Datas/#Player.xlsx` 经 Luban 导出的 `TbPlayer`，按 `team` 字段筛选，`Falcons` 的 5 名选手组成 Team A，`Vitality` 的 5 名选手组成 Team B，队内顺序沿用 `GetDataList()` 的稳定表顺序，同时将生成选手表访问保留在 `matchengine` 之外。任一队伍不是恰好 5 人或选手 ID 重复时 SHALL 返回 `INVALID_LINEUP`。`tbplayer.json` SHALL 仅由 Luban 导出生成，不得为默认阵容手工改写。
-
-#### Scenario: 默认队伍包含十名唯一选手
-- **WHEN** 调用不带阵容字段的 `DebugSimuMatch`
-- **THEN** `match.Service` 构建 Team A 和 Team B，且每队 5 名选手
-- **AND** 十个 `PlayerID` 全部唯一
-- **AND** Team A 名称为 `Falcons`，成员来自 `team=Falcons` 的 5 条记录
-- **AND** Team B 名称为 `Vitality`，成员来自 `team=Vitality` 的 5 条记录
-- **AND** 两队内部的 `PlayerID` 顺序分别保持 `TbPlayer.GetDataList()` 的稳定表顺序
-- **AND** 每个默认选手由 `match.Service` 从 `windypath.com/cs2match/config` 的 `TbPlayer` 读取
-- **AND** `matchengine` 仅通过 `MatchInput` 接收这些选手，且不读取 `TbPlayer`
-
-#### Scenario: 选手头像路径随快照传递
-- **WHEN** `match.Service` 将 `TbPlayer` 选手转换为 `PlayerProfile`
-- **THEN** `TbPlayer.Portrait` 原样写入 `PlayerProfile.Portrait`
-- **AND** 回合 `PlayerState` 将该头像路径返回给客户端
-- **AND** 客户端将 `portraits/player_niko.jpg` 解析为站点根路径 `/portraits/player_niko.jpg`
-- **AND** 图片不存在或加载失败时回退到 `/images/star-player.png`
-
 ### Requirement: Match 服务分配第一版固定武器
 
 在这个无经济系统版本中，`match.Service` SHALL 提供按阵营默认的武器装配规则：当前作为 T 方的选手使用 AK-47，当前作为 CT 方的选手使用 M4A1-S。`PlayerProfile` SHALL 只表达选手基础属性、角色标签和头像等静态档案信息，不绑定固定枪械；具体枪械 SHALL 在回合派生输入或回合内选手状态中按当前阵营动态确定。
@@ -132,4 +111,80 @@ MVP 阶段虽然采用简化战斗，但回合时间上限、一回合固定长�
 - **GIVEN** 生成配置包含 `de_dust2` 的 `TbRouteTemplate` 行
 - **WHEN** 适配器构建 `matchengine.MapConfig`
 - **THEN** 每个生成路线模板行都以 ID、目标包点、节奏、所需角色、关键属性、场景、地图标签、成功阶段和失败 fallback 形式出现在引擎快照中
+
+### Requirement: 选手卡面和头像裁切数据随比赛快照传递
+
+服务端 SHALL 从 Luban Player 配置读取完整卡面及头像裁切数据，并经领域模型和比赛快照传递给客户端。新增字段 SHALL 为可选字段，旧 `portrait` 数据 SHALL 继续可用。
+
+#### Scenario: Luban 为服务端和客户端生成一致字段
+
+- **GIVEN** `#Player.xlsx` 包含 `cardImage`、`avatarCropX`、`avatarCropY`、`avatarCropWidth`、`avatarCropHeight`
+- **WHEN** 项目运行 Luban 导表
+- **THEN** Server Go 和 Client TypeScript 生成结构包含语义一致的字段
+- **AND** 生成的 JSON 数据保留相同的资源路径和归一化数值
+
+#### Scenario: Match 服务构建选手视觉资料
+
+- **GIVEN** 一条 Player 配置包含合法的完整卡面和裁切参数
+- **WHEN** Match 服务从 `TbPlayer` 构建 `PlayerProfile`
+- **THEN** `PlayerProfile` 包含 `CardImage`
+- **AND** 四个扁平配置字段被组装为一个可选的 `AvatarCrop` 值对象
+- **AND** 回合投影将 `CardImage` 和 `AvatarCrop` 复制到客户端可见的 `PlayerState`
+
+#### Scenario: 非法或缺失新字段使用旧头像
+
+- **GIVEN** Player 未配置完整卡面，或裁切矩形不合法
+- **WHEN** Match 服务构建比赛快照
+- **THEN** 服务端不输出可用的 `AvatarCrop`
+- **AND** 保留现有 `Portrait` 路径供客户端回退
+- **AND** 比赛模拟仍可正常创建和推进
+
+#### Scenario: 视觉配置不改变模拟过程
+
+- **GIVEN** 两份 Player 配置只有卡面和头像裁切参数不同
+- **WHEN** MatchLoop 使用相同种子和相同比赛输入运行
+- **THEN** 两场模拟产生相同的比赛状态与事件结果
+- **AND** MatchLoop 不直接读取静态配置文件或图片资源
+
+### Requirement: Luban 提供独立队伍表并由选手引用
+系统 SHALL 新增自动导入的 `#Team.xlsx`/`TbTeam`，至少配置队伍 ID、正式名称、简称、昵称和 Logo。`#Player.xlsx` SHALL 使用引用 `TbTeam` 的 `teamId` 替换自由文本 team 字段；未来客户端图鉴和当前服务端比赛阵容构建 SHALL 按 teamId 关联选手。本变更 SHALL NOT 在 Team 表预置首发领取或阵容调整规则。
+
+#### Scenario: 按队伍查询选手
+- **GIVEN** `TbTeam` 存在某个 team ID 且多名 `TbPlayer.teamId` 引用它
+- **WHEN** 图鉴按该队伍筛选
+- **THEN** 客户端返回所有引用该 teamId 的选手
+- **AND** 不依赖队伍展示名称进行字符串匹配
+
+#### Scenario: Player 引用不存在队伍
+- **GIVEN** `#Player.xlsx` 某行的 teamId 不存在于 `TbTeam`
+- **WHEN** 执行 Luban 导出或配置测试
+- **THEN** 导出/测试失败并指出非法引用
+
+### Requirement: Luban 提供版本化教学战表
+系统 SHALL 新增自动导入的 `#TutorialBattle.xlsx`/`TbTutorialBattle`。每个启用方案 SHALL 配置 ID、版本、预算、阵容人数、地图、5/4/3/2/1 元 Player ID 列表、机器人 team ID 和机器人五个 Player ID；Player 与 Team 字段 SHALL 使用表引用约束。
+
+#### Scenario: 加载有效教学方案
+- **GIVEN** 教学表包含一个启用且引用完整的方案
+- **WHEN** 服务端配置初始化
+- **THEN** 服务端缓存各价格档、预算、地图和机器人阵容
+- **AND** 客户端可加载相同导出数据用于展示
+
+#### Scenario: 教学档位重复选手
+- **GIVEN** 同一 Player ID 同时出现在两个价格档
+- **WHEN** 配置测试执行
+- **THEN** 测试失败并标识重复 Player ID
+
+#### Scenario: 教学方案无预算可解阵容
+- **GIVEN** 配置的价格池无法选择指定人数且不超过预算
+- **WHEN** 配置测试执行
+- **THEN** 测试失败且该方案不可启用
+
+### Requirement: Team 与 TutorialBattle 同步导出到前后端
+Luban 导表 SHALL 生成 Go、TypeScript 与客户端/服务端 JSON 产物，并更新 `server/config/loader.go` 与 `client/src/config/index.ts` 以加载 `TbTeam` 和 `TbTutorialBattle`。生成文件不得手工维护。
+
+#### Scenario: 导表后验证
+- **GIVEN** Team、Player 和 TutorialBattle Excel 已保存
+- **WHEN** 执行 `scripts/gen-config.ps1`
+- **THEN** 前后端生成 schema 与 JSON 包含新表及 Player.teamId
+- **AND** `server/config` Go 测试和客户端 TypeScript 检查通过
 

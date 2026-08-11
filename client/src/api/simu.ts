@@ -12,3 +12,13 @@ export async function debugSimuMatch(session: Session, mapId = "de_dust2", seed?
   const payload = typeof rpcRes.payload === "string" ? rpcRes.payload : JSON.stringify(rpcRes.payload)
   return JSON.parse(payload) as MatchReport
 }
+
+export type SimuMatchRequest =
+  | { mode: "computer" }
+  | { mode: "tutorial"; tutorial_config_id: string; config_version: number; player_ids: string[] }
+
+export async function simuMatch(session: Session, request: SimuMatchRequest): Promise<MatchReport> {
+  const rpcRes = await client.rpc(session, "SimuMatch", request)
+  const payload = typeof rpcRes.payload === "string" ? rpcRes.payload : JSON.stringify(rpcRes.payload)
+  return JSON.parse(payload) as MatchReport
+}

@@ -14,6 +14,12 @@ export interface BattlePlayer {
   id: string
   /** 头像 URL */
   avatar: string
+  /** 旧头像回退路径 */
+  portrait?: string
+  /** 完整选手卡面路径 */
+  cardImage?: string
+  /** 归一化 5:7 头像裁切 */
+  avatarCrop?: { x: number; y: number; width: number; height: number }
   /** 是否存活 */
   alive: boolean
   /** 血量 0-100 */

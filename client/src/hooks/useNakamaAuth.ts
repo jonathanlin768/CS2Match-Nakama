@@ -1,97 +1,58 @@
-import { useEffect, useState, useCallback } from "react";
-import type { Session } from "@heroiclabs/nakama-js";
-import { loginWithEmail, registerWithEmail, restoreSession, clearSession } from "../api/auth";
+import { useCallback, useEffect, useState } from "react"
+import type { Session } from "@heroiclabs/nakama-js"
+import { linkEmailAccount, loginWithEmail, logoutToFreshGuest, restoreOrCreateSession, type IdentityKind } from "../api/auth"
 
-type AuthStatus = "restoring" | "authenticated" | "guest";
+type AuthStatus = "restoring" | "authenticated" | "guest"
 
 interface AuthState {
-  status: AuthStatus;
-  session: Session | null;
-  error: string | null;
+  status: AuthStatus
+  session: Session | null
+  kind: IdentityKind
+  error: string | null
 }
 
-/**
- * useNakamaAuth — 管理 Nakama 认证状态
- *
- * 挂载时自动尝试从 localStorage 恢复 Session：
- * - `restoring`  → 正在检查/恢复 Session（显示加载画面）
- * - `authenticated` → Session 有效（跳转 /home）
- * - `guest` → 无有效 Session（显示登录表单）
- *
- * 提供 `login(email, password)` 和 `logout()` 方法。
- */
 export function useNakamaAuth() {
-  const [state, setState] = useState<AuthState>({
-    status: "restoring",
-    session: null,
-    error: null,
-  });
+  const [state, setState] = useState<AuthState>({ status: "restoring", session: null, kind: "guest", error: null })
 
-  // 组件挂载时自动恢复 Session
   useEffect(() => {
-    let cancelled = false;
+    let cancelled = false
+    restoreOrCreateSession()
+      .then(({ session, kind }) => {
+        if (!cancelled) setState({ status: kind === "account" ? "authenticated" : "guest", session, kind, error: null })
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setState({ status: "guest", session: null, kind: "guest", error: error instanceof Error ? error.message : String(error) })
+      })
+    return () => { cancelled = true }
+  }, [])
 
-    async function init() {
-      const session = await restoreSession();
-      if (cancelled) return;
-
-      if (session) {
-        setState({ status: "authenticated", session, error: null });
-      } else {
-        setState({ status: "guest", session: null, error: null });
-      }
-    }
-
-    init();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // 邮箱登录
   const login = useCallback(async (email: string, password: string) => {
-    setState({ status: "guest", session: null, error: null });
-
     try {
-      const session = await loginWithEmail(email, password);
-      setState({ status: "authenticated", session, error: null });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      setState({ status: "guest", session: null, error: message });
+      const session = await loginWithEmail(email, password)
+      setState({ status: "authenticated", session, kind: "account", error: null })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      setState((current) => ({ ...current, error: message }))
+      throw error
     }
-  }, []);
+  }, [])
 
-  // 邮箱注册
   const register = useCallback(async (email: string, password: string) => {
-    setState({ status: "guest", session: null, error: null });
-
+    if (!state.session) throw new Error("访客会话尚未准备好")
     try {
-      const { session, created } = await registerWithEmail(email, password);
-      if (!created) {
-        // 该邮箱已注册
-        setState({ status: "guest", session: null, error: "该邮箱已注册，请直接登录" });
-      } else {
-        setState({ status: "authenticated", session, error: null });
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      setState({ status: "guest", session: null, error: message });
+      const session = await linkEmailAccount(state.session, email, password)
+      setState({ status: "authenticated", session, kind: "account", error: null })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      setState((current) => ({ ...current, error: message }))
+      throw error
     }
-  }, []);
+  }, [state.session])
 
-  // 登出
-  const logout = useCallback(() => {
-    clearSession();
-    setState({ status: "guest", session: null, error: null });
-  }, []);
+  const logout = useCallback(async () => {
+    const session = await logoutToFreshGuest()
+    setState({ status: "guest", session, kind: "guest", error: null })
+  }, [])
 
-  return {
-    status: state.status,
-    session: state.session,
-    error: state.error,
-    login,
-    register,
-    logout,
-  };
+  return { ...state, isGuest: state.kind === "guest", login, register, logout }
 }

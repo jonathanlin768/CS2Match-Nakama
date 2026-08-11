@@ -142,6 +142,13 @@ export interface PlayerState {
   player_name: string
   display_name: string
   portrait?: string
+  card_image?: string
+  avatar_crop?: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }
   team_id: string
   side: Side
   is_alive: boolean
@@ -212,6 +219,7 @@ export interface PlayerMatchStats {
   side: Side
   kills: number
   deaths: number
+  assists: number
   damage: number
   adr: number
   fk: number

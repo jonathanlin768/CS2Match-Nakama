@@ -17,8 +17,10 @@ type mapConfigState struct {
 }
 
 const (
-	defaultTeamAName        = "Falcons"
-	defaultTeamBName        = "Vitality"
+	defaultTeamAID          = "team_falcons"
+	defaultTeamBID          = "team_vitality"
+	defaultTeamAName        = "Team Falcons"
+	defaultTeamBName        = "Team Vitality"
 	battleReportDebugLogKey = "BattleReportDebugLog"
 )
 
@@ -57,11 +59,11 @@ func (s *Service) DebugSimuMatch(ctx context.Context, userID string, req DebugSi
 	if err != nil {
 		return nil, err
 	}
-	teamA, err := s.buildTeam("team_a", defaultTeamAName, teamAPlayerIDs)
+	teamA, err := s.buildNamedTeam("team_a", defaultTeamAName, teamAPlayerIDs)
 	if err != nil {
 		return nil, err
 	}
-	teamB, err := s.buildTeam("team_b", defaultTeamBName, teamBPlayerIDs)
+	teamB, err := s.buildNamedTeam("team_b", defaultTeamBName, teamBPlayerIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -70,9 +72,87 @@ func (s *Service) DebugSimuMatch(ctx context.Context, userID string, req DebugSi
 	if seed == 0 {
 		seed = time.Now().UnixNano()
 	}
+	result, err := s.simulate(ctx, fmt.Sprintf("debug_%d", time.Now().UnixMilli()), req.MapID, seed, teamA, teamB)
+	if err != nil {
+		return nil, err
+	}
+	return &DebugSimuMatchResponse{
+		MatchResult: result,
+		DebugEnabled: combatConstBool(
+			state.config.CombatConstants,
+			battleReportDebugLogKey,
+			false,
+		),
+	}, nil
+}
+
+// SimuMatch runs a server-authoritative tutorial or computer battle.
+func (s *Service) SimuMatch(ctx context.Context, userID string, req SimuMatchRequest) (*SimuMatchResponse, error) {
+	var mapID string
+	var teamA, teamB matchengine.TeamInput
+	var err error
+	switch req.Mode {
+	case "computer":
+		mapID = matchengine.DefaultMapID
+		teamAIDs, teamBIDs, lineupErr := defaultTeamPlayerIDs()
+		if lineupErr != nil {
+			return nil, lineupErr
+		}
+		teamA, err = s.buildConfigTeam(defaultTeamAID, teamAIDs)
+		if err == nil {
+			teamB, err = s.buildConfigTeam(defaultTeamBID, teamBIDs)
+		}
+	case "tutorial":
+		tutorial := cfg.GetTutorialBattle(req.TutorialConfigID)
+		if tutorial == nil || !tutorial.Enabled {
+			return nil, &MatchError{Code: "INVALID_TUTORIAL_CONFIG", Message: "tutorial config is unavailable"}
+		}
+		if req.ConfigVersion != tutorial.Version {
+			return nil, &MatchError{Code: "CONFIG_VERSION_MISMATCH", Message: "tutorial config has changed; reload and try again"}
+		}
+		if err = validateTutorialLineup(tutorial, req.PlayerIDs); err != nil {
+			return nil, err
+		}
+		mapID = tutorial.MapId
+		teamA, err = s.buildNamedTeam("tutorial_players", "你的临时阵容", req.PlayerIDs)
+		if err == nil {
+			teamB, err = s.buildConfigTeam(tutorial.OpponentTeamId, tutorial.OpponentPlayerIds)
+		}
+	default:
+		return nil, &MatchError{Code: "INVALID_MODE", Message: "mode must be tutorial or computer"}
+	}
+	if err != nil {
+		return nil, err
+	}
+	result, err := s.simulate(ctx, fmt.Sprintf("simu_%s_%d", userID, time.Now().UnixMilli()), mapID, time.Now().UnixNano(), teamA, teamB)
+	if err != nil {
+		return nil, err
+	}
+	return &SimuMatchResponse{
+		MatchResult: result,
+		DebugEnabled: combatConstBool(
+			s.mapConfig[mapID].config.CombatConstants,
+			battleReportDebugLogKey,
+			false,
+		),
+	}, nil
+}
+
+func (s *Service) simulate(ctx context.Context, matchID, mapID string, seed int64, teamA, teamB matchengine.TeamInput) (*matchengine.MatchResult, error) {
+	state, ok := s.mapConfig[mapID]
+	if !ok {
+		s.cacheMapConfig(mapID)
+		state, ok = s.mapConfig[mapID]
+	}
+	if !ok {
+		return nil, &MatchError{Code: "INVALID_MAP", Message: fmt.Sprintf("unsupported map: %s", mapID)}
+	}
+	if state.err != nil {
+		return nil, state.err
+	}
 	input := &matchengine.MatchInput{
-		MatchID:    fmt.Sprintf("debug_%d", time.Now().UnixMilli()),
-		MapID:      req.MapID,
+		MatchID:    matchID,
+		MapID:      mapID,
 		MapName:    state.config.MapName,
 		MapVersion: state.config.Version,
 		Seed:       seed,
@@ -95,14 +175,7 @@ func (s *Service) DebugSimuMatch(ctx context.Context, userID string, req DebugSi
 		}
 		return nil, &MatchError{Code: "SIMULATION_ERROR", Message: err.Error()}
 	}
-	return &DebugSimuMatchResponse{
-		MatchResult: result,
-		DebugEnabled: combatConstBool(
-			state.config.CombatConstants,
-			battleReportDebugLogKey,
-			false,
-		),
-	}, nil
+	return result, nil
 }
 
 func combatConstBool(constants matchengine.CombatConstants, key string, fallback bool) bool {
@@ -136,6 +209,18 @@ func (s *Service) cacheMapConfig(mapID string) {
 	s.mapConfig[mapID] = mapConfigState{config: mapConfig}
 }
 
+func (s *Service) buildConfigTeam(teamID string, playerIDs []string) (matchengine.TeamInput, error) {
+	teamConfig := cfg.GetTeam(teamID)
+	if teamConfig == nil {
+		return matchengine.TeamInput{}, &MatchError{Code: "INVALID_TEAM", Message: fmt.Sprintf("team not found: %s", teamID)}
+	}
+	return s.buildTeam(teamID, teamConfig.Name, playerIDs)
+}
+
+func (s *Service) buildNamedTeam(teamID string, name string, playerIDs []string) (matchengine.TeamInput, error) {
+	return s.buildTeam(teamID, name, playerIDs)
+}
+
 func (s *Service) buildTeam(teamID string, name string, playerIDs []string) (matchengine.TeamInput, error) {
 	team := matchengine.TeamInput{
 		TeamID:  teamID,
@@ -152,11 +237,47 @@ func (s *Service) buildTeam(teamID string, name string, playerIDs []string) (mat
 	return team, nil
 }
 
+func validateTutorialLineup(tutorial *cfg.TutorialBattle, playerIDs []string) error {
+	if len(playerIDs) != int(tutorial.RosterSize) {
+		return &MatchError{Code: "INVALID_LINEUP", Message: fmt.Sprintf("select exactly %d players", tutorial.RosterSize)}
+	}
+	prices := make(map[string]int)
+	for price, ids := range map[int][]string{5: tutorial.Tier5PlayerIds, 4: tutorial.Tier4PlayerIds, 3: tutorial.Tier3PlayerIds, 2: tutorial.Tier2PlayerIds, 1: tutorial.Tier1PlayerIds} {
+		for _, id := range ids {
+			prices[id] = price
+		}
+	}
+	seen, total := make(map[string]struct{}, len(playerIDs)), 0
+	for _, id := range playerIDs {
+		if _, duplicate := seen[id]; duplicate {
+			return &MatchError{Code: "INVALID_LINEUP", Message: "player ids must be unique"}
+		}
+		price, ok := prices[id]
+		if !ok || cfg.GetPlayer(id) == nil {
+			return &MatchError{Code: "INVALID_LINEUP", Message: fmt.Sprintf("player is not in tutorial pool: %s", id)}
+		}
+		seen[id], total = struct{}{}, total+price
+	}
+	if total > int(tutorial.Budget) {
+		return &MatchError{Code: "BUDGET_EXCEEDED", Message: fmt.Sprintf("lineup costs %d, budget is %d", total, tutorial.Budget)}
+	}
+	return nil
+}
+
 func playerFromConfig(p *cfg.Player) matchengine.PlayerProfile {
+	crop := &matchengine.ImageCrop{
+		X: float64(p.AvatarCropX), Y: float64(p.AvatarCropY),
+		Width: float64(p.AvatarCropWidth), Height: float64(p.AvatarCropHeight),
+	}
+	if p.CardImage == "" || !crop.Valid() {
+		crop = nil
+	}
 	return matchengine.PlayerProfile{
 		PlayerID:    p.Id,
 		DisplayName: p.Name,
 		Portrait:    p.Portrait,
+		CardImage:   p.CardImage,
+		AvatarCrop:  crop,
 		RoleTags:    append([]string(nil), p.Positions...),
 		Attributes: matchengine.PlayerAttributes{
 			Entry:       int(p.Entry),
@@ -194,9 +315,9 @@ func defaultTeamPlayerIDs() ([]string, []string, error) {
 
 		var target *[]string
 		switch {
-		case strings.EqualFold(strings.TrimSpace(player.Team), defaultTeamAName):
+		case strings.EqualFold(strings.TrimSpace(player.TeamId), defaultTeamAID):
 			target = &teamAPlayerIDs
-		case strings.EqualFold(strings.TrimSpace(player.Team), defaultTeamBName):
+		case strings.EqualFold(strings.TrimSpace(player.TeamId), defaultTeamBID):
 			target = &teamBPlayerIDs
 		default:
 			continue

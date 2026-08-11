@@ -13,6 +13,14 @@ $ProjectDir = Split-Path -Parent $ScriptDir
 $Image = "luban-runner"
 $Conf = "configs/luban.conf"
 $DefinesDir = Join-Path $ProjectDir "configs/Defines"
+$Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+$ManualFiles = @{}
+foreach ($relativePath in @('server/config/go.mod', 'server/config/loader.go', 'server/config/config_test.go', 'client/src/config/index.ts')) {
+    $absolutePath = Join-Path $ProjectDir $relativePath
+    if (Test-Path $absolutePath) {
+        $ManualFiles[$relativePath] = Get-Content $absolutePath -Raw -Encoding UTF8
+    }
+}
 
 Write-Host "=============================================="
 Write-Host "  Luban Config Export (Docker)"
@@ -115,14 +123,17 @@ Write-Host "[OK] Client config done" -ForegroundColor Green
 # Post-process: add @ts-nocheck to generated TypeScript (suppresses unused-param warnings)
 $schemaPath = "client/src/config/schema.ts"
 if (Test-Path $schemaPath) {
-    $schemaContent = Get-Content $schemaPath -Raw
+    $schemaContent = Get-Content $schemaPath -Raw -Encoding UTF8
     if ($schemaContent -notmatch '// @ts-nocheck') {
-        Set-Content $schemaPath -Value ("// @ts-nocheck`n" + $schemaContent)
+        [System.IO.File]::WriteAllText((Join-Path $ProjectDir $schemaPath), ("// @ts-nocheck`n" + $schemaContent), $Utf8NoBom)
         Write-Host "[POST] Added @ts-nocheck to schema.ts" -ForegroundColor Yellow
     }
 }
 
 # Ensure hand-written files exist (Luban may have cleared outputCodeDir)
+foreach ($entry in $ManualFiles.GetEnumerator()) {
+    [System.IO.File]::WriteAllText((Join-Path $ProjectDir $entry.Key), $entry.Value, $Utf8NoBom)
+}
 if (-not (Test-Path server/config/go.mod)) {
     Set-Content -Path server/config/go.mod -Value @"
 module windypath.com/cs2match/config
@@ -315,6 +326,25 @@ export async function loadConfig(): Promise<InstanceType<typeof Tables>> {
 }
 '@
     Write-Host "[POST] Recreated client/src/config/index.ts" -ForegroundColor Yellow
+}
+
+# Luban's templates leave indentation on blank lines. Normalize generated
+# artifacts so regeneration does not introduce formatting-only diffs.
+$goFiles = (Get-ChildItem (Join-Path $ProjectDir 'server/config') -Filter '*.go').FullName
+for ($attempt = 1; $attempt -le 3; $attempt++) {
+    & gofmt -w $goFiles
+    if ($LASTEXITCODE -eq 0) { break }
+    if ($attempt -eq 3) { throw "gofmt failed after $attempt attempts" }
+    Start-Sleep -Milliseconds 250
+}
+foreach ($relativePath in @('server/config/go.mod', 'client/src/config/schema.ts', 'client/src/config/index.ts')) {
+    $absolutePath = Join-Path $ProjectDir $relativePath
+    if (Test-Path $absolutePath) {
+        $content = [IO.File]::ReadAllText($absolutePath)
+        $content = [Text.RegularExpressions.Regex]::Replace($content, '[ \t]+(?=\r?$)', '', [Text.RegularExpressions.RegexOptions]::Multiline)
+        $content = $content.TrimEnd() + "`n"
+        [IO.File]::WriteAllText($absolutePath, $content, $Utf8NoBom)
+    }
 }
 
 Write-Host ""

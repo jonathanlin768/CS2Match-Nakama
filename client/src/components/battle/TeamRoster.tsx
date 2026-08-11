@@ -13,7 +13,7 @@ export default function TeamRoster({
   align: "left" | "right"
 }) {
   return (
-    <div className="flex h-full w-[470px] shrink-0 flex-col gap-2">
+    <div className="battle-roster flex h-full w-[clamp(260px,24vw,470px)] shrink-0 flex-col gap-2">
       {team.players.map((player) => (
         <div key={player.id} className="min-h-0 flex-1">
           <PlayerCard player={player} side={team.side} align={align} />

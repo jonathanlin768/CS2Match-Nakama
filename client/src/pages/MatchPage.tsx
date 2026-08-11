@@ -1,68 +1,35 @@
+import { Bot, ChevronLeft, Radio, Users } from "lucide-react"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
-import SubPageHeader from "../components/SubPageHeader"
+import { simuMatch } from "../api/simu"
 import { useAuth } from "../context/AuthContext"
-import { debugSimuMatch } from "../api/simu"
-import type { MatchReport } from "../types/match-report"
 
 export default function MatchPage() {
   const navigate = useNavigate()
   const { session } = useAuth()
   const [loading, setLoading] = useState(false)
-  const [loadingPhase, setLoadingPhase] = useState<"idle" | "matching" | "simulating" | "entering">("idle")
 
-  const handleStartMatch = async () => {
-    if (!session) {
-      toast.error("请先登录")
-      return
-    }
-
+  async function startComputerBattle() {
+    if (!session) return
     setLoading(true)
-    setLoadingPhase("matching")
     try {
-      await new Promise((resolve) => setTimeout(resolve, 250))
-      setLoadingPhase("simulating")
-      const report: MatchReport = await debugSimuMatch(session, "de_dust2")
-      setLoadingPhase("entering")
-      await new Promise((resolve) => setTimeout(resolve, 250))
+      const report = await simuMatch(session, { mode: "computer" })
       navigate("/battle", { state: { report } })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      toast.error(`模拟战斗失败，请重试：${message}`)
-    } finally {
-      setLoading(false)
-      setLoadingPhase("idle")
-    }
+    } catch (error) {
+      toast.error(`生成比赛失败：${error instanceof Error ? error.message : String(error)}`)
+    } finally { setLoading(false) }
   }
 
-  const buttonLabel =
-    loadingPhase === "matching"
-      ? "匹配中"
-      : loadingPhase === "simulating"
-        ? "正在模拟比赛"
-        : loadingPhase === "entering"
-          ? "进入战场"
-          : "开始匹配"
-
-  return (
-    // Full viewport wrapper that centers the fixed 1920x900 game frame
-    <div className="flex min-h-screen w-screen items-center justify-center overflow-hidden bg-black">
-      {/* Fixed game frame: 1920 x 900 — blank canvas with a single bottom-right CTA */}
-      <main className="relative flex h-[900px] w-[1920px] shrink-0 flex-col overflow-hidden bg-background">
-        {/* 二级界面头部：← 匹配比赛 */}
-        <SubPageHeader title="匹配比赛" />
-
-        {/* 开始匹配 — pinned to the bottom-right corner */}
-        <button
-          type="button"
-          onClick={handleStartMatch}
-          disabled={loading}
-          className="absolute bottom-[60px] right-[80px] rounded-md bg-gradient-to-r from-gold to-gold/80 px-12 py-4 text-xl font-bold text-background shadow-lg transition-all hover:from-gold/90 hover:to-gold/70 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {buttonLabel}
-        </button>
-      </main>
+  return <div className="sub-page match-page">
+    <button className="back-button" onClick={() => navigate("/")}><ChevronLeft size={18} />返回主页</button>
+    <header className="page-heading"><p className="eyebrow">MATCH</p><h1>选择对战方式</h1><p>本期电脑对战会在一次请求内生成完整比赛战报；路人匹配仍在开发。</p></header>
+    <div className="mode-grid">
+      <button className="mode-card available" onClick={() => void startComputerBattle()} disabled={loading}>
+        <span><Bot size={34} /></span><div><small>随时可玩</small><h2>电脑对战</h2><p>Falcons 对阵 Vitality，使用服务器真实配置和完整比赛引擎。</p></div><strong>{loading ? "正在准备比赛…" : "开始模拟"}</strong>
+      </button>
+      <button className="mode-card" disabled><span><Users size={34} /></span><div><small>真人队列</small><h2>路人匹配</h2><p>需要权威房间、断线恢复与实时同步，将在独立版本开放。</p></div><strong><Radio size={15} />未开放</strong></button>
     </div>
-  )
+    {loading && <div className="request-status"><span className="app-spinner" /><div><b>正在请求电脑模拟</b><p>服务器正在构建阵容并生成完整比赛战报，请稍候。</p></div></div>}
+  </div>
 }

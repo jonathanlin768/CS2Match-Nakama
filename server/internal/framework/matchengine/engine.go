@@ -24,6 +24,7 @@ type playerStatAccumulator struct {
 	Side       string
 	Kills      int
 	Deaths     int
+	Assists    int
 	Damage     int
 	FK         int
 	MK         int
@@ -364,6 +365,7 @@ func (e *MatchEngine) buildFinalStats(totalRounds int, winnerTeamID string) *Fin
 			Side:       acc.Side,
 			Kills:      acc.Kills,
 			Deaths:     acc.Deaths,
+			Assists:    acc.Assists,
 			Damage:     acc.Damage,
 			ADR:        math.Round(adr*10) / 10,
 			FK:         acc.FK,

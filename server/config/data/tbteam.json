@@ -1,0 +1,30 @@
+[
+  {
+    "id": "team_vitality",
+    "name": "Team Vitality",
+    "shortName": "VIT",
+    "nickname": "蜜蜂",
+    "logo": "teams/vitality.png"
+  },
+  {
+    "id": "team_spirit",
+    "name": "Team Spirit",
+    "shortName": "Spirit",
+    "nickname": "绿龙",
+    "logo": "teams/spirit.png"
+  },
+  {
+    "id": "team_falcons",
+    "name": "Team Falcons",
+    "shortName": "Falcons",
+    "nickname": "猎鹰",
+    "logo": "teams/falcons.png"
+  },
+  {
+    "id": "team_navi",
+    "name": "Natus Vincere",
+    "shortName": "NAVI",
+    "nickname": "NAVI",
+    "logo": "teams/navi.png"
+  }
+]

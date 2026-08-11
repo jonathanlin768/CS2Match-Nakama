@@ -36,17 +36,20 @@ export class CombatConst {
     }
 
     /**
-     * 常量�?     */
+     * 常量键
+     */
     readonly key: string
     /**
      * 类别
      */
     readonly category: string
     /**
-     * 值类�?     */
+     * 值类型
+     */
     readonly valueType: string
     /**
-     * 原始�?     */
+     * 原始值
+     */
     readonly value: string
     /**
      * 下限
@@ -117,14 +120,16 @@ export class EncounterModifier {
      */
     readonly side: string
     /**
-     * 关联属�?     */
+     * 关联属性
+     */
     readonly attribute: string
     /**
      * 权重
      */
     readonly weight: number
     /**
-     * 原因�?     */
+     * 原因码
+     */
     readonly reasonCode: string
 
     resolve(tables:Tables) {
@@ -226,7 +231,8 @@ export class MapEdge {
      */
     readonly baseTime: number
     /**
-     * 体能消�?     */
+     * 体能消耗
+     */
     readonly staminaCost: number
     /**
      * 转移风险
@@ -325,7 +331,8 @@ export class MapNode {
      */
     readonly nodeType: string
     /**
-     * 默认优势�?     */
+     * 默认优势方
+     */
     readonly defaultSide: string
     /**
      * 归一化X
@@ -340,7 +347,8 @@ export class MapNode {
      */
     readonly floor: string
     /**
-     * 节点范围用�?     */
+     * 节点范围用途
+     */
     readonly areaUsages: string[]
     /**
      * 节点范围形状
@@ -351,7 +359,7 @@ export class MapNode {
      */
     readonly radius: number
     /**
-     * 多边形顶�?x1,y1;x2,y2
+     * 多边形顶点 x1,y1;x2,y2
      */
     readonly points: string
 
@@ -411,7 +419,8 @@ export class MapTag {
      */
     readonly category: string
     /**
-     * 标签�?     */
+     * 标签值
+     */
     readonly value: string
     /**
      * 阵营
@@ -422,7 +431,8 @@ export class MapTag {
      */
     readonly weight: number
     /**
-     * 原因�?     */
+     * 原因码
+     */
     readonly reasonCode: string
     /**
      * 说明
@@ -452,8 +462,8 @@ export class Player {
         this.id = _json_.id
         if (_json_.name === undefined) { throw new Error() }
         this.name = _json_.name
-        if (_json_.team === undefined) { throw new Error() }
-        this.team = _json_.team
+        if (_json_.teamId === undefined) { throw new Error() }
+        this.teamId = _json_.teamId
         if (_json_.nationality === undefined) { throw new Error() }
         this.nationality = _json_.nationality
         if (_json_.entry === undefined) { throw new Error() }
@@ -492,6 +502,16 @@ export class Player {
         this.rarity = _json_.rarity
         if (_json_.portrait === undefined) { throw new Error() }
         this.portrait = _json_.portrait
+        if (_json_.cardImage === undefined) { throw new Error() }
+        this.cardImage = _json_.cardImage
+        if (_json_.avatarCropX === undefined) { throw new Error() }
+        this.avatarCropX = _json_.avatarCropX
+        if (_json_.avatarCropY === undefined) { throw new Error() }
+        this.avatarCropY = _json_.avatarCropY
+        if (_json_.avatarCropWidth === undefined) { throw new Error() }
+        this.avatarCropWidth = _json_.avatarCropWidth
+        if (_json_.avatarCropHeight === undefined) { throw new Error() }
+        this.avatarCropHeight = _json_.avatarCropHeight
     }
 
     /**
@@ -503,8 +523,10 @@ export class Player {
      */
     readonly name: string
     /**
-     * 所属战�?     */
-    readonly team: string
+     * Team ID
+     */
+    readonly teamId: string
+    teamId_ref: Team | undefined
     /**
      * 国籍
      */
@@ -581,8 +603,33 @@ export class Player {
      * 头像路径
      */
     readonly portrait: string
+    /**
+     * 完整卡面
+     */
+    readonly cardImage: string
+    /**
+     * 头像裁切 X
+     */
+    readonly avatarCropX: number
+    /**
+     * 头像裁切 Y
+     */
+    readonly avatarCropY: number
+    /**
+     * 头像裁切宽度
+     */
+    readonly avatarCropWidth: number
+    /**
+     * 头像裁切高度
+     */
+    readonly avatarCropHeight: number
 
     resolve(tables:Tables) {
+
+
+        this.teamId_ref = tables.TbTeam.get(this.teamId)
+
+
 
 
 
@@ -654,10 +701,12 @@ export class Route {
      */
     readonly nodes: string[]
     /**
-     * 最少人�?     */
+     * 最少人数
+     */
     readonly minPlayers: number
     /**
-     * 最多人�?     */
+     * 最多人数
+     */
     readonly maxPlayers: number
     /**
      * 路线标签
@@ -738,17 +787,20 @@ export class RouteTemplate {
      */
     readonly tempo: string
     /**
-     * 推荐最少人�?     */
+     * 推荐最少人数
+     */
     readonly recommendedMin: number
     /**
-     * 推荐最多人�?     */
+     * 推荐最多人数
+     */
     readonly recommendedMax: number
     /**
      * 关键角色
      */
     readonly requiredRoles: string[]
     /**
-     * 属性权�?     */
+     * 属性权重
+     */
     readonly keyAttributes: string
     /**
      * 路线ID
@@ -759,7 +811,8 @@ export class RouteTemplate {
      */
     readonly routeAllocations: Map<string, number>
     /**
-     * 可生成场�?     */
+     * 可生成场景
+     */
     readonly scenarioIds: string[]
     /**
      * 地图标签
@@ -770,10 +823,12 @@ export class RouteTemplate {
      */
     readonly commonCtSetupIds: string[]
     /**
-     * 成功后阶�?     */
+     * 成功后阶段
+     */
     readonly successNextPhase: string
     /**
-     * 失败候选模�?     */
+     * 失败候选模板
+     */
     readonly failureFallbacks: string[]
 
     resolve(tables:Tables) {
@@ -852,10 +907,12 @@ export class Scenario {
      */
     readonly tempo: string
     /**
-     * 姿�?     */
+     * 姿态
+     */
     readonly posture: string
     /**
-     * 道具上下�?     */
+     * 道具上下文
+     */
     readonly utilityContext: string
     /**
      * 地图标签
@@ -881,6 +938,161 @@ export class Scenario {
 
 
 
+
+    }
+}
+
+
+
+
+
+export class Team {
+
+    constructor(_json_: any) {
+        if (_json_.id === undefined) { throw new Error() }
+        this.id = _json_.id
+        if (_json_.name === undefined) { throw new Error() }
+        this.name = _json_.name
+        if (_json_.shortName === undefined) { throw new Error() }
+        this.shortName = _json_.shortName
+        if (_json_.nickname === undefined) { throw new Error() }
+        this.nickname = _json_.nickname
+        if (_json_.logo === undefined) { throw new Error() }
+        this.logo = _json_.logo
+    }
+
+    /**
+     * Team ID
+     */
+    readonly id: string
+    /**
+     * Official name
+     */
+    readonly name: string
+    /**
+     * Short name
+     */
+    readonly shortName: string
+    /**
+     * Chinese nickname
+     */
+    readonly nickname: string
+    /**
+     * Logo path
+     */
+    readonly logo: string
+
+    resolve(tables:Tables) {
+
+
+
+
+
+    }
+}
+
+
+
+
+
+export class TutorialBattle {
+
+    constructor(_json_: any) {
+        if (_json_.id === undefined) { throw new Error() }
+        this.id = _json_.id
+        if (_json_.version === undefined) { throw new Error() }
+        this.version = _json_.version
+        if (_json_.enabled === undefined) { throw new Error() }
+        this.enabled = _json_.enabled
+        if (_json_.budget === undefined) { throw new Error() }
+        this.budget = _json_.budget
+        if (_json_.rosterSize === undefined) { throw new Error() }
+        this.rosterSize = _json_.rosterSize
+        if (_json_.mapId === undefined) { throw new Error() }
+        this.mapId = _json_.mapId
+        if (_json_.tier5PlayerIds === undefined) { throw new Error() }
+        { this.tier5PlayerIds = []; for(let _ele0 of _json_.tier5PlayerIds) { let _e0; _e0 = _ele0; this.tier5PlayerIds.push(_e0);}}
+        if (_json_.tier4PlayerIds === undefined) { throw new Error() }
+        { this.tier4PlayerIds = []; for(let _ele0 of _json_.tier4PlayerIds) { let _e0; _e0 = _ele0; this.tier4PlayerIds.push(_e0);}}
+        if (_json_.tier3PlayerIds === undefined) { throw new Error() }
+        { this.tier3PlayerIds = []; for(let _ele0 of _json_.tier3PlayerIds) { let _e0; _e0 = _ele0; this.tier3PlayerIds.push(_e0);}}
+        if (_json_.tier2PlayerIds === undefined) { throw new Error() }
+        { this.tier2PlayerIds = []; for(let _ele0 of _json_.tier2PlayerIds) { let _e0; _e0 = _ele0; this.tier2PlayerIds.push(_e0);}}
+        if (_json_.tier1PlayerIds === undefined) { throw new Error() }
+        { this.tier1PlayerIds = []; for(let _ele0 of _json_.tier1PlayerIds) { let _e0; _e0 = _ele0; this.tier1PlayerIds.push(_e0);}}
+        if (_json_.opponentTeamId === undefined) { throw new Error() }
+        this.opponentTeamId = _json_.opponentTeamId
+        if (_json_.opponentPlayerIds === undefined) { throw new Error() }
+        { this.opponentPlayerIds = []; for(let _ele0 of _json_.opponentPlayerIds) { let _e0; _e0 = _ele0; this.opponentPlayerIds.push(_e0);}}
+    }
+
+    /**
+     * Config ID
+     */
+    readonly id: string
+    /**
+     * Version
+     */
+    readonly version: number
+    /**
+     * Enabled
+     */
+    readonly enabled: boolean
+    /**
+     * Budget
+     */
+    readonly budget: number
+    /**
+     * Roster size
+     */
+    readonly rosterSize: number
+    /**
+     * Map ID
+     */
+    readonly mapId: string
+    /**
+     * 5-cost players
+     */
+    readonly tier5PlayerIds: string[]
+    /**
+     * 4-cost players
+     */
+    readonly tier4PlayerIds: string[]
+    /**
+     * 3-cost players
+     */
+    readonly tier3PlayerIds: string[]
+    /**
+     * 2-cost players
+     */
+    readonly tier2PlayerIds: string[]
+    /**
+     * 1-cost players
+     */
+    readonly tier1PlayerIds: string[]
+    /**
+     * Opponent team
+     */
+    readonly opponentTeamId: string
+    opponentTeamId_ref: Team | undefined
+    /**
+     * Opponent lineup
+     */
+    readonly opponentPlayerIds: string[]
+
+    resolve(tables:Tables) {
+
+
+
+
+
+
+
+
+
+
+
+        this.opponentTeamId_ref = tables.TbTeam.get(this.opponentTeamId)
 
     }
 }
@@ -917,7 +1129,8 @@ export class Visibility {
      */
     readonly id: string
     /**
-     * 观察�?     */
+     * 观察点
+     */
     readonly fromNode: string
     /**
      * 被观察点
@@ -1276,6 +1489,68 @@ export class TbScenario {
 
 
 
+export class TbTeam {
+    private _dataMap: Map<string, Team>
+    private _dataList: Team[]
+    constructor(_json_: any) {
+        this._dataMap = new Map<string, Team>()
+        this._dataList = []
+        for(var _json2_ of _json_) {
+            let _v: Team
+            _v = new Team(_json2_)
+            this._dataList.push(_v)
+            this._dataMap.set(_v.id, _v)
+        }
+    }
+
+    getDataMap(): Map<string, Team> { return this._dataMap; }
+    getDataList(): Team[] { return this._dataList; }
+
+    get(key: string): Team | undefined { return this._dataMap.get(key); }
+
+    resolve(tables:Tables) {
+        for(let  data of this._dataList)
+        {
+            data.resolve(tables)
+        }
+    }
+
+}
+
+
+
+
+export class TbTutorialBattle {
+    private _dataMap: Map<string, TutorialBattle>
+    private _dataList: TutorialBattle[]
+    constructor(_json_: any) {
+        this._dataMap = new Map<string, TutorialBattle>()
+        this._dataList = []
+        for(var _json2_ of _json_) {
+            let _v: TutorialBattle
+            _v = new TutorialBattle(_json2_)
+            this._dataList.push(_v)
+            this._dataMap.set(_v.id, _v)
+        }
+    }
+
+    getDataMap(): Map<string, TutorialBattle> { return this._dataMap; }
+    getDataList(): TutorialBattle[] { return this._dataList; }
+
+    get(key: string): TutorialBattle | undefined { return this._dataMap.get(key); }
+
+    resolve(tables:Tables) {
+        for(let  data of this._dataList)
+        {
+            data.resolve(tables)
+        }
+    }
+
+}
+
+
+
+
 export class TbVisibility {
     private _dataMap: Map<string, Visibility>
     private _dataList: Visibility[]
@@ -1330,6 +1605,10 @@ export class Tables {
     get TbRouteTemplate(): TbRouteTemplate  { return this._TbRouteTemplate;}
     private _TbScenario: TbScenario
     get TbScenario(): TbScenario  { return this._TbScenario;}
+    private _TbTeam: TbTeam
+    get TbTeam(): TbTeam  { return this._TbTeam;}
+    private _TbTutorialBattle: TbTutorialBattle
+    get TbTutorialBattle(): TbTutorialBattle  { return this._TbTutorialBattle;}
     private _TbVisibility: TbVisibility
     get TbVisibility(): TbVisibility  { return this._TbVisibility;}
 
@@ -1344,6 +1623,8 @@ export class Tables {
         this._TbRoute = new TbRoute(loader('tbroute'))
         this._TbRouteTemplate = new TbRouteTemplate(loader('tbroutetemplate'))
         this._TbScenario = new TbScenario(loader('tbscenario'))
+        this._TbTeam = new TbTeam(loader('tbteam'))
+        this._TbTutorialBattle = new TbTutorialBattle(loader('tbtutorialbattle'))
         this._TbVisibility = new TbVisibility(loader('tbvisibility'))
 
         this._TbCombatConst.resolve(this)
@@ -1356,8 +1637,8 @@ export class Tables {
         this._TbRoute.resolve(this)
         this._TbRouteTemplate.resolve(this)
         this._TbScenario.resolve(this)
+        this._TbTeam.resolve(this)
+        this._TbTutorialBattle.resolve(this)
         this._TbVisibility.resolve(this)
     }
 }
-
-

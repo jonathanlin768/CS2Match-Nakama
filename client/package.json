@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "node --experimental-strip-types --test src/pages/battle-playback.test.mjs",
+    "test": "node --experimental-strip-types --test src/pages/battle-playback.test.mjs src/tests/lightweight-client.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

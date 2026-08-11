@@ -34,6 +34,10 @@ export async function addFriendsByUsername(
   return client.addFriends(session, undefined, [username]);
 }
 
+export async function addFriendById(session: Session, userId: string): Promise<boolean> {
+  return client.addFriends(session, [userId]);
+}
+
 /**
  * 删除好友关系。
  *

@@ -530,3 +530,822 @@ button {
 .metric strong {
   font-size: 22px;
 }
+
+/* Config workbench */
+.configShell {
+  height: 100vh;
+  display: grid;
+  grid-template-rows: 52px minmax(0, 1fr);
+  background: #0f1115;
+}
+
+.configHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 7px 12px;
+  border-bottom: 1px solid #313943;
+  background: #171b21;
+}
+
+.configBrand,
+.configNav,
+.configCommands {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.configBrand {
+  flex: 0 0 auto;
+  padding-right: 12px;
+  color: #f1f5f8;
+}
+
+.configNav {
+  flex: 0 0 auto;
+}
+
+.configNavButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #aeb8c3;
+}
+
+.configNavButton:hover {
+  background: #222932;
+  color: #fff;
+}
+
+.configNavButton.active {
+  border-color: #506174;
+  background: #e3ebf3;
+  color: #111820;
+}
+
+.configCommands {
+  min-width: 0;
+  margin-left: auto;
+}
+
+.configCommands .commandButton,
+.configCommands .primaryButton {
+  min-height: 32px;
+}
+
+.configStatus {
+  max-width: 280px;
+  overflow: hidden;
+  color: #aeb8c3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.configStatus.error {
+  color: #ff9dad;
+}
+
+.configPageContent {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.configPageContent > .appShell,
+.mapConfigPage {
+  height: 100%;
+}
+
+.configWorkspacePage {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 190px;
+}
+
+.configWorkspaceMain {
+  min-height: 0;
+  display: grid;
+}
+
+.recordEditorLayout {
+  grid-template-columns: 290px minmax(0, 1fr);
+}
+
+.allTablesLayout {
+  grid-template-columns: 300px minmax(0, 1fr);
+}
+
+.configSidebar {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px;
+  border-right: 1px solid #303943;
+  background: #151a20;
+}
+
+.panelHeading,
+.tableEditorHeader,
+.detailHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panelHeading h1,
+.tableEditorHeader h2,
+.detailHeader h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.panelHeading p,
+.tableEditorHeader p,
+.detailHeader p {
+  margin: 3px 0 0;
+  color: #8f9ba8;
+  font-size: 12px;
+}
+
+.searchInput,
+.configField input,
+.configField select,
+.tagEditor input,
+.filterGrid select,
+.genericConfigTable input,
+.genericConfigTable select,
+.playerPicker input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #3a4653;
+  border-radius: 4px;
+  background: #11161c;
+  color: #e8edf2;
+  padding: 7px 8px;
+}
+
+.searchInput:focus,
+.configField input:focus,
+.configField select:focus,
+.tagEditor input:focus,
+.genericConfigTable input:focus,
+.genericConfigTable select:focus,
+.playerPicker input:focus {
+  border-color: #79a8cf;
+  outline: 1px solid #79a8cf;
+}
+
+.filterGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+.rowCommands {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rowCommands.compact {
+  justify-content: flex-end;
+}
+
+.iconButton.danger {
+  color: #ff9dad;
+  border-color: #70404a;
+}
+
+.recordList,
+.tableFileList {
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recordButton,
+.tableFileButton {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 48px;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #dfe5eb;
+  text-align: left;
+}
+
+.recordButton:hover,
+.tableFileButton:hover {
+  background: #20272f;
+}
+
+.recordButton.active,
+.tableFileButton.active {
+  border-color: #4d667d;
+  background: #263442;
+}
+
+.recordButton strong,
+.recordButton span,
+.tableFileButton strong,
+.tableFileButton small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recordButton span,
+.tableFileButton small {
+  margin-top: 3px;
+  color: #8f9ba8;
+  font-size: 11px;
+}
+
+.tableFileButton > span {
+  min-width: 0;
+}
+
+.ownerBadge {
+  flex: 0 0 auto;
+  border: 1px solid #465565;
+  border-radius: 3px;
+  padding: 3px 5px;
+  color: #aeb9c5;
+  font-size: 10px;
+  font-style: normal;
+}
+
+.ownerBadge.map {
+  border-color: #876535;
+  color: #edc879;
+}
+
+.ownerBadge.player,
+.ownerBadge.team,
+.ownerBadge.tutorial {
+  border-color: #377860;
+  color: #87d5b6;
+}
+
+.recordDetailPane,
+.tableEditorArea {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background: #101419;
+}
+
+.detailForm {
+  padding: 14px 18px 24px;
+}
+
+.detailHeader {
+  min-height: 52px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #2b333c;
+}
+
+.formSection {
+  padding: 12px 0 16px;
+  border-bottom: 1px solid #252c34;
+}
+
+.formSection h3 {
+  margin: 0 0 10px;
+  color: #bac5cf;
+  font-size: 13px;
+}
+
+.formGrid {
+  display: grid;
+  gap: 10px 12px;
+}
+
+.formGrid.twoColumns {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.formGrid.threeColumns {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.configField {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: #9fabb7;
+  font-size: 12px;
+}
+
+.configField small {
+  color: #798693;
+  line-height: 1.4;
+}
+
+.inlineField {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+.inlineField .commandButton {
+  min-height: 34px;
+}
+
+.abilityGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(100px, 1fr));
+  gap: 9px;
+}
+
+.tagEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.tagList,
+.selectedChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.tag,
+.selectedChips button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid #4e6578;
+  border-radius: 3px;
+  background: #23303b;
+  color: #d9e4ed;
+  padding: 3px 6px;
+  font-size: 11px;
+}
+
+.tag button {
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #aeb9c5;
+  padding: 0;
+}
+
+.imageField {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.imagePreview {
+  width: 180px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #3a4653;
+  border-radius: 4px;
+  background: #0d1116;
+  color: #778491;
+}
+
+.imagePreview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.imageFieldControls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.imageFieldControls .configField {
+  width: 100%;
+}
+
+.playerVisualEditor {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(360px, 1.5fr) minmax(150px, 0.55fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.playerVisualEditor h4 {
+  margin: 0 0 8px;
+  color: #dce4eb;
+  font-size: 12px;
+}
+
+.visualSourceColumn,
+.visualCropColumn,
+.visualResultColumn {
+  min-width: 0;
+}
+
+.visualSourceColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.fullCardPreview,
+.cropCanvas,
+.avatarCropPreview {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #3a4653;
+  border-radius: 4px;
+  background: #0d1116;
+  color: #778491;
+}
+
+.fullCardPreview {
+  width: min(100%, 220px);
+  aspect-ratio: 2 / 3;
+}
+
+.fullCardPreview img,
+.cropCanvas img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.visualColumnHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.visualColumnHeading h4 {
+  margin: 0;
+}
+
+.cropCanvas {
+  width: 100%;
+  min-height: 280px;
+}
+
+.cropCanvas .ReactCrop {
+  max-height: 520px;
+}
+
+.cropCanvas .ReactCrop__child-wrapper {
+  max-height: 520px;
+}
+
+.cropCanvas .ReactCrop__child-wrapper img {
+  max-height: 520px;
+  object-fit: contain;
+}
+
+.avatarCropPreview {
+  width: min(100%, 180px);
+  aspect-ratio: 5 / 7;
+  background-repeat: no-repeat;
+}
+
+.cropValues {
+  margin: 10px 0 0;
+  font-size: 11px;
+}
+
+.cropValues div {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.cropValues dt {
+  color: #7f8c99;
+}
+
+.cropValues dd {
+  margin: 0;
+  color: #cdd6df;
+  font-variant-numeric: tabular-nums;
+}
+
+.legacyPortrait {
+  margin-top: 14px;
+  color: #9fabb7;
+}
+
+.legacyPortrait summary {
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+.issueButton {
+  width: 100%;
+  display: block;
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  color: inherit;
+  text-align: left;
+}
+
+.issueButton:disabled {
+  cursor: default;
+}
+
+.fieldWarning {
+  margin: 0;
+  color: #efc46e;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.referenceList p {
+  margin: 0 0 5px;
+  color: #b9c5d0;
+}
+
+.switchField {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #b8c3ce;
+}
+
+.tierEditorGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.playerPicker {
+  min-width: 0;
+  border: 1px solid #303a45;
+  border-radius: 4px;
+  background: #151a20;
+}
+
+.playerPicker > header {
+  display: grid;
+  grid-template-columns: auto minmax(160px, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 8px;
+  border-bottom: 1px solid #2b333c;
+}
+
+.playerPicker > header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.playerPicker > header span {
+  color: #83909c;
+  font-size: 11px;
+}
+
+.playerPicker > header label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.selectedChips {
+  min-height: 34px;
+  padding: 6px 8px;
+  border-bottom: 1px solid #252c34;
+}
+
+.playerPickerOptions {
+  max-height: 190px;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px;
+  padding: 6px;
+}
+
+.playerPickerOptions label {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+}
+
+.playerPickerOptions label.active {
+  border-color: #39795f;
+  background: #1d392f;
+}
+
+.playerPickerOptions label span,
+.playerPickerOptions label strong,
+.playerPickerOptions label small {
+  min-width: 0;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playerPickerOptions label small {
+  margin-top: 2px;
+  color: #8794a0;
+  font-size: 10px;
+}
+
+.tableEditorArea {
+  display: flex;
+  flex-direction: column;
+}
+
+.tableEditorHeader {
+  flex: 0 0 auto;
+  padding: 11px 14px;
+  border-bottom: 1px solid #303943;
+  background: #171c22;
+}
+
+.genericTableScroll {
+  min-height: 0;
+  overflow: auto;
+}
+
+.genericConfigTable {
+  min-width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.genericConfigTable th,
+.genericConfigTable td {
+  width: 178px;
+  padding: 5px;
+  border-right: 1px solid #2c343d;
+  border-bottom: 1px solid #2c343d;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.genericConfigTable th:first-child,
+.genericConfigTable td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: 46px;
+  background: #171c22;
+  text-align: center;
+}
+
+.genericConfigTable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #1d242c;
+  color: #dce4eb;
+}
+
+.genericConfigTable th small {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  color: #788694;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.genericConfigTable tr.selected td {
+  background: #1c2b36;
+}
+
+.genericConfigTable select[multiple] {
+  min-height: 64px;
+}
+
+.mapOwnedNotice,
+.emptyState.large {
+  margin: auto;
+  max-width: 520px;
+  padding: 32px;
+  text-align: center;
+}
+
+.mapOwnedNotice h2 {
+  margin: 12px 0 6px;
+  font-size: 18px;
+}
+
+.mapOwnedNotice p,
+.emptyState {
+  color: #8f9ba8;
+}
+
+.configBottomPanel {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 36px minmax(0, 1fr);
+  border-top: 1px solid #303943;
+  background: #15191f;
+}
+
+.configBottomTabs {
+  display: flex;
+  gap: 5px;
+  padding: 5px 10px;
+  border-bottom: 1px solid #252c34;
+}
+
+.configBottomTabs button {
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: #98a4b0;
+  padding: 3px 8px;
+}
+
+.configBottomTabs button.active {
+  border-color: #536575;
+  background: #e3ebf3;
+  color: #111820;
+}
+
+.configBottomContent {
+  overflow: auto;
+  padding: 7px 10px;
+}
+
+.configBottomContent p {
+  margin: 0 0 5px;
+}
+
+.issueLine {
+  padding: 5px 7px;
+  border-left: 3px solid #8b6a2e;
+  background: #201f19;
+}
+
+.issueLine.error {
+  border-color: #a44454;
+  background: #25191d;
+  color: #ffc0ca;
+}
+
+@media (max-width: 1360px) {
+  .configStatus {
+    display: none;
+  }
+
+  .abilityGrid {
+    grid-template-columns: repeat(4, minmax(100px, 1fr));
+  }
+
+  .formGrid.threeColumns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .playerVisualEditor {
+    grid-template-columns: minmax(180px, 0.7fr) minmax(320px, 1.3fr);
+  }
+
+  .visualResultColumn {
+    grid-column: 1 / -1;
+  }
+}
