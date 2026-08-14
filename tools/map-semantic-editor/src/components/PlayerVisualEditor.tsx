@@ -4,6 +4,7 @@ import ReactCrop, { centerCrop, makeAspectCrop, type PercentCrop } from 'react-i
 import 'react-image-crop/dist/ReactCrop.css'
 import { toNumberValue } from '../lib/configValues'
 import { configAssetUrl } from '../lib/api'
+import { configFieldLabel } from '../lib/configLabels'
 import type { LubanCellValue, LubanRow } from '../lib/luban'
 import { useConfigStore } from '../store/configStore'
 
@@ -62,7 +63,7 @@ export function PlayerVisualEditor({ row, onChange }: { row: LubanRow; onChange:
         <div className="fullCardPreview">{cardImage && !missing ? <img src={configAssetUrl(cardImage)} alt="完整选手卡面" onError={() => setMissing(true)} /> : <span>{missing ? '卡面图片缺失' : '尚未配置完整卡面'}</span>}</div>
         <input ref={inputRef} className="visuallyHidden" type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => void selectFile(event.target.files?.[0])} />
         <button type="button" className="commandButton" onClick={() => inputRef.current?.click()}><ImagePlus size={16} />上传卡面</button>
-        <label className="configField"><span>cardImage</span><input value={cardImage} onChange={(event) => { setMissing(false); onChange({ cardImage: event.target.value }) }} /></label>
+        <label className="configField"><span>{configFieldLabel('cardImage')}</span><input value={cardImage} onChange={(event) => { setMissing(false); onChange({ cardImage: event.target.value }) }} /></label>
       </div>
 
       <div className="visualCropColumn">
@@ -78,10 +79,10 @@ export function PlayerVisualEditor({ row, onChange }: { row: LubanRow; onChange:
         <h4>战斗头像预览</h4>
         <div className="avatarCropPreview" style={previewStyle}>{!previewStyle ? <span>5:7</span> : null}</div>
         <dl className="cropValues">
-          <div><dt>x</dt><dd>{(crop.x / 100).toFixed(4)}</dd></div>
-          <div><dt>y</dt><dd>{(crop.y / 100).toFixed(4)}</dd></div>
-          <div><dt>width</dt><dd>{(crop.width / 100).toFixed(4)}</dd></div>
-          <div><dt>height</dt><dd>{(crop.height / 100).toFixed(4)}</dd></div>
+          <div><dt>{configFieldLabel('avatarCropX')}</dt><dd>{(crop.x / 100).toFixed(4)}</dd></div>
+          <div><dt>{configFieldLabel('avatarCropY')}</dt><dd>{(crop.y / 100).toFixed(4)}</dd></div>
+          <div><dt>{configFieldLabel('avatarCropWidth')}</dt><dd>{(crop.width / 100).toFixed(4)}</dd></div>
+          <div><dt>{configFieldLabel('avatarCropHeight')}</dt><dd>{(crop.height / 100).toFixed(4)}</dd></div>
         </dl>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { ConfigBottomPanel } from '../components/ConfigBottomPanel'
 import { FormField, ImageField, RecordList } from '../components/ConfigControls'
 import { toStringValue } from '../lib/configValues'
 import { rowId } from '../lib/luban'
+import { configTableLabel } from '../lib/configLabels'
 import { useConfigStore } from '../store/configStore'
 
 const fileName = '#Team.xlsx'
@@ -58,7 +59,7 @@ export function TeamConfigPage() {
     <div className="configWorkspacePage">
       <section className="configWorkspaceMain recordEditorLayout">
         <aside className="configSidebar">
-          <div className="panelHeading"><div><h1>战队配置</h1><p>{document.rows.length} 支战队 {document.dirty ? '· 未保存' : ''}</p></div></div>
+          <div className="panelHeading"><div><h1>{configTableLabel(document.tableName, '战队配置')}</h1><p>{document.rows.length} 支战队 {document.dirty ? '· 未保存' : ''}</p></div></div>
           <input className="searchInput" value={search} placeholder="搜索战队" onChange={(event) => setSearch(event.target.value)} />
           <div className="rowCommands compact"><button type="button" className="iconButton" title="新增战队" onClick={createRow}><Plus size={16} /></button><button type="button" className="iconButton" title="复制战队" disabled={!row} onClick={() => duplicateRow(fileName, selectedIndex)}><Copy size={16} /></button><button type="button" className="iconButton danger" title="删除战队" disabled={!row || busy} onClick={() => void removeRow()}><Trash2 size={16} /></button></div>
           <RecordList rows={filteredRows} selectedIndex={filteredRows.indexOf(row!)} onSelect={selectFiltered} secondary={(candidate) => `${toStringValue(candidate.shortName)} · ${rowId(candidate)}`} />

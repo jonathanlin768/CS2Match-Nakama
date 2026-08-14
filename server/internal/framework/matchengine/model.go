@@ -58,13 +58,14 @@ type TeamInput struct {
 
 // PlayerProfile 表示选手静态档案。武器不属于该档案，需按回合阵营派生。
 type PlayerProfile struct {
-	PlayerID    string           `json:"player_id"`             // 选手唯一标识。
-	DisplayName string           `json:"display_name"`          // 战报和客户端使用的显示名称。
-	Portrait    string           `json:"portrait,omitempty"`    // 头像资源路径或 URL。
-	CardImage   string           `json:"card_image,omitempty"`  // 完整选手卡面资源路径或 URL。
-	AvatarCrop  *ImageCrop       `json:"avatar_crop,omitempty"` // 从完整卡面裁切战斗头像的归一化矩形。
-	RoleTags    []string         `json:"role_tags,omitempty"`   // 选手位置、职责等角色标签。
-	Attributes  PlayerAttributes `json:"attributes"`            // 参与模拟计算的静态能力值。
+	PlayerID       string           `json:"player_id"`             // 整场比赛内唯一且不透明的实例标识。
+	ConfigPlayerID string           `json:"config_player_id"`      // 对应 TbPlayer.id 的策划选手标识。
+	DisplayName    string           `json:"display_name"`          // 战报和客户端使用的显示名称。
+	Portrait       string           `json:"portrait,omitempty"`    // 头像资源路径或 URL。
+	CardImage      string           `json:"card_image,omitempty"`  // 完整选手卡面资源路径或 URL。
+	AvatarCrop     *ImageCrop       `json:"avatar_crop,omitempty"` // 从完整卡面裁切战斗头像的归一化矩形。
+	RoleTags       []string         `json:"role_tags,omitempty"`   // 选手位置、职责等角色标签。
+	Attributes     PlayerAttributes `json:"attributes"`            // 参与模拟计算的静态能力值。
 }
 
 // ImageCrop 表示基于原图自然尺寸的归一化裁切矩形。完整卡面固定为 2:3，裁切输出固定为 5:7。
@@ -314,26 +315,27 @@ type GameEvent struct {
 
 // PlayerState 表示单个选手在回合结束时的公开状态。
 type PlayerState struct {
-	PlayerID    string        `json:"player_id"`              // 选手唯一标识。
-	PlayerName  string        `json:"player_name"`            // 兼容旧战报消费者的选手名称。
-	DisplayName string        `json:"display_name"`           // 客户端优先使用的选手显示名称。
-	Portrait    string        `json:"portrait,omitempty"`     // 头像资源路径或 URL。
-	CardImage   string        `json:"card_image,omitempty"`   // 完整选手卡面资源路径或 URL。
-	AvatarCrop  *ImageCrop    `json:"avatar_crop,omitempty"`  // 归一化 5:7 头像裁切矩形。
-	TeamID      string        `json:"team_id"`                // 本回合所属队伍 ID。
-	Side        string        `json:"side"`                   // 本回合所属 T/CT 阵营。
-	IsAlive     bool          `json:"is_alive"`               // 兼容旧战报消费者的存活标记。
-	Alive       bool          `json:"alive"`                  // 当前标准存活标记。
-	HP          int           `json:"hp"`                     // 回合结束时生命值。
-	Stamina     int           `json:"stamina"`                // 回合结束时体力值。
-	Focus       int           `json:"focus"`                  // 回合结束时专注值。
-	CurrentNode string        `json:"current_node,omitempty"` // 当前所在地图节点 ID。
-	HasBomb     bool          `json:"has_bomb,omitempty"`     // 是否携带炸弹。
-	Kills       int           `json:"kills"`                  // 本回合击杀数。
-	Deaths      int           `json:"deaths"`                 // 本回合死亡数。
-	Damage      int           `json:"damage"`                 // 本回合造成的总伤害。
-	RoleTags    []string      `json:"role_tags,omitempty"`    // 选手角色标签快照。
-	Weapon      WeaponLoadout `json:"weapon"`                 // 本回合按阵营派生的装备。
+	PlayerID       string        `json:"player_id"`              // 整场比赛内唯一且不透明的实例标识。
+	ConfigPlayerID string        `json:"config_player_id"`       // 对应 TbPlayer.id 的策划选手标识。
+	PlayerName     string        `json:"player_name"`            // 兼容旧战报消费者的选手名称。
+	DisplayName    string        `json:"display_name"`           // 客户端优先使用的选手显示名称。
+	Portrait       string        `json:"portrait,omitempty"`     // 头像资源路径或 URL。
+	CardImage      string        `json:"card_image,omitempty"`   // 完整选手卡面资源路径或 URL。
+	AvatarCrop     *ImageCrop    `json:"avatar_crop,omitempty"`  // 归一化 5:7 头像裁切矩形。
+	TeamID         string        `json:"team_id"`                // 本回合所属队伍 ID。
+	Side           string        `json:"side"`                   // 本回合所属 T/CT 阵营。
+	IsAlive        bool          `json:"is_alive"`               // 兼容旧战报消费者的存活标记。
+	Alive          bool          `json:"alive"`                  // 当前标准存活标记。
+	HP             int           `json:"hp"`                     // 回合结束时生命值。
+	Stamina        int           `json:"stamina"`                // 回合结束时体力值。
+	Focus          int           `json:"focus"`                  // 回合结束时专注值。
+	CurrentNode    string        `json:"current_node,omitempty"` // 当前所在地图节点 ID。
+	HasBomb        bool          `json:"has_bomb,omitempty"`     // 是否携带炸弹。
+	Kills          int           `json:"kills"`                  // 本回合击杀数。
+	Deaths         int           `json:"deaths"`                 // 本回合死亡数。
+	Damage         int           `json:"damage"`                 // 本回合造成的总伤害。
+	RoleTags       []string      `json:"role_tags,omitempty"`    // 选手角色标签快照。
+	Weapon         WeaponLoadout `json:"weapon"`                 // 本回合按阵营派生的装备。
 }
 
 // BombPublicState 表示某一事件或回合结束时的公开炸弹状态。
@@ -358,19 +360,20 @@ type NodeControlState struct {
 
 // PlayerMatchStats 表示单个选手的整场聚合统计。
 type PlayerMatchStats struct {
-	PlayerID   string  `json:"player_id"`   // 选手唯一标识。
-	PlayerName string  `json:"player_name"` // 选手显示名称。
-	TeamID     string  `json:"team_id"`     // 选手所属队伍 ID。
-	Side       string  `json:"side"`        // 选手开局时的初始阵营，仅作摘要展示。
-	Kills      int     `json:"kills"`       // 整场击杀数。
-	Deaths     int     `json:"deaths"`      // 整场死亡数。
-	Assists    int     `json:"assists"`     // 整场助攻数。
-	Damage     int     `json:"damage"`      // 整场造成的总伤害。
-	ADR        float64 `json:"adr"`         // 场均回合伤害，即总伤害除以总回合数。
-	FK         int     `json:"fk"`          // 整场首杀次数。
-	MK         int     `json:"mk"`          // 整场多杀回合次数。
-	Plants     int     `json:"plants"`      // 整场下包次数。
-	Defuses    int     `json:"defuses"`     // 整场拆包次数。
+	PlayerID       string  `json:"player_id"`        // 整场比赛内唯一且不透明的实例标识。
+	ConfigPlayerID string  `json:"config_player_id"` // 对应 TbPlayer.id 的策划选手标识。
+	PlayerName     string  `json:"player_name"`      // 选手显示名称。
+	TeamID         string  `json:"team_id"`          // 选手所属队伍 ID。
+	Side           string  `json:"side"`             // 选手开局时的初始阵营，仅作摘要展示。
+	Kills          int     `json:"kills"`            // 整场击杀数。
+	Deaths         int     `json:"deaths"`           // 整场死亡数。
+	Assists        int     `json:"assists"`          // 整场助攻数。
+	Damage         int     `json:"damage"`           // 整场造成的总伤害。
+	ADR            float64 `json:"adr"`              // 场均回合伤害，即总伤害除以总回合数。
+	FK             int     `json:"fk"`               // 整场首杀次数。
+	MK             int     `json:"mk"`               // 整场多杀回合次数。
+	Plants         int     `json:"plants"`           // 整场下包次数。
+	Defuses        int     `json:"defuses"`          // 整场拆包次数。
 }
 
 // FinalStats 表示比赛结束后的比分与选手聚合统计。

@@ -12,18 +12,32 @@ const TABLE_NAMES = [
   'tbtutorialbattle', 'tbvisibility',
 ];
 
+const CONFIG_LOAD_TIMEOUT_MS = 10_000;
+
 export async function loadConfig(): Promise<InstanceType<typeof Tables>> {
   const dataCache: Record<string, unknown> = {};
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), CONFIG_LOAD_TIMEOUT_MS);
 
-  await Promise.all(
-    TABLE_NAMES.map(async (name) => {
-      const resp = await fetch(`/data/config/${name}.json`);
-      if (!resp.ok) {
-        throw new Error(`Failed to load config table "${name}": ${resp.status}`);
-      }
-      dataCache[name] = await resp.json();
-    })
-  );
+  try {
+    await Promise.all(
+      TABLE_NAMES.map(async (name) => {
+        const resp = await fetch(`/data/config/${name}.json`, {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        if (!resp.ok) {
+          throw new Error(`Failed to load config table "${name}": ${resp.status}`);
+        }
+        dataCache[name] = await resp.json();
+      })
+    );
+  } catch (reason) {
+    if (controller.signal.aborted) throw new Error('读取游戏配置超时，请检查网络后重试', { cause: reason });
+    throw reason;
+  } finally {
+    window.clearTimeout(timeout);
+  }
 
   const loader = (tableName: string) => {
     const data = dataCache[tableName];

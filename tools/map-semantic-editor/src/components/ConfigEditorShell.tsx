@@ -1,4 +1,4 @@
-import { Database, Map, Play, RefreshCw, Save, SaveAll, Shield, Table2, Users } from 'lucide-react'
+import { Database, Map, Play, RefreshCw, Save, SaveAll, ServerCog, Shield, Table2, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { AllTablesPage } from '../pages/AllTablesPage'
 import { MapConfigPage } from '../pages/MapConfigPage'
@@ -25,6 +25,7 @@ export function ConfigEditorShell() {
   const saveCurrent = useConfigStore((state) => state.saveCurrent)
   const saveAll = useConfigStore((state) => state.saveAll)
   const runExport = useConfigStore((state) => state.runExport)
+  const updateLocal = useConfigStore((state) => state.updateLocal)
   const currentFile = pageFiles[page] ?? (page === 'tables' ? activeFile ?? undefined : undefined)
   const dirtyCount = Object.values(documents).filter((document) => document.dirty).length
 
@@ -58,6 +59,7 @@ export function ConfigEditorShell() {
               <button type="button" className="commandButton" disabled={busy || !currentFile || !documents[currentFile]?.dirty} onClick={() => void saveCurrent(currentFile)}><Save size={16} />保存当前表</button>
               <button type="button" className="commandButton" disabled={busy || dirtyCount === 0} onClick={() => void saveAll()}><SaveAll size={16} />保存全部{dirtyCount > 0 ? ` (${dirtyCount})` : ''}</button>
               <button type="button" className="primaryButton secondary" disabled={busy} onClick={() => void runExport()}><Play size={16} />运行导表</button>
+              <button type="button" className="primaryButton secondary" disabled={busy} onClick={() => void updateLocal()} title="导表、编译后端插件、重建前端并重启本地 Docker 服务"><ServerCog size={16} />更新本地前后端</button>
             </>
           ) : null}
         </div>

@@ -18,18 +18,19 @@ type MatchEngine struct {
 }
 
 type playerStatAccumulator struct {
-	PlayerID   string
-	PlayerName string
-	TeamID     string
-	Side       string
-	Kills      int
-	Deaths     int
-	Assists    int
-	Damage     int
-	FK         int
-	MK         int
-	Plants     int
-	Defuses    int
+	PlayerID       string
+	ConfigPlayerID string
+	PlayerName     string
+	TeamID         string
+	Side           string
+	Kills          int
+	Deaths         int
+	Assists        int
+	Damage         int
+	FK             int
+	MK             int
+	Plants         int
+	Defuses        int
 }
 
 func newProductionMatchEngine(input *MatchInput) *MatchEngine {
@@ -303,6 +304,9 @@ func (e *MatchEngine) validateInput() error {
 	if err := validateTeam(e.input.TeamB); err != nil {
 		return err
 	}
+	if e.input.TeamA.TeamID == e.input.TeamB.TeamID {
+		return newError("INVALID_LINEUP", "team ids must be unique within a match")
+	}
 	seen := map[string]struct{}{}
 	for _, p := range append(e.input.TeamA.Players, e.input.TeamB.Players...) {
 		if _, ok := seen[p.PlayerID]; ok {
@@ -338,8 +342,8 @@ func validateTeam(team TeamInput) error {
 		return newError("INVALID_LINEUP", "team %s must contain exactly 5 players", team.TeamID)
 	}
 	for _, p := range team.Players {
-		if p.PlayerID == "" || p.DisplayName == "" {
-			return newError("INVALID_LINEUP", "player id and display name are required")
+		if p.PlayerID == "" || p.ConfigPlayerID == "" || p.DisplayName == "" {
+			return newError("INVALID_LINEUP", "player id, config player id, and display name are required")
 		}
 	}
 	return nil
@@ -359,19 +363,20 @@ func (e *MatchEngine) buildFinalStats(totalRounds int, winnerTeamID string) *Fin
 			adr = float64(acc.Damage) / float64(totalRounds)
 		}
 		stats = append(stats, &PlayerMatchStats{
-			PlayerID:   acc.PlayerID,
-			PlayerName: acc.PlayerName,
-			TeamID:     acc.TeamID,
-			Side:       acc.Side,
-			Kills:      acc.Kills,
-			Deaths:     acc.Deaths,
-			Assists:    acc.Assists,
-			Damage:     acc.Damage,
-			ADR:        math.Round(adr*10) / 10,
-			FK:         acc.FK,
-			MK:         acc.MK,
-			Plants:     acc.Plants,
-			Defuses:    acc.Defuses,
+			PlayerID:       acc.PlayerID,
+			ConfigPlayerID: acc.ConfigPlayerID,
+			PlayerName:     acc.PlayerName,
+			TeamID:         acc.TeamID,
+			Side:           acc.Side,
+			Kills:          acc.Kills,
+			Deaths:         acc.Deaths,
+			Assists:        acc.Assists,
+			Damage:         acc.Damage,
+			ADR:            math.Round(adr*10) / 10,
+			FK:             acc.FK,
+			MK:             acc.MK,
+			Plants:         acc.Plants,
+			Defuses:        acc.Defuses,
 		})
 	}
 	return &FinalStats{WinnerTeamID: winnerTeamID, PlayerStats: stats}
@@ -390,10 +395,11 @@ func (e *MatchEngine) buildStats() map[string]*playerStatAccumulator {
 	for _, team := range []TeamInput{e.input.TeamA, e.input.TeamB} {
 		for _, p := range team.Players {
 			stats[p.PlayerID] = &playerStatAccumulator{
-				PlayerID:   p.PlayerID,
-				PlayerName: p.DisplayName,
-				TeamID:     team.TeamID,
-				Side:       e.input.InitialSideByTeam[team.TeamID],
+				PlayerID:       p.PlayerID,
+				ConfigPlayerID: p.ConfigPlayerID,
+				PlayerName:     p.DisplayName,
+				TeamID:         team.TeamID,
+				Side:           e.input.InitialSideByTeam[team.TeamID],
 			}
 		}
 	}

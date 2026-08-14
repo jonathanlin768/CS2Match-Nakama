@@ -2,6 +2,7 @@ import { Copy, ExternalLink, Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { ConfigBottomPanel } from '../components/ConfigBottomPanel'
 import { displayLabel, rowId, type LubanCellValue, type LubanField, type LubanRow } from '../lib/luban'
+import { configFieldLabel, configTableLabel } from '../lib/configLabels'
 import { useConfigStore } from '../store/configStore'
 
 export function AllTablesPage({ onOpenMap }: { onOpenMap: () => void }) {
@@ -33,8 +34,8 @@ export function AllTablesPage({ onOpenMap }: { onOpenMap: () => void }) {
           {summary && summary.owner !== 'map' && !document ? <div className="emptyState large">{summary.warnings.join('；') || '表格读取失败'}</div> : null}
           {document && summary?.owner !== 'map' ? (
             <>
-              <header className="tableEditorHeader"><div><h2>{document.fileName}</h2><p>{document.tableName} · {document.rows.length} 行 {document.dirty ? '· 有未保存修改' : ''}</p></div><div className="rowCommands"><button type="button" className="commandButton" onClick={() => addRow(document.fileName)}><Plus size={15} />新增行</button><button type="button" className="commandButton" disabled={!document.rows[selectedRow]} onClick={() => duplicateRow(document.fileName, selectedRow)}><Copy size={15} />复制行</button><button type="button" className="dangerButton" disabled={!document.rows[selectedRow]} onClick={() => void deleteRow(document.fileName, selectedRow)}><Trash2 size={15} />删除行</button></div></header>
-              <div className="genericTableScroll"><table className="genericConfigTable"><thead><tr><th>#</th>{document.fields.map((field) => <th key={field.key} title={`${field.type}\n${field.comment}`}>{field.key}<small>{field.type}</small></th>)}</tr></thead><tbody>{document.rows.map((row, rowIndex) => <tr key={`${rowId(row)}-${rowIndex}`} className={selectedRow === rowIndex ? 'selected' : ''} onClick={() => setSelectedRow(rowIndex)}><td>{rowIndex + 1}</td>{document.fields.map((field) => <td key={field.key}><CellEditor field={field} row={row} documents={documents} onChange={(value) => updateCell(document.fileName, rowIndex, field.key, value)} /></td>)}</tr>)}</tbody></table></div>
+              <header className="tableEditorHeader"><div><h2>{document.fileName}</h2><p>{configTableLabel(document.tableName)} · {document.rows.length} 行 {document.dirty ? '· 有未保存修改' : ''}</p></div><div className="rowCommands"><button type="button" className="commandButton" onClick={() => addRow(document.fileName)}><Plus size={15} />新增行</button><button type="button" className="commandButton" disabled={!document.rows[selectedRow]} onClick={() => duplicateRow(document.fileName, selectedRow)}><Copy size={15} />复制行</button><button type="button" className="dangerButton" disabled={!document.rows[selectedRow]} onClick={() => void deleteRow(document.fileName, selectedRow)}><Trash2 size={15} />删除行</button></div></header>
+              <div className="genericTableScroll"><table className="genericConfigTable"><thead><tr><th>#</th>{document.fields.map((field) => <th key={field.key} title={`${field.type}\n${field.comment}`}>{configFieldLabel(field.key, field.comment)}<small>{field.type}</small></th>)}</tr></thead><tbody>{document.rows.map((row, rowIndex) => <tr key={`${rowId(row)}-${rowIndex}`} className={selectedRow === rowIndex ? 'selected' : ''} onClick={() => setSelectedRow(rowIndex)}><td>{rowIndex + 1}</td>{document.fields.map((field) => <td key={field.key}><CellEditor field={field} row={row} documents={documents} onChange={(value) => updateCell(document.fileName, rowIndex, field.key, value)} /></td>)}</tr>)}</tbody></table></div>
             </>
           ) : null}
         </section>

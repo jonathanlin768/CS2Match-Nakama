@@ -5,6 +5,7 @@ import { FormField, ImageField, RecordList, ReferenceSelect, TagEditor } from '.
 import { PlayerVisualEditor } from '../components/PlayerVisualEditor'
 import { toListValue, toNumberValue, toStringValue } from '../lib/configValues'
 import { rowId, type LubanRow } from '../lib/luban'
+import { configTableLabel } from '../lib/configLabels'
 import { useConfigStore } from '../store/configStore'
 
 const fileName = '#Player.xlsx'
@@ -69,7 +70,7 @@ export function PlayerConfigPage() {
     <div className="configWorkspacePage">
       <section className="configWorkspaceMain recordEditorLayout playerLayout">
         <aside className="configSidebar">
-          <div className="panelHeading"><div><h1>选手配置</h1><p>{document.rows.length} 名选手 {document.dirty ? '· 未保存' : ''}</p></div></div>
+          <div className="panelHeading"><div><h1>{configTableLabel(document.tableName, '选手配置')}</h1><p>{document.rows.length} 名选手 {document.dirty ? '· 未保存' : ''}</p></div></div>
           <input className="searchInput" value={search} placeholder="搜索选手或 ID" onChange={(event) => setSearch(event.target.value)} />
           <div className="filterGrid"><select value={teamFilter} onChange={(event) => setTeamFilter(event.target.value)}><option value="">全部战队</option>{teams.map((team) => <option key={rowId(team)} value={rowId(team)}>{toStringValue(team.shortName) || rowId(team)}</option>)}</select><select value={rarityFilter} onChange={(event) => setRarityFilter(event.target.value)}><option value="">全部稀有度</option>{rarities.map((rarity) => <option key={rarity}>{rarity}</option>)}</select><select value={positionFilter} onChange={(event) => setPositionFilter(event.target.value)}><option value="">全部位置</option>{positions.map((position) => <option key={position}>{position}</option>)}</select></div>
           <div className="rowCommands compact"><button type="button" className="iconButton" title="新增选手" onClick={createRow}><Plus size={16} /></button><button type="button" className="iconButton" title="复制选手" disabled={!row} onClick={() => duplicateRow(fileName, selectedIndex)}><Copy size={16} /></button><button type="button" className="iconButton danger" title="删除选手" disabled={!row || busy} onClick={() => void removeRow()}><Trash2 size={16} /></button></div>

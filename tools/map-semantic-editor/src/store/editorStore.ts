@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { fetchProject, fetchPublishedProject, importLubanConfig, runGenConfig, saveProject, writeLuban, type GenConfigOutput, type ImportLogEntry, type WriteLogEntry } from '../lib/api'
+import { fetchProject, fetchPublishedProject, importLubanConfig, runGenConfig, saveProject, updateLocalConfig, writeLuban, type GenConfigOutput, type ImportLogEntry, type WriteLogEntry } from '../lib/api'
 import type { MapEdge, MapNode, MapProject, Point, RangeDraft, Route, SelectedObject, ToolMode, Visibility } from '../lib/model'
 import { cellToPoints } from '../lib/model'
 import { sampleNode } from '../lib/sampling'
@@ -36,6 +36,7 @@ interface EditorState {
   clearPreview: () => void
   write: () => Promise<void>
   runExport: () => Promise<void>
+  updateLocal: () => Promise<void>
   addNode: (point: Point, risk?: boolean) => void
   moveNode: (id: string, point: Point) => void
   updateNode: (id: string, patch: Partial<MapNode>) => void
@@ -216,7 +217,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   runExport: async () => {
     set({
       busy: true,
-      genConfig: { status: 'running', exitCode: null, durationMs: 0, stdout: '', stderr: '' },
+      genConfig: { operation: 'gen-config', status: 'running', exitCode: null, durationMs: 0, stdout: '', stderr: '' },
       serviceMessage: '导表运行中',
     })
     try {
@@ -224,8 +225,26 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       set({ genConfig: output, serviceMessage: output.status === 'success' ? '导表成功' : '导表失败', busy: false })
     } catch (error) {
       set({
-        genConfig: { status: 'failed', exitCode: null, durationMs: 0, stdout: '', stderr: errorMessage(error) },
+        genConfig: { operation: 'gen-config', status: 'failed', exitCode: null, durationMs: 0, stdout: '', stderr: errorMessage(error) },
         serviceMessage: '导表失败',
+        busy: false,
+      })
+    }
+  },
+
+  updateLocal: async () => {
+    set({
+      busy: true,
+      genConfig: { operation: 'update-local', status: 'running', exitCode: null, durationMs: 0, stdout: '', stderr: '' },
+      serviceMessage: '正在更新本地前后端',
+    })
+    try {
+      const output = await updateLocalConfig()
+      set({ genConfig: output, serviceMessage: output.status === 'success' ? '本地前后端更新成功' : '本地前后端更新失败', busy: false })
+    } catch (error) {
+      set({
+        genConfig: { operation: 'update-local', status: 'failed', exitCode: null, durationMs: 0, stdout: '', stderr: errorMessage(error) },
+        serviceMessage: '本地前后端更新失败',
         busy: false,
       })
     }

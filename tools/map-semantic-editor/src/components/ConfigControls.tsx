@@ -1,11 +1,12 @@
 import { ImagePlus, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { displayLabel, rowId, type LubanRow } from '../lib/luban'
+import { configFieldLabel } from '../lib/configLabels'
 import { configAssetUrl } from '../lib/api'
 import { useConfigStore } from '../store/configStore'
 
 export function FormField({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return <label className="configField"><span>{label}</span>{children}{hint ? <small>{hint}</small> : null}</label>
+  return <label className="configField"><span>{configFieldLabel(label)}</span>{children}{hint ? <small>{hint}</small> : null}</label>
 }
 
 export function ImageField({ label, kind, value, onChange }: { label: string; kind: 'portrait' | 'team' | 'player-card'; value: string; onChange: (value: string) => void }) {

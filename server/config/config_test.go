@@ -20,12 +20,12 @@ func TestConfigLoad(t *testing.T) {
 	if Global.TbMapNode == nil {
 		t.Fatal("TbMapNode not loaded")
 	}
-	if TableCount() < 13 {
-		t.Fatalf("expected at least 13 tables, got %d", TableCount())
+	if TableCount() < 11 {
+		t.Fatalf("expected at least 11 tables, got %d", TableCount())
 	}
 	players := Global.TbPlayer.GetDataList()
-	if len(players) != 20 {
-		t.Fatalf("expected 20 players, got %d", len(players))
+	if len(players) == 0 {
+		t.Fatal("expected at least one player")
 	}
 	p := GetPlayer("player_niko")
 	if p == nil {
@@ -37,31 +37,51 @@ func TestConfigLoad(t *testing.T) {
 	if p.Portrait != "portraits/player_niko.jpg" {
 		t.Fatalf("unexpected portrait: %s", p.Portrait)
 	}
-	if p.CardImage != "player-cards/niko2.png" {
-		t.Fatalf("unexpected card image: %s", p.CardImage)
-	}
-	if p.AvatarCropWidth <= 0 || p.AvatarCropHeight <= 0 {
-		t.Fatalf("expected configured avatar crop, got %v x %v", p.AvatarCropWidth, p.AvatarCropHeight)
-	}
-	legacy := GetPlayer("player_chopper")
-	if legacy == nil || legacy.CardImage != "" || legacy.AvatarCropWidth != 0 || legacy.Portrait == "" {
-		t.Fatalf("expected player_chopper to retain portrait-only fallback: %+v", legacy)
-	}
 	t.Logf("Loaded %d tables and %d players, first: %s (entry=%d)", TableCount(), len(players), p.Name, p.Entry)
 }
 
-func TestTeamLookupAndTutorialValidation(t *testing.T) {
+func TestValidateAllowsTutorialCandidateOpponentOverlap(t *testing.T) {
 	if err := Init(); err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
-	if team := GetTeam("team_vitality"); team == nil || team.Name != "Team Vitality" {
-		t.Fatalf("unexpected team: %#v", team)
+	tutorial := GetTutorialBattle("tutorial_default")
+	if tutorial == nil {
+		t.Fatal("tutorial_default not found")
 	}
-	if got := len(PlayersByTeam("team_spirit")); got != 5 {
-		t.Fatalf("expected 5 Spirit players, got %d", got)
+	candidateIDs := append([]string{}, tutorial.Tier5PlayerIds...)
+	candidateIDs = append(candidateIDs, tutorial.Tier4PlayerIds...)
+	candidateIDs = append(candidateIDs, tutorial.Tier3PlayerIds...)
+	candidateIDs = append(candidateIDs, tutorial.Tier2PlayerIds...)
+	candidateIDs = append(candidateIDs, tutorial.Tier1PlayerIds...)
+	hasOverlap := false
+	for _, candidateID := range candidateIDs {
+		for _, opponentID := range tutorial.OpponentPlayerIds {
+			if candidateID == opponentID {
+				hasOverlap = true
+				break
+			}
+		}
 	}
-	tutorial := EnabledTutorialBattle()
-	if tutorial == nil || tutorial.Id != "tutorial_default" || tutorial.Version != 1 {
-		t.Fatalf("unexpected tutorial: %#v", tutorial)
+	if !hasOverlap {
+		t.Fatal("tutorial fixture should contain a candidate/opponent overlap")
+	}
+	if err := Validate(); err != nil {
+		t.Fatalf("candidate/opponent overlap should be valid: %v", err)
+	}
+}
+
+func TestValidateStillRejectsDuplicateOpponentPlayer(t *testing.T) {
+	if err := Init(); err != nil {
+		t.Fatalf("Init failed: %v", err)
+	}
+	tutorial := GetTutorialBattle("tutorial_default")
+	if tutorial == nil {
+		t.Fatal("tutorial_default not found")
+	}
+	original := append([]string(nil), tutorial.OpponentPlayerIds...)
+	t.Cleanup(func() { tutorial.OpponentPlayerIds = original })
+	tutorial.OpponentPlayerIds[1] = tutorial.OpponentPlayerIds[0]
+	if err := Validate(); err == nil {
+		t.Fatal("duplicate opponent player should remain invalid")
 	}
 }

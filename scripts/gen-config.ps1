@@ -143,6 +143,7 @@ go 1.24.5
     Write-Host "[POST] Recreated server/config/go.mod" -ForegroundColor Yellow
 }
 
+$loaderRecreated = $false
 if (-not (Test-Path server/config/loader.go)) {
     Set-Content -Path server/config/loader.go -Value @'
 package cfg
@@ -152,6 +153,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 )
 
@@ -202,7 +204,7 @@ func Init() error {
 	}
 
 	Global = tables
-	return nil
+	return Validate()
 }
 
 // TableCount returns the number of loaded tables
@@ -241,6 +243,7 @@ func GetFirstItem() *item {
 }
 '@
     Write-Host "[POST] Recreated server/config/loader.go" -ForegroundColor Yellow
+    $loaderRecreated = $true
 }
 
 if (-not (Test-Path server/config/config_test.go)) {
@@ -271,15 +274,15 @@ func TestConfigLoad(t *testing.T) {
 		t.Fatalf("expected at least 11 tables, got %d", TableCount())
 	}
 	players := Global.TbPlayer.GetDataList()
-	if len(players) != 10 {
-		t.Fatalf("expected 10 players, got %d", len(players))
+	if len(players) == 0 {
+		t.Fatal("expected at least one player")
 	}
 	p := GetPlayer("player_niko")
 	if p == nil {
 		t.Fatal("player_niko not found")
 	}
-	if p.Team != "Falcons" {
-		t.Fatalf("expected Falcons, got %s", p.Team)
+	if p.TeamId != "team_falcons" {
+		t.Fatalf("expected team_falcons, got %s", p.TeamId)
 	}
 	if p.Portrait != "portraits/player_niko.jpg" {
 		t.Fatalf("unexpected portrait: %s", p.Portrait)
@@ -326,6 +329,121 @@ export async function loadConfig(): Promise<InstanceType<typeof Tables>> {
 }
 '@
     Write-Host "[POST] Recreated client/src/config/index.ts" -ForegroundColor Yellow
+}
+
+if ($loaderRecreated) {
+    Add-Content -Path server/config/loader.go -Value @'
+// GetTeam returns a team config by stable id.
+func GetTeam(id string) *Team {
+	if Global == nil || Global.TbTeam == nil {
+		return nil
+	}
+	return Global.TbTeam.Get(id)
+}
+
+// PlayersByTeam returns a deterministic lineup candidate list for a team.
+func PlayersByTeam(teamID string) []*Player {
+	if Global == nil || Global.TbPlayer == nil {
+		return nil
+	}
+	players := make([]*Player, 0)
+	for _, player := range Global.TbPlayer.GetDataList() {
+		if player != nil && player.TeamId == teamID {
+			players = append(players, player)
+		}
+	}
+	sort.Slice(players, func(i, j int) bool { return players[i].Id < players[j].Id })
+	return players
+}
+
+// GetTutorialBattle returns a tutorial config by id.
+func GetTutorialBattle(id string) *TutorialBattle {
+	if Global == nil || Global.TbTutorialBattle == nil {
+		return nil
+	}
+	return Global.TbTutorialBattle.Get(id)
+}
+
+// EnabledTutorialBattle returns the first enabled tutorial config.
+func EnabledTutorialBattle() *TutorialBattle {
+	if Global == nil || Global.TbTutorialBattle == nil {
+		return nil
+	}
+	for _, tutorial := range Global.TbTutorialBattle.GetDataList() {
+		if tutorial != nil && tutorial.Enabled {
+			return tutorial
+		}
+	}
+	return nil
+}
+
+// Validate checks cross-table constraints which must hold before the module starts.
+func Validate() error {
+	if Global == nil || Global.TbTeam == nil || Global.TbPlayer == nil || Global.TbTutorialBattle == nil {
+		return fmt.Errorf("config: Team, Player and TutorialBattle tables are required")
+	}
+	for _, player := range Global.TbPlayer.GetDataList() {
+		if player == nil || GetTeam(player.TeamId) == nil {
+			return fmt.Errorf("config: player %v references unknown team", player)
+		}
+	}
+	for _, tutorial := range Global.TbTutorialBattle.GetDataList() {
+		if tutorial == nil || !tutorial.Enabled {
+			continue
+		}
+		if tutorial.Budget <= 0 || tutorial.RosterSize != 5 || GetTeam(tutorial.OpponentTeamId) == nil {
+			return fmt.Errorf("config: tutorial %s has invalid budget, roster size or opponent team", tutorial.Id)
+		}
+		seen := make(map[string]struct{})
+		priceByPlayer := make(map[string]int)
+		pools := map[int][]string{5: tutorial.Tier5PlayerIds, 4: tutorial.Tier4PlayerIds, 3: tutorial.Tier3PlayerIds, 2: tutorial.Tier2PlayerIds, 1: tutorial.Tier1PlayerIds}
+		for price, ids := range pools {
+			for _, id := range ids {
+				if GetPlayer(id) == nil {
+					return fmt.Errorf("config: tutorial %s references unknown player %s", tutorial.Id, id)
+				}
+				if _, duplicate := seen[id]; duplicate {
+					return fmt.Errorf("config: tutorial %s repeats player %s across price tiers", tutorial.Id, id)
+				}
+				seen[id], priceByPlayer[id] = struct{}{}, price
+			}
+		}
+		if len(tutorial.OpponentPlayerIds) != int(tutorial.RosterSize) {
+			return fmt.Errorf("config: tutorial %s opponent requires exactly %d players", tutorial.Id, tutorial.RosterSize)
+		}
+		opponents := make(map[string]struct{}, len(tutorial.OpponentPlayerIds))
+		for _, id := range tutorial.OpponentPlayerIds {
+			player := GetPlayer(id)
+			if player == nil || player.TeamId != tutorial.OpponentTeamId {
+				return fmt.Errorf("config: tutorial %s has invalid opponent player %s", tutorial.Id, id)
+			}
+			if _, duplicate := opponents[id]; duplicate {
+				return fmt.Errorf("config: tutorial %s repeats opponent player %s", tutorial.Id, id)
+			}
+			if _, duplicate := seen[id]; duplicate {
+				return fmt.Errorf("config: tutorial %s repeats player %s between candidate pool and opponent lineup", tutorial.Id, id)
+			}
+			opponents[id] = struct{}{}
+		}
+		prices := make([]int, 0, len(priceByPlayer))
+		for _, price := range priceByPlayer {
+			prices = append(prices, price)
+		}
+		sort.Ints(prices)
+		if len(prices) < int(tutorial.RosterSize) {
+			return fmt.Errorf("config: tutorial %s cannot form a full roster", tutorial.Id)
+		}
+		cost := 0
+		for i := 0; i < int(tutorial.RosterSize); i++ {
+			cost += prices[i]
+		}
+		if cost > int(tutorial.Budget) {
+			return fmt.Errorf("config: tutorial %s cannot form a roster within budget", tutorial.Id)
+		}
+	}
+	return nil
+}
+'@
 }
 
 # Luban's templates leave indentation on blank lines. Normalize generated

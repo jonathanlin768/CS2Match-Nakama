@@ -684,7 +684,7 @@ button {
 .filterGrid select,
 .genericConfigTable input,
 .genericConfigTable select,
-.playerPicker input {
+.playerPicker input:not([type="checkbox"]) {
   width: 100%;
   min-width: 0;
   border: 1px solid #3a4653;
@@ -700,7 +700,7 @@ button {
 .tagEditor input:focus,
 .genericConfigTable input:focus,
 .genericConfigTable select:focus,
-.playerPicker input:focus {
+.playerPicker input:not([type="checkbox"]):focus {
   border-color: #79a8cf;
   outline: 1px solid #79a8cf;
 }
@@ -811,6 +811,10 @@ button {
   min-height: 0;
   overflow: auto;
   background: #101419;
+}
+
+.recordDetailPane {
+  container-type: inline-size;
 }
 
 .detailForm {
@@ -1106,10 +1110,27 @@ button {
   color: #b8c3ce;
 }
 
+.switchField input[type="checkbox"],
+.playerPickerOptions input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 16px;
+  accent-color: #5fb98f;
+}
+
 .tierEditorGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+}
+
+@container (max-width: 900px) {
+  .tierEditorGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .playerPicker {
@@ -1173,6 +1194,15 @@ button {
 .playerPickerOptions label.active {
   border-color: #39795f;
   background: #1d392f;
+}
+
+.playerPickerOptions label.disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.playerPickerOptions label.disabled small {
+  color: #bd8f65;
 }
 
 .playerPickerOptions label span,

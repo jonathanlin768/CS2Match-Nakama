@@ -90,6 +90,28 @@ test("playback health follows visible damage events instead of stale snapshots o
   )
 })
 
+test("shared config players remain separate match instances in KDA and health playback", () => {
+  const left = "tutorial_players/player_zywoo"
+  const right = "team_vitality/player_zywoo"
+  const match = { rounds: [{ events: [] }] }
+  const round = {
+    player_states: [
+      { player_id: left, config_player_id: "player_zywoo", alive: true, is_alive: true, hp: 100 },
+      { player_id: right, config_player_id: "player_zywoo", alive: true, is_alive: true, hp: 100 },
+    ],
+  }
+  const events = [{ event_type: "KILL", attacker_id: left, victim_id: right }]
+
+  assert.deepEqual(cumulativePlayerStatsAtPlayback(match, 0, events), {
+    [left]: { kills: 1, deaths: 0, assists: 0 },
+    [right]: { kills: 0, deaths: 1, assists: 0 },
+  })
+  assert.deepEqual(playerVitalsAtPlayback(round, events), {
+    [left]: { alive: true, hp: 100 },
+    [right]: { alive: false, hp: 0 },
+  })
+})
+
 test("structured events are rendered as localized battle commentary", () => {
   const context = {
     teamAID: "a",
@@ -115,4 +137,14 @@ test("structured events are rendered as localized battle commentary", () => {
 		formatBattleEvent({ event_type: "ROUND_START", message: "round started" }, context),
     "TeamA 作为 T 执行 A_Long_Rush 战术；TeamB 作为 CT 使用 CT_Default 防守。",
   )
+	const sidedKill = formatBattleEvent({
+		event_type: "KILL",
+		attacker_name: "PlayerA",
+		attacker_team_id: "a",
+		victim_name: "PlayerB",
+		victim_team_id: "b",
+		message: "kill",
+	}, context)
+	assert.match(sidedKill, /\[T\] PlayerA/)
+	assert.match(sidedKill, /\[CT\] PlayerB/)
 })

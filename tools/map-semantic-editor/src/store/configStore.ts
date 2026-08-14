@@ -8,6 +8,7 @@ import {
   saveConfigTables,
   syncConfigId,
   uploadConfigImage,
+  updateLocalConfig,
   type GenConfigOutput,
 } from '../lib/api'
 import { cloneDocument, rowId, type ConfigReference, type ConfigValidationIssue, type LubanCellValue, type LubanRow, type LubanTableDocument, type LubanTableSummary } from '../lib/luban'
@@ -42,6 +43,7 @@ interface ConfigState {
   saveCurrent: (fileName?: string) => Promise<boolean>
   saveAll: () => Promise<boolean>
   runExport: () => Promise<void>
+  updateLocal: () => Promise<void>
   uploadImage: (kind: 'portrait' | 'team' | 'player-card', file: File) => Promise<string | null>
   referencesFor: (fileName: string, rowIndex: number) => Promise<ConfigReference[]>
   validate: () => ConfigValidationIssue[]
@@ -217,13 +219,27 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   runExport: async () => {
     const dirty = Object.values(get().documents).filter((document) => document.dirty)
     if (dirty.length > 0 && !window.confirm(`当前有 ${dirty.length} 张表尚未保存。继续导表将使用磁盘上的旧数据，是否继续？`)) return
-    set({ busy: true, genConfig: { status: 'running', exitCode: null, durationMs: 0, stdout: '', stderr: '' }, serviceMessage: '导表运行中' })
+    set({ busy: true, genConfig: { operation: 'gen-config', status: 'running', exitCode: null, durationMs: 0, stdout: '', stderr: '' }, serviceMessage: '导表运行中' })
     try {
       const genConfig = await runGenConfig()
       set({ genConfig, busy: false, serviceMessage: genConfig.status === 'success' ? '导表成功' : '导表失败' })
       appendLog(set, genConfig.status === 'success' ? 'info' : 'error', `导表${genConfig.status === 'success' ? '成功' : '失败'}，退出码 ${genConfig.exitCode ?? 'null'}`)
     } catch (error) {
-      set({ busy: false, serviceMessage: errorMessage(error), genConfig: { status: 'failed', exitCode: null, durationMs: 0, stdout: '', stderr: errorMessage(error) } })
+      set({ busy: false, serviceMessage: errorMessage(error), genConfig: { operation: 'gen-config', status: 'failed', exitCode: null, durationMs: 0, stdout: '', stderr: errorMessage(error) } })
+      appendLog(set, 'error', errorMessage(error))
+    }
+  },
+
+  updateLocal: async () => {
+    const dirty = Object.values(get().documents).filter((document) => document.dirty)
+    if (dirty.length > 0 && !window.confirm(`当前有 ${dirty.length} 张表尚未保存。更新将使用磁盘上的旧数据，是否继续？`)) return
+    set({ busy: true, genConfig: { operation: 'update-local', status: 'running', exitCode: null, durationMs: 0, stdout: '', stderr: '' }, serviceMessage: '正在更新本地前后端' })
+    try {
+      const genConfig = await updateLocalConfig()
+      set({ genConfig, busy: false, serviceMessage: genConfig.status === 'success' ? '本地前后端更新成功' : '本地前后端更新失败' })
+      appendLog(set, genConfig.status === 'success' ? 'info' : 'error', `本地前后端更新${genConfig.status === 'success' ? '成功' : '失败'}，退出码 ${genConfig.exitCode ?? 'null'}`)
+    } catch (error) {
+      set({ busy: false, serviceMessage: errorMessage(error), genConfig: { operation: 'update-local', status: 'failed', exitCode: null, durationMs: 0, stdout: '', stderr: errorMessage(error) } })
       appendLog(set, 'error', errorMessage(error))
     }
   },

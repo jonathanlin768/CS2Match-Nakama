@@ -144,7 +144,7 @@ TBD - created by archiving change add-luban-config-visual-editor. Update Purpose
 
 ### Requirement: 工作台提供 TutorialBattle 专属编辑页
 
-工作台 SHALL 为 `#TutorialBattle.xlsx` 提供专属新手战斗配置页。该页面 SHALL 支持编辑启用状态、版本、预算、阵容人数、地图 ID、各费用档候选选手、对手战队和对手阵容。
+工作台 SHALL 为 `#TutorialBattle.xlsx` 提供专属新手战斗配置页。该页面 SHALL 支持编辑启用状态、版本、预算、阵容人数、地图 ID、各费用档候选选手、对手战队和对手阵容。费用档候选池与固定对手阵容 SHALL 允许引用同一个 Player ID，但费用档之间和对手阵容内部的唯一性约束 SHALL 保持生效。
 
 #### Scenario: 配置费用档候选选手
 
@@ -153,6 +153,8 @@ TBD - created by archiving change add-luban-config-visual-editor. Update Purpose
 - **WHEN** 用户在 `tier5PlayerIds`、`tier4PlayerIds`、`tier3PlayerIds`、`tier2PlayerIds` 或 `tier1PlayerIds` 中选择多个选手
 - **THEN** 系统将选手 ID 写入对应列表字段
 - **AND** 选择器显示选手名称、战队和稀有度等辅助信息
+- **AND** 选手一旦被某个费用档选中，其他费用档中的该选手选项立即禁用并提示其已被占用；从原费用档取消后恢复可选
+- **AND** 固定对手阵容中的同一选手仍可在一个费用档中选择，系统不跨双方禁用或报告重叠 ERROR
 - **AND** 列表中出现不存在的选手 ID 时显示引用错误
 
 #### Scenario: 阻止保存空费用档
@@ -169,6 +171,7 @@ TBD - created by archiving change add-luban-config-visual-editor. Update Purpose
 - **WHEN** 用户编辑 `opponentPlayerIds`
 - **THEN** 系统提供引用 `TbPlayer` 的多选控件
 - **AND** 系统优先显示属于 `opponentTeamId` 的选手
+- **AND** 候选池中已存在的同一选手仍可加入对手阵容
 - **AND** 若已选选手不属于该战队，系统显示阻止保存的校验错误且不自动删除该选手
 
 #### Scenario: 切换唯一启用的新手战斗配置
@@ -185,6 +188,13 @@ TBD - created by archiving change add-luban-config-visual-editor. Update Purpose
 - **WHEN** `budget` 不大于 0、`rosterSize` 不等于 5、选手跨费用档重复、候选池无法在预算内组成完整阵容、对手阵容人数不等于 `rosterSize`、对手选手重复或对手选手不属于 `opponentTeamId`
 - **THEN** 系统显示与当前运行时校验一致的 ERROR
 - **AND** 系统不写入 `#TutorialBattle.xlsx`
+
+#### Scenario: 候选池与对手重叠仍可保存
+
+- **GIVEN** 一条启用配置只有候选池与对手阵容交叉引用同一个有效 Player ID，其他运行时约束均满足
+- **WHEN** 用户执行校验并保存当前表
+- **THEN** 工作台不产生交叉重叠 ERROR
+- **AND** 系统将配置写入 `#TutorialBattle.xlsx`
 
 ### Requirement: 工作台保护被引用记录并显式同步 ID 修改
 
@@ -267,7 +277,7 @@ TBD - created by archiving change add-luban-config-visual-editor. Update Purpose
 
 ### Requirement: 工作台复用 Luban 导表验证入口
 
-工作台 SHALL 继续提供 Web 按钮运行 `scripts/gen-config.ps1`。导表输出 SHALL 显示执行中、成功、失败、退出码、耗时、stdout 和 stderr。导表动作 SHALL 不隐式保存未确认的脏表，除非用户在确认提示中明确同意。
+工作台 SHALL 继续提供 Web 按钮运行 `scripts/gen-config.ps1`。任务输出 SHALL 显示执行中、成功、失败、退出码、耗时、stdout 和 stderr。导表动作 SHALL 不隐式保存未确认的脏表，除非用户在确认提示中明确同意。
 
 #### Scenario: 保存后运行导表
 
@@ -282,6 +292,15 @@ TBD - created by archiving change add-luban-config-visual-editor. Update Purpose
 - **WHEN** 用户点击 `运行导表`
 - **THEN** 系统提示存在未保存修改
 - **AND** 用户未确认保存或继续时，系统不开始导表
+
+#### Scenario: 一键更新本地前后端配置
+
+- **GIVEN** 用户已将需要生效的配置保存到 Luban Excel
+- **WHEN** 用户点击 `更新本地前后端`
+- **THEN** 本地服务执行受控仓库脚本，依次运行 Luban 导表、编译 Nakama Go 插件、重载 Nakama、重建并重新创建 Docker 前端容器
+- **AND** 任一步骤失败时停止后续步骤并返回非零退出码
+- **AND** 页面在 `任务输出` 面板显示状态、耗时、stdout 和 stderr
+- **AND** 存在未保存的通用配表修改时，系统先提示本次更新只使用磁盘数据
 
 ### Requirement: Player 专属页配置完整卡面与 5:7 头像裁切
 

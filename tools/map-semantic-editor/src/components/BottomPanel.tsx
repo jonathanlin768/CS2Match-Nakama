@@ -35,7 +35,7 @@ export function BottomPanel() {
         <TabButton active={tab === 'summary'} onClick={() => setTab('summary')}>导出摘要</TabButton>
         <TabButton active={tab === 'import'} onClick={() => setTab('import')}>读取日志</TabButton>
         <TabButton active={tab === 'write'} onClick={() => setTab('write')}>写入日志</TabButton>
-        <TabButton active={tab === 'gen'} onClick={() => setTab('gen')}>导表输出</TabButton>
+        <TabButton active={tab === 'gen'} onClick={() => setTab('gen')}>任务输出</TabButton>
       </div>
 
       <div className="tabContent">
@@ -88,9 +88,9 @@ export function BottomPanel() {
 
         {tab === 'gen' ? (
           <div className="terminalOutput">
-            {!genConfig ? <p>点击运行导表后显示 scripts/gen-config.ps1 输出。</p> : (
+            {!genConfig ? <p>运行导表或更新本地前后端后显示脚本输出。</p> : (
               <>
-                <p>状态: {genConfig.status} exit={genConfig.exitCode ?? 'null'} duration={(genConfig.durationMs / 1000).toFixed(1)}s</p>
+                <p>任务: {genConfig.operation === 'update-local' ? '更新本地前后端' : '运行导表'} | 状态: {genConfig.status} exit={genConfig.exitCode ?? 'null'} duration={(genConfig.durationMs / 1000).toFixed(1)}s</p>
                 <h4>stdout</h4>
                 <pre>{genConfig.stdout || '<empty>'}</pre>
                 <h4>stderr</h4>

@@ -67,6 +67,17 @@ describe('local service path guard', () => {
     const backupFiles = await findFiles(backupRoot, testProjectName)
     expect(backupFiles.length).toBeGreaterThan(0)
   })
+
+  it('keeps the local update pipeline explicit and fail-fast', async () => {
+    const source = await fs.readFile(path.resolve(dataRoot, '..', '..', 'scripts', 'update-local-config.ps1'), 'utf8')
+
+    expect(source).toContain('scripts/gen-config.ps1')
+    expect(source).toContain('server\\build.bat')
+    expect(source).toContain('docker compose restart nakama')
+    expect(source).toContain('docker compose build --no-cache frontend')
+    expect(source).toContain('docker compose up -d --no-deps frontend')
+    expect(source).toContain('throw "$Name failed with exit code $LASTEXITCODE"')
+  })
 })
 
 async function findFiles(root: string, fileName: string): Promise<string[]> {

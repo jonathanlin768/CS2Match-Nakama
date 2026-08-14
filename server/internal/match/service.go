@@ -3,6 +3,7 @@ package match
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -139,6 +140,9 @@ func (s *Service) SimuMatch(ctx context.Context, userID string, req SimuMatchReq
 }
 
 func (s *Service) simulate(ctx context.Context, matchID, mapID string, seed int64, teamA, teamB matchengine.TeamInput) (*matchengine.MatchResult, error) {
+	if err := validateMatchTeamIdentities(teamA, teamB); err != nil {
+		return nil, err
+	}
 	state, ok := s.mapConfig[mapID]
 	if !ok {
 		s.cacheMapConfig(mapID)
@@ -176,6 +180,33 @@ func (s *Service) simulate(ctx context.Context, matchID, mapID string, seed int6
 		return nil, &MatchError{Code: "SIMULATION_ERROR", Message: err.Error()}
 	}
 	return result, nil
+}
+
+func validateMatchTeamIdentities(teamA, teamB matchengine.TeamInput) error {
+	if strings.TrimSpace(teamA.TeamID) == "" || strings.TrimSpace(teamB.TeamID) == "" {
+		return &MatchError{Code: "INVALID_TEAM", Message: "both team ids are required"}
+	}
+	if teamA.TeamID == teamB.TeamID {
+		return &MatchError{Code: "INVALID_LINEUP", Message: "team ids must be unique within a match"}
+	}
+
+	seenPlayerIDs := make(map[string]struct{}, len(teamA.Players)+len(teamB.Players))
+	for _, team := range []matchengine.TeamInput{teamA, teamB} {
+		for _, player := range team.Players {
+			expectedID, err := matchPlayerID(team.TeamID, player.ConfigPlayerID)
+			if err != nil {
+				return err
+			}
+			if player.PlayerID != expectedID {
+				return &MatchError{Code: "INVALID_LINEUP", Message: fmt.Sprintf("player instance id %q does not match team/config identity", player.PlayerID)}
+			}
+			if _, duplicate := seenPlayerIDs[player.PlayerID]; duplicate {
+				return &MatchError{Code: "INVALID_LINEUP", Message: fmt.Sprintf("duplicate player instance id: %s", player.PlayerID)}
+			}
+			seenPlayerIDs[player.PlayerID] = struct{}{}
+		}
+	}
+	return nil
 }
 
 func combatConstBool(constants matchengine.CombatConstants, key string, fallback bool) bool {
@@ -222,6 +253,13 @@ func (s *Service) buildNamedTeam(teamID string, name string, playerIDs []string)
 }
 
 func (s *Service) buildTeam(teamID string, name string, playerIDs []string) (matchengine.TeamInput, error) {
+	teamID = strings.TrimSpace(teamID)
+	if teamID == "" {
+		return matchengine.TeamInput{}, &MatchError{Code: "INVALID_TEAM", Message: "team id is required"}
+	}
+	if err := validateUniqueConfigPlayerIDs(teamID, playerIDs); err != nil {
+		return matchengine.TeamInput{}, err
+	}
 	team := matchengine.TeamInput{
 		TeamID:  teamID,
 		Name:    name,
@@ -232,9 +270,24 @@ func (s *Service) buildTeam(teamID string, name string, playerIDs []string) (mat
 		if p == nil {
 			return matchengine.TeamInput{}, &MatchError{Code: "INVALID_LINEUP", Message: fmt.Sprintf("player not found: %s", id)}
 		}
-		team.Players = append(team.Players, playerFromConfig(p))
+		profile, profileErr := playerFromConfig(teamID, p)
+		if profileErr != nil {
+			return matchengine.TeamInput{}, profileErr
+		}
+		team.Players = append(team.Players, profile)
 	}
 	return team, nil
+}
+
+func validateUniqueConfigPlayerIDs(teamID string, playerIDs []string) error {
+	seen := make(map[string]struct{}, len(playerIDs))
+	for _, playerID := range playerIDs {
+		if _, duplicate := seen[playerID]; duplicate {
+			return &MatchError{Code: "INVALID_LINEUP", Message: fmt.Sprintf("duplicate player in team %s: %s", teamID, playerID)}
+		}
+		seen[playerID] = struct{}{}
+	}
+	return nil
 }
 
 func validateTutorialLineup(tutorial *cfg.TutorialBattle, playerIDs []string) error {
@@ -264,7 +317,23 @@ func validateTutorialLineup(tutorial *cfg.TutorialBattle, playerIDs []string) er
 	return nil
 }
 
-func playerFromConfig(p *cfg.Player) matchengine.PlayerProfile {
+func matchPlayerID(teamID string, configPlayerID string) (string, error) {
+	teamID = strings.TrimSpace(teamID)
+	configPlayerID = strings.TrimSpace(configPlayerID)
+	if teamID == "" || configPlayerID == "" {
+		return "", &MatchError{Code: "INVALID_LINEUP", Message: "team id and config player id are required"}
+	}
+	return url.PathEscape(teamID) + "/" + url.PathEscape(configPlayerID), nil
+}
+
+func playerFromConfig(teamID string, p *cfg.Player) (matchengine.PlayerProfile, error) {
+	if p == nil {
+		return matchengine.PlayerProfile{}, &MatchError{Code: "INVALID_LINEUP", Message: "player config is required"}
+	}
+	playerID, err := matchPlayerID(teamID, p.Id)
+	if err != nil {
+		return matchengine.PlayerProfile{}, err
+	}
 	crop := &matchengine.ImageCrop{
 		X: float64(p.AvatarCropX), Y: float64(p.AvatarCropY),
 		Width: float64(p.AvatarCropWidth), Height: float64(p.AvatarCropHeight),
@@ -273,12 +342,13 @@ func playerFromConfig(p *cfg.Player) matchengine.PlayerProfile {
 		crop = nil
 	}
 	return matchengine.PlayerProfile{
-		PlayerID:    p.Id,
-		DisplayName: p.Name,
-		Portrait:    p.Portrait,
-		CardImage:   p.CardImage,
-		AvatarCrop:  crop,
-		RoleTags:    append([]string(nil), p.Positions...),
+		PlayerID:       playerID,
+		ConfigPlayerID: p.Id,
+		DisplayName:    p.Name,
+		Portrait:       p.Portrait,
+		CardImage:      p.CardImage,
+		AvatarCrop:     crop,
+		RoleTags:       append([]string(nil), p.Positions...),
 		Attributes: matchengine.PlayerAttributes{
 			Entry:       int(p.Entry),
 			Aim:         int(p.Aim),
@@ -296,7 +366,7 @@ func playerFromConfig(p *cfg.Player) matchengine.PlayerProfile {
 			Endurance:   int(p.Endurance),
 			Discipline:  int(p.Discipline),
 		},
-	}
+	}, nil
 }
 
 func defaultTeamPlayerIDs() ([]string, []string, error) {
@@ -306,8 +376,6 @@ func defaultTeamPlayerIDs() ([]string, []string, error) {
 	players := cfg.Global.TbPlayer.GetDataList()
 	teamAPlayerIDs := make([]string, 0, 5)
 	teamBPlayerIDs := make([]string, 0, 5)
-	seenPlayerIDs := make(map[string]struct{}, 10)
-
 	for index, player := range players {
 		if player == nil {
 			return nil, nil, &MatchError{Code: "INVALID_LINEUP", Message: fmt.Sprintf("TbPlayer row %d is empty", index+1)}
@@ -327,11 +395,13 @@ func defaultTeamPlayerIDs() ([]string, []string, error) {
 		if playerID == "" {
 			return nil, nil, &MatchError{Code: "INVALID_LINEUP", Message: fmt.Sprintf("TbPlayer row %d has no player id", index+1)}
 		}
-		if _, exists := seenPlayerIDs[playerID]; exists {
-			return nil, nil, &MatchError{Code: "INVALID_LINEUP", Message: fmt.Sprintf("duplicate default player id: %s", playerID)}
-		}
-		seenPlayerIDs[playerID] = struct{}{}
 		*target = append(*target, playerID)
+	}
+	if err := validateUniqueConfigPlayerIDs(defaultTeamAID, teamAPlayerIDs); err != nil {
+		return nil, nil, err
+	}
+	if err := validateUniqueConfigPlayerIDs(defaultTeamBID, teamBPlayerIDs); err != nil {
+		return nil, nil, err
 	}
 
 	if len(teamAPlayerIDs) != 5 {

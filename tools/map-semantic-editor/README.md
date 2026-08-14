@@ -158,7 +158,9 @@ configs/Datas/de_dust2.json
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/gen-config.ps1
 ```
 
-执行结果会显示在底部 `导表输出` 面板中，包括状态、退出码、耗时、stdout 和 stderr。
+执行结果会显示在底部 `任务输出` 面板中，包括状态、退出码、耗时、stdout 和 stderr。
+
+点击 `更新本地前后端` 会执行 `scripts/update-local-config.ps1`。脚本依次重新导表、编译 `server/build/backend.so`、启动并重载 Nakama、无缓存重建前端镜像并重新创建前端容器。完成后访问 `http://localhost:3000`，必要时按 `Ctrl+F5` 清除浏览器静态资源缓存。任一步骤失败都会停止后续步骤，完整输出显示在底部 `任务输出` 面板。
 
 ## 第一版限制
 

@@ -9,7 +9,7 @@ import { validateDocuments } from '../src/lib/lubanValidation'
 import { readLubanSummary, writeExportTables } from './excel'
 import { configAssetExists, configAssetFilePath, findReferences, hydrateIncomingDocument, listLubanTables, readEditableDocuments, readLubanTable, saveConfigImage, saveLubanTable, saveLubanTables, syncRecordId } from './configTables'
 import { importLubanProject } from './importTables'
-import { isGenConfigRunning, runGenConfig } from './genConfig'
+import { isGenConfigRunning, runGenConfig, runLocalUpdate } from './genConfig'
 import { readProject, readPublishedProject, saveProject, savePublishedProject } from './projectFiles'
 import { radarRoot, resolveInside } from './paths'
 
@@ -169,6 +169,12 @@ async function route(request: http.IncomingMessage, response: http.ServerRespons
     return
   }
 
+  if (request.method === 'POST' && url.pathname === '/api/update-local') {
+    const result = await runLocalUpdate()
+    json(response, 200, { ok: result.status === 'success', result })
+    return
+  }
+
   if (request.method === 'GET' && url.pathname.startsWith('/csmaps/')) {
     await serveRadar(url.pathname.replace('/csmaps/', ''), response)
     return
@@ -214,6 +220,7 @@ async function serveConfigAsset(relativePath: string, response: http.ServerRespo
     json(response, 404, { ok: false, error: '不支持的图片资源路径' })
     return
   }
+
   const data = await fs.readFile(file)
   const extension = path.extname(file).toLowerCase()
   const type = extension === '.png' ? 'image/png' : extension === '.webp' ? 'image/webp' : 'image/jpeg'

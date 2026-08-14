@@ -1,7 +1,9 @@
 package matchengine
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,9 +36,10 @@ func makeTestTeam(teamID, name string, base int) TeamInput {
 	for i := 0; i < 5; i++ {
 		value := base - i
 		players = append(players, PlayerProfile{
-			PlayerID:    teamID + "_p" + string(rune('1'+i)),
-			DisplayName: name + " P" + string(rune('1'+i)),
-			RoleTags:    []string{"Rifler"},
+			PlayerID:       teamID + "_p" + string(rune('1'+i)),
+			ConfigPlayerID: "config_p" + string(rune('1'+i)),
+			DisplayName:    name + " P" + string(rune('1'+i)),
+			RoleTags:       []string{"Rifler"},
 			Attributes: PlayerAttributes{
 				Entry: value, Aim: value, Trade: value, Clutch: value, Firepower: value, Gamesense: value,
 				Reaction: value, Positioning: value, Awareness: value, Teamplay: value, Utility: value, Composure: value, Mobility: value, Endurance: value, Discipline: value,
@@ -297,6 +300,62 @@ func TestRoundTerminalStateMatchesWinReason(t *testing.T) {
 
 	if len(seenReasons) < 2 {
 		t.Fatalf("seed sweep did not exercise distinct causal terminals: %+v", seenReasons)
+	}
+}
+
+func TestSharedConfigPlayersRemainDistinctAndDeterministic(t *testing.T) {
+	input := makeTestInput(424242)
+	input.StartTime = 1_700_000_000_000
+	input.TeamA.Players[0].ConfigPlayerID = "player_shared"
+	input.TeamB.Players[0].ConfigPlayerID = "player_shared"
+
+	first, err := newProductionMatchEngine(input).simulateMatch(context.Background())
+	if err != nil {
+		t.Fatalf("first simulation failed: %v", err)
+	}
+	second, err := newProductionMatchEngine(input).simulateMatch(context.Background())
+	if err != nil {
+		t.Fatalf("second simulation failed: %v", err)
+	}
+	firstJSON, err := json.Marshal(first)
+	if err != nil {
+		t.Fatalf("marshal first result: %v", err)
+	}
+	secondJSON, err := json.Marshal(second)
+	if err != nil {
+		t.Fatalf("marshal second result: %v", err)
+	}
+	if !bytes.Equal(firstJSON, secondJSON) {
+		t.Fatal("same instance identities and seed produced different reports")
+	}
+
+	sharedStates := map[string]*PlayerState{}
+	for _, state := range first.Rounds[0].PlayerStates {
+		if state.ConfigPlayerID == "player_shared" {
+			sharedStates[state.PlayerID] = state
+		}
+	}
+	if len(sharedStates) != 2 {
+		t.Fatalf("expected two shared-config instances, got %+v", sharedStates)
+	}
+	sharedStats := map[string]*PlayerMatchStats{}
+	for _, stats := range first.FinalStats.PlayerStats {
+		if stats.ConfigPlayerID == "player_shared" {
+			sharedStats[stats.PlayerID] = stats
+		}
+	}
+	if len(sharedStats) != 2 {
+		t.Fatalf("expected two independent shared-config stats, got %+v", sharedStats)
+	}
+}
+
+func TestDuplicateMatchPlayerIDIsRejectedEvenWhenConfigIDsDiffer(t *testing.T) {
+	input := makeTestInput(99)
+	input.TeamB.Players[0].PlayerID = input.TeamA.Players[0].PlayerID
+	input.TeamB.Players[0].ConfigPlayerID = "different_config_player"
+	_, err := newProductionMatchEngine(input).simulateMatch(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "duplicate player id") {
+		t.Fatalf("expected duplicate instance id error, got %v", err)
 	}
 }
 

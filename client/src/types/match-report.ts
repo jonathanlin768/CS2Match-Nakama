@@ -130,6 +130,18 @@ export interface EventStateSnapshot {
   controls?: NodeControlState[]
 }
 
+export interface PlayerProfile {
+  /** Opaque, match-scoped combat instance ID. */
+  player_id: string
+  /** Stable TbPlayer.id used only for config and visual-data lookup. */
+  config_player_id: string
+  display_name: string
+  portrait?: string
+  card_image?: string
+  avatar_crop?: { x: number; y: number; width: number; height: number }
+  role_tags?: string[]
+}
+
 export interface ExplainableReport {
   key_events: GameEvent[]
   strategy_summary: string
@@ -138,7 +150,10 @@ export interface ExplainableReport {
 }
 
 export interface PlayerState {
+  /** Opaque, match-scoped combat instance ID. */
   player_id: string
+  /** Stable TbPlayer.id used only for config and visual-data lookup. */
+  config_player_id: string
   player_name: string
   display_name: string
   portrait?: string
@@ -213,7 +228,10 @@ export interface MatchInfo {
 }
 
 export interface PlayerMatchStats {
+  /** Opaque, match-scoped combat instance ID. */
   player_id: string
+  /** Stable TbPlayer.id used only for config and visual-data lookup. */
+  config_player_id: string
   player_name: string
   team_id: string
   side: Side

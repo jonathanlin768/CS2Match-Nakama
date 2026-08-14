@@ -10,13 +10,19 @@ export function ConfigBottomPanel({ fileName, onIssueClick }: { fileName?: strin
   const logs = useConfigStore((state) => state.logs)
   const genConfig = useConfigStore((state) => state.genConfig)
   const visibleIssues = fileName ? issues.filter((issue) => issue.fileName === fileName) : issues
+  const [previousGenConfig, setPreviousGenConfig] = useState(genConfig)
+
+  if (previousGenConfig !== genConfig) {
+    setPreviousGenConfig(genConfig)
+    if (genConfig) setTab('gen')
+  }
 
   return (
     <footer className="configBottomPanel">
       <div className="configBottomTabs">
         <button type="button" className={tab === 'issues' ? 'active' : ''} onClick={() => setTab('issues')}>校验结果 ({visibleIssues.length})</button>
         <button type="button" className={tab === 'logs' ? 'active' : ''} onClick={() => setTab('logs')}>写入日志 ({logs.length})</button>
-        <button type="button" className={tab === 'gen' ? 'active' : ''} onClick={() => setTab('gen')}>导表输出</button>
+        <button type="button" className={tab === 'gen' ? 'active' : ''} onClick={() => setTab('gen')}>任务输出</button>
       </div>
       <div className="configBottomContent">
         {tab === 'issues' ? (
@@ -30,7 +36,7 @@ export function ConfigBottomPanel({ fileName, onIssueClick }: { fileName?: strin
           logs.length === 0 ? <p className="emptyState">保存、图片复制和 ID 同步结果会显示在这里。</p> : logs.map((entry, index) => <p key={`${entry.time}-${index}`} className={entry.level === 'error' ? 'issueLine error' : 'logLine'}>[{entry.time}] {entry.message}</p>)
         ) : null}
         {tab === 'gen' ? (
-          !genConfig ? <p className="emptyState">运行导表后显示 scripts/gen-config.ps1 输出。</p> : <div className="terminalOutput"><p>状态: {genConfig.status} exit={genConfig.exitCode ?? 'null'} duration={(genConfig.durationMs / 1000).toFixed(1)}s</p><h4>stdout</h4><pre>{genConfig.stdout || '<empty>'}</pre><h4>stderr</h4><pre>{genConfig.stderr || '<empty>'}</pre></div>
+          !genConfig ? <p className="emptyState">运行导表或更新本地前后端后显示脚本输出。</p> : <div className="terminalOutput"><p>任务: {genConfig.operation === 'update-local' ? '更新本地前后端' : '运行导表'} | 状态: {genConfig.status} exit={genConfig.exitCode ?? 'null'} duration={(genConfig.durationMs / 1000).toFixed(1)}s</p><h4>stdout</h4><pre>{genConfig.stdout || '<empty>'}</pre><h4>stderr</h4><pre>{genConfig.stderr || '<empty>'}</pre></div>
         ) : null}
       </div>
     </footer>

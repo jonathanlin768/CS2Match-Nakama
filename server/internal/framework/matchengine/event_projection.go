@@ -80,7 +80,7 @@ func snapshotForEvent(state *RoundState) *EventStateSnapshot {
 	for _, playerID := range sortedPlayerIDs(state) {
 		player := state.Players[playerID]
 		projection.Players = append(projection.Players, &PlayerState{
-			PlayerID: player.Profile.PlayerID, PlayerName: player.Profile.DisplayName, DisplayName: player.Profile.DisplayName,
+			PlayerID: player.Profile.PlayerID, ConfigPlayerID: player.Profile.ConfigPlayerID, PlayerName: player.Profile.DisplayName, DisplayName: player.Profile.DisplayName,
 			Portrait: player.Profile.Portrait, CardImage: player.Profile.CardImage, AvatarCrop: cloneImageCrop(player.Profile.AvatarCrop), TeamID: player.TeamID, Side: player.Side, IsAlive: player.Alive, Alive: player.Alive,
 			HP: player.HP, Stamina: player.Stamina, Focus: player.Focus, CurrentNode: projectedNodeID(player.Location), HasBomb: player.HasBomb,
 			Kills: player.Kills, Deaths: player.Deaths, Damage: player.Damage, RoleTags: append([]string(nil), player.Profile.RoleTags...), Weapon: cloneLoadout(player.Weapon),

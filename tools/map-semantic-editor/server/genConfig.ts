@@ -3,6 +3,7 @@ import { performance } from 'node:perf_hooks'
 import { projectRoot } from './paths'
 
 export interface GenConfigResult {
+  operation: 'gen-config' | 'update-local'
   status: 'success' | 'failed' | 'timeout' | 'running'
   exitCode: number | null
   durationMs: number
@@ -17,18 +18,26 @@ export function isGenConfigRunning(): boolean {
 }
 
 export function runGenConfig(timeoutMs = 5 * 60 * 1000): Promise<GenConfigResult> {
+  return runScript('gen-config', 'scripts/gen-config.ps1', timeoutMs)
+}
+
+export function runLocalUpdate(timeoutMs = 30 * 60 * 1000): Promise<GenConfigResult> {
+  return runScript('update-local', 'scripts/update-local-config.ps1', timeoutMs)
+}
+
+function runScript(operation: GenConfigResult['operation'], script: string, timeoutMs: number): Promise<GenConfigResult> {
   if (running) return running
 
-  running = execute(timeoutMs).finally(() => {
+  running = execute(operation, script, timeoutMs).finally(() => {
     running = null
   })
 
   return running
 }
 
-function execute(timeoutMs: number): Promise<GenConfigResult> {
+function execute(operation: GenConfigResult['operation'], script: string, timeoutMs: number): Promise<GenConfigResult> {
   const started = performance.now()
-  const child = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'scripts/gen-config.ps1'], {
+  const child = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script], {
     cwd: projectRoot,
     windowsHide: true,
   })
@@ -51,6 +60,7 @@ function execute(timeoutMs: number): Promise<GenConfigResult> {
       killProcessTree(child.pid, (message) => {
         if (message) stderr += message
         finish({
+          operation,
           status: 'timeout',
           exitCode: null,
           durationMs: Math.round(performance.now() - started),
@@ -69,6 +79,7 @@ function execute(timeoutMs: number): Promise<GenConfigResult> {
 
     child.on('error', (error) => {
       finish({
+        operation,
         status: 'failed',
         exitCode: null,
         durationMs: Math.round(performance.now() - started),
@@ -78,6 +89,7 @@ function execute(timeoutMs: number): Promise<GenConfigResult> {
     })
     child.on('close', (code) => {
       finish({
+        operation,
         status: didTimeout ? 'timeout' : code === 0 ? 'success' : 'failed',
         exitCode: code,
         durationMs: Math.round(performance.now() - started),

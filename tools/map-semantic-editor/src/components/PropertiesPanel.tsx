@@ -1,6 +1,7 @@
 import { Check, Copy, PenLine, Trash2, X } from 'lucide-react'
 import { nodeShapes, nodeTypes, nodeUsages, floors, sides, sites, pointsToCell } from '../lib/model'
 import { useEditorStore } from '../store/editorStore'
+import { configFieldLabel } from '../lib/configLabels'
 
 export function PropertiesPanel() {
   const project = useEditorStore((state) => state.project)
@@ -46,7 +47,7 @@ export function PropertiesPanel() {
             <SelectInput label="shape" value={node.shape} options={nodeShapes} onChange={(value) => updateNode(node.id, { shape: value })} />
             <NumberInput label="radius" value={node.radius ?? 0} step={0.001} onChange={(value) => updateNode(node.id, { radius: value })} />
             <label className="field full">
-              <span>area_usages</span>
+              <span>{configFieldLabel('area_usages')}</span>
               <div className="checkboxGroup">
                 {nodeUsages.map((usage) => (
                   <label key={usage}>
@@ -64,7 +65,7 @@ export function PropertiesPanel() {
               </div>
             </label>
             <label className="field full">
-              <span>points</span>
+              <span>{configFieldLabel('points')}</span>
               <textarea value={pointsToCell(node.points)} onChange={(event) => setNodePointsFromText(node.id, event.target.value)} rows={3} />
             </label>
             <div className="rangeActions">
@@ -101,9 +102,9 @@ export function PropertiesPanel() {
             <NumberInput label="stamina_cost" value={edge.stamina_cost} step={1} onChange={(value) => updateEdge(edge.id, { stamina_cost: Math.round(value) })} />
             <NumberInput label="risk" value={edge.risk} step={1} onChange={(value) => updateEdge(edge.id, { risk: Math.round(value) })} />
             <NumberInput label="noise" value={edge.noise} step={1} onChange={(value) => updateEdge(edge.id, { noise: Math.round(value) })} />
-            <TextInput label="risk_points 风险热点" value={edge.risk_points.join(',')} onChange={(value) => updateEdge(edge.id, { risk_points: splitList(value) })} />
-            <TextInput label="intercept_nodes 拦截候选点" value={edge.intercept_nodes.join(',')} onChange={(value) => updateEdge(edge.id, { intercept_nodes: splitList(value) })} />
-            <label className="field toggle"><span>bidirectional</span><input type="checkbox" checked={edge.bidirectional} onChange={(event) => updateEdge(edge.id, { bidirectional: event.target.checked })} /></label>
+            <TextInput label="risk_points" value={edge.risk_points.join(',')} onChange={(value) => updateEdge(edge.id, { risk_points: splitList(value) })} />
+            <TextInput label="intercept_nodes" value={edge.intercept_nodes.join(',')} onChange={(value) => updateEdge(edge.id, { intercept_nodes: splitList(value) })} />
+            <label className="field toggle"><span>{configFieldLabel('bidirectional')}</span><input type="checkbox" checked={edge.bidirectional} onChange={(event) => updateEdge(edge.id, { bidirectional: event.target.checked })} /></label>
             <DeleteAction onDelete={deleteSelected} />
           </div>
         ) : null}
@@ -119,7 +120,7 @@ export function PropertiesPanel() {
  <SelectInput label="elevation" value={visibility.elevation} options={['HighToLow', 'LowToHigh', 'SameLevel', 'Same', 'HeightBlocked']} onChange={(value) => updateVisibility(visibility.id, { elevation: value })} />
             <NumberInput label="cover_modifier" value={visibility.cover_modifier} step={1} onChange={(value) => updateVisibility(visibility.id, { cover_modifier: Math.round(value) })} />
             <NumberInput label="exposure_modifier" value={visibility.exposure_modifier} step={1} onChange={(value) => updateVisibility(visibility.id, { exposure_modifier: Math.round(value) })} />
-            <label className="field toggle"><span>visible</span><input type="checkbox" checked={visibility.visible} onChange={(event) => updateVisibility(visibility.id, { visible: event.target.checked })} /></label>
+            <label className="field toggle"><span>{configFieldLabel('visible')}</span><input type="checkbox" checked={visibility.visible} onChange={(event) => updateVisibility(visibility.id, { visible: event.target.checked })} /></label>
             <DeleteAction onDelete={deleteSelected} />
           </div>
         ) : null}
@@ -146,7 +147,7 @@ export function PropertiesPanel() {
 function TextInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
     <label className="field">
-      <span>{label}</span>
+      <span>{configFieldLabel(label)}</span>
       <input value={value} onChange={(event) => onChange(event.target.value)} />
     </label>
   )
@@ -155,7 +156,7 @@ function TextInput({ label, value, onChange }: { label: string; value: string; o
 function NumberInput({ label, value, step, onChange }: { label: string; value: number; step: number; onChange: (value: number) => void }) {
   return (
     <label className="field">
-      <span>{label}</span>
+      <span>{configFieldLabel(label)}</span>
       <input type="number" value={value} step={step} onChange={(event) => onChange(Number(event.target.value))} />
     </label>
   )
@@ -164,7 +165,7 @@ function NumberInput({ label, value, step, onChange }: { label: string; value: n
 function SelectInput<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: readonly T[]; onChange: (value: T) => void }) {
   return (
     <label className="field">
-      <span>{label}</span>
+      <span>{configFieldLabel(label)}</span>
       <select value={value} onChange={(event) => onChange(event.target.value as T)}>
         {options.map((option) => <option key={option} value={option}>{option}</option>)}
       </select>
@@ -176,7 +177,7 @@ function NodeSelect({ label, value, onChange }: { label: string; value: string; 
   const nodes = useEditorStore((state) => state.project.nodes)
   return (
     <label className="field">
-      <span>{label}</span>
+      <span>{configFieldLabel(label)}</span>
       <select value={value} onChange={(event) => onChange(event.target.value)}>
         {nodes.map((node) => <option key={node.id} value={node.id}>{node.id}</option>)}
       </select>

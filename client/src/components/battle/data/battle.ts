@@ -10,6 +10,10 @@ export type Side = "ct" | "t"
 export type GrenadeType = "flash" | "smoke" | "he" | "molotov" | "decoy"
 
 export interface BattlePlayer {
+  /** 整场比赛内唯一且不透明的实例 ID。旧 mock 可省略。 */
+  instanceId?: string
+  /** 对应 TbPlayer.id，仅用于读取策划配置和视觉资料。 */
+  configPlayerId?: string
   /** 选手 ID / 昵称，如 "s1mple" */
   id: string
   /** 头像 URL */

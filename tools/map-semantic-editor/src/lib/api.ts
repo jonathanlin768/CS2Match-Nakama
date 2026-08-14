@@ -18,6 +18,7 @@ export interface ImportLogEntry {
 }
 
 export interface GenConfigOutput {
+  operation: 'gen-config' | 'update-local'
   status: 'success' | 'failed' | 'timeout' | 'running'
   exitCode: number | null
   durationMs: number
@@ -83,6 +84,14 @@ export async function runGenConfig(): Promise<GenConfigOutput> {
   const body = await readApiBody(response)
   if (!response.ok) throw new Error(body.error ? `导表接口失败 (${response.status}): ${body.error}` : `导表接口失败 (${response.status})`)
   if (!isGenConfigOutput(body.result)) throw new Error('导表接口返回格式异常')
+  return body.result as GenConfigOutput
+}
+
+export async function updateLocalConfig(): Promise<GenConfigOutput> {
+  const response = await fetch('/api/update-local', { method: 'POST' })
+  const body = await readApiBody(response)
+  if (!response.ok) throw new Error(body.error ? `更新接口失败 (${response.status}): ${body.error}` : `更新接口失败 (${response.status})`)
+  if (!isGenConfigOutput(body.result)) throw new Error('更新接口返回格式异常')
   return body.result as GenConfigOutput
 }
 
@@ -192,6 +201,7 @@ function isGenConfigOutput(value: unknown): value is GenConfigOutput {
   if (!value || typeof value !== 'object') return false
   const output = value as Partial<GenConfigOutput>
   return (
+    (output.operation === 'gen-config' || output.operation === 'update-local') &&
     (output.status === 'success' || output.status === 'failed' || output.status === 'timeout' || output.status === 'running') &&
     (typeof output.exitCode === 'number' || output.exitCode === null) &&
     typeof output.durationMs === 'number' &&

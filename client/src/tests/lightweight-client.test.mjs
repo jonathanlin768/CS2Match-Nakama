@@ -1,9 +1,13 @@
 import assert from "node:assert/strict"
 import test from "node:test"
+import { createElement } from "react"
+import { renderToStaticMarkup } from "react-dom/server"
 import { countUnreadCards, parseContactCard } from "../social/contact-card.ts"
 import { groupFriends } from "../social/friend-groups.ts"
 import { toggleTutorialPlayer, tutorialSelectionCost, tutorialSelectionReady } from "../game/tutorial-selection.ts"
 import { assetUrl, croppedImageStyle, validAvatarCrop } from "../components/player/player-visual.ts"
+import { rpcErrorMessage } from "../api/rpc-error.ts"
+import { BattleRosterIdentityRows, battleRosterRows } from "../components/battle/roster-identity.ts"
 
 const tutorial = {
   budget: 15, rosterSize: 5,
@@ -21,6 +25,12 @@ test("tutorial selection enforces pool, roster and budget boundaries", () => {
   assert.deepEqual(toggleTutorialPlayer(tutorial, selected, "p3").selected, ["p1", "p2", "p4", "p5"])
 })
 
+test("RPC response errors expose the Nakama message", async () => {
+  const response = new Response(JSON.stringify({ code: 13, error: {}, message: "INVALID_LINEUP: duplicate player id: p1" }), { status: 500, statusText: "Internal Server Error" })
+  assert.equal(await rpcErrorMessage(response), "INVALID_LINEUP: duplicate player id: p1")
+  assert.equal(await rpcErrorMessage(new Error("offline")), "offline")
+})
+
 test("player visual helpers preserve normalized 2:3 to 5:7 crops", () => {
   const crop = { x: 0.2, y: 0.08, width: 0.6, height: 0.56 }
   assert.equal(validAvatarCrop(crop), true)
@@ -36,6 +46,30 @@ test("player visual helpers preserve normalized 2:3 to 5:7 crops", () => {
   assert.equal(assetUrl("player-cards/niko2.png"), "/player-cards/niko2.png")
   assert.equal(assetUrl("https://example.com/player.png"), "https://example.com/player.png")
   assert.equal(assetUrl(), "/images/star-player.png")
+})
+
+test("battle roster renders shared config players as two distinct instance rows", () => {
+  const cardImage = "player-cards/zywoo.png"
+  const rows = battleRosterRows([
+    { id: "ZyWOo", instanceId: "tutorial_players/player_zywoo", configPlayerId: "player_zywoo", cardImage },
+    { id: "ZyWOo", instanceId: "team_vitality/player_zywoo", configPlayerId: "player_zywoo", cardImage },
+  ])
+
+  assert.equal(rows.length, 2)
+  assert.deepEqual(rows.map((row) => row.key), ["tutorial_players/player_zywoo", "team_vitality/player_zywoo"])
+  assert.deepEqual(rows.map((row) => row.playerId), ["tutorial_players/player_zywoo", "team_vitality/player_zywoo"])
+  assert.deepEqual(rows.map((row) => row.configPlayerId), ["player_zywoo", "player_zywoo"])
+  assert.deepEqual(rows.map((row) => row.player.cardImage), [cardImage, cardImage])
+
+  const markup = renderToStaticMarkup(createElement(BattleRosterIdentityRows, {
+    players: rows.map((row) => row.player),
+    renderPlayer: (player) => createElement("span", { "data-card-image": player.cardImage }, player.id),
+  }))
+  assert.equal((markup.match(/data-player-id=/g) ?? []).length, 2)
+  assert.match(markup, /data-player-id="tutorial_players\/player_zywoo"/)
+  assert.match(markup, /data-player-id="team_vitality\/player_zywoo"/)
+  assert.equal((markup.match(/data-config-player-id="player_zywoo"/g) ?? []).length, 2)
+  assert.equal((markup.match(/data-card-image="player-cards\/zywoo.png"/g) ?? []).length, 2)
 })
 
 test("contact card parser accepts only supported server card shapes", () => {

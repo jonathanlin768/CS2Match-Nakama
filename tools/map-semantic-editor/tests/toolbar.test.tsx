@@ -30,4 +30,10 @@ describe('toolbar dangerous actions', () => {
     expect(screen.queryByRole('dialog', { name: '新建项目' })).not.toBeInTheDocument()
     expect(useEditorStore.getState().project.nodes.find((node) => node.id === 'A_SITE')?.name).toBe('A Site')
   })
+
+  it('offers one-click local frontend and backend refresh', () => {
+    render(<Toolbar />)
+
+    expect(screen.getByRole('button', { name: '更新本地前后端' })).toBeEnabled()
+  })
 })

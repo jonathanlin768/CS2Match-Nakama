@@ -102,6 +102,13 @@ afterEach(() => {
 })
 
 describe('config editor pages', () => {
+  it('renders the TutorialBattle loading state before config documents arrive', () => {
+    useConfigStore.setState({ documents: {} })
+    render(<TutorialConfigPage />)
+
+    expect(screen.getByText(/正在读取 #TutorialBattle.xlsx/)).toBeInTheDocument()
+  })
+
   it('enables current and batch save commands only after a table becomes dirty', () => {
     const item = document('#item.xlsx', 'Tbitem', 'generic', [field('id'), field('name', 'string', 2)], [{ id: 'AK47', name: 'AK-47' }])
     seed([item])
@@ -115,6 +122,13 @@ describe('config editor pages', () => {
     fireEvent.change(within(table).getAllByRole('textbox')[1], { target: { value: 'Changed' } })
     expect(screen.getByRole('button', { name: '保存当前表' })).toBeEnabled()
     expect(screen.getByRole('button', { name: '保存全部 (1)' })).toBeEnabled()
+  })
+
+  it('offers one-click local frontend and backend refresh', () => {
+    window.location.hash = '#tutorial'
+    render(<ConfigEditorShell />)
+
+    expect(screen.getByRole('button', { name: '更新本地前后端' })).toBeEnabled()
   })
 
   it('edits, adds and deletes rows in a generic table', async () => {
@@ -148,9 +162,9 @@ describe('config editor pages', () => {
 
   it('edits player references, abilities and position tags', () => {
     render(<PlayerConfigPage />)
-    const teamSelect = screen.getByLabelText('teamId')
+    const teamSelect = screen.getByLabelText(/^teamId\(/)
     fireEvent.change(teamSelect, { target: { value: 'TEAM_B' } })
-    const entry = screen.getByLabelText('entry')
+    const entry = screen.getByLabelText(/^entry\(/)
     fireEvent.change(entry, { target: { value: '101' } })
     const positionInput = screen.getByPlaceholderText(/输入标签后按 Enter/)
     fireEvent.change(positionInput, { target: { value: 'awper' } })
@@ -204,13 +218,38 @@ describe('config editor pages', () => {
 
   it('keeps only one TutorialBattle plan enabled', () => {
     render(<TutorialConfigPage />)
+    expect(screen.getByRole('heading', { name: 'TbTutorialBattle(新手战斗配置)' })).toBeInTheDocument()
+    expect(screen.getByText('tier5PlayerIds(5 费候选选手)')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /T2/ }))
-    const enabled = screen.getByRole('checkbox', { name: /启用/ })
+    const enabled = screen.getByRole('checkbox', { name: 'enabled(是否启用)' })
     fireEvent.click(enabled)
 
     const rows = useConfigStore.getState().documents['#TutorialBattle.xlsx'].rows
     expect(rows.map((row) => row.enabled)).toEqual([false, true])
     expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('关闭当前已启用'))
+  })
+
+  it('disables a player in other TutorialBattle cost tiers after selection', () => {
+    const tutorial = useConfigStore.getState().documents['#TutorialBattle.xlsx']
+    tutorial.rows[0] = { ...tutorial.rows[0], tier5PlayerIds: ['P1'], tier4PlayerIds: [], tier3PlayerIds: [], tier2PlayerIds: [], tier1PlayerIds: [], opponentPlayerIds: [] }
+    render(<TutorialConfigPage />)
+
+    expect(screen.getByRole('checkbox', { name: 'tier5PlayerIds(5 费候选选手) Player One' })).toBeEnabled()
+    expect(screen.getByRole('checkbox', { name: 'tier4PlayerIds(4 费候选选手) Player One' })).toBeDisabled()
+    expect(screen.getByRole('checkbox', { name: 'tier1PlayerIds(1 费候选选手) Player One' })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'tier5PlayerIds(5 费候选选手) Player One' }))
+    expect(screen.getByRole('checkbox', { name: 'tier4PlayerIds(4 费候选选手) Player One' })).toBeEnabled()
+  })
+
+  it('allows players shared by a cost tier and the opponent lineup', () => {
+    const tutorial = useConfigStore.getState().documents['#TutorialBattle.xlsx']
+    tutorial.rows[0] = { ...tutorial.rows[0], tier5PlayerIds: ['P1'], tier4PlayerIds: [], tier3PlayerIds: [], tier2PlayerIds: [], tier1PlayerIds: [], opponentPlayerIds: [] }
+    render(<TutorialConfigPage />)
+
+    expect(screen.getByRole('checkbox', { name: 'opponentPlayerIds(对手阵容) Player One' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'opponentPlayerIds(对手阵容) Player One' }))
+    expect(useConfigStore.getState().documents['#TutorialBattle.xlsx'].rows[0].opponentPlayerIds).toContain('P1')
   })
 
   it('reports an empty TutorialBattle tier and blocks saving', async () => {

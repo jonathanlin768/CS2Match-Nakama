@@ -108,8 +108,10 @@ export function playerVitalsAtPlayback(
 }
 
 export function formatBattleEvent(event: GameEvent, context: BattleEventContext): string {
-  const attacker = event.attacker_name || event.attacker_id || "未知选手"
-  const victim = event.victim_name || event.victim_id || "未知选手"
+  const attackerName = event.attacker_name || event.attacker_id || "未知选手"
+  const victimName = event.victim_name || event.victim_id || attackerName
+  const attacker = playerLabel(attackerName, event.attacker_team_id, context)
+  const victim = playerLabel(victimName, event.victim_team_id || (!event.victim_name && !event.victim_id ? event.attacker_team_id : undefined), context)
   const location = event.location?.name || event.bomb?.node_id || event.state?.bomb?.node_id || "未知位置"
   const damage = numericExtra(event, "damage")
   const actorTeam = teamName(event.attacker_team_id, context)
@@ -136,19 +138,19 @@ export function formatBattleEvent(event: GameEvent, context: BattleEventContext)
     case "CONTROL_GAINED":
       return `${actorTeam} 取得了 ${location} 的控制权。`
     case "BOMB_DROP":
-      return `${event.victim_name || event.victim_id || attacker} 在 ${location} 丢掉了炸弹。`
+      return `${victim} 在 ${location} 丢掉了炸弹。`
     case "BOMB_PICKUP":
       return `${attacker} 在 ${location} 拾取了炸弹。`
     case "BOMB_PLANT_START":
       return `${attacker} 开始在 ${event.bomb?.site || location} 安放炸弹。`
     case "BOMB_PLANT_INTERRUPT":
-      return `${event.victim_name || event.victim_id || attacker} 的安包被打断。`
+      return `${victim} 的安包被打断。`
     case "BOMB_PLANT":
       return `${attacker} 在 ${event.bomb?.site || location} 安放了炸弹。`
     case "DEFUSE_START":
       return `${attacker} 开始拆除炸弹。`
     case "DEFUSE_INTERRUPT":
-      return `${event.victim_name || event.victim_id || attacker} 的拆包被打断。`
+      return `${victim} 的拆包被打断。`
     case "BOMB_DEFUSE":
       return `炸弹被 ${attacker} 拆除。`
     case "BOMB_EXPLODE":
@@ -190,6 +192,12 @@ function teamName(teamID: string | undefined, context: BattleEventContext): stri
   if (teamID === context.teamAID) return context.teamAName
   if (teamID === context.teamBID) return context.teamBName
   return teamID || "未知队伍"
+}
+
+function playerLabel(name: string, teamID: string | undefined, context: BattleEventContext): string {
+  if (teamID === context.teamTID) return `[T] ${name}`
+  if (teamID === context.teamCTID) return `[CT] ${name}`
+  return name
 }
 
 function winReasonLabel(reason: string): string {

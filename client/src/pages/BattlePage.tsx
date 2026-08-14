@@ -112,6 +112,8 @@ function buildBattlePlayer(
   stats: CumulativePlayerStats,
 ): BattlePlayer {
   return {
+    instanceId: state.player_id,
+    configPlayerId: state.config_player_id,
     id: state.player_name || state.display_name,
     avatar: portraitUrl(state.portrait),
     portrait: state.portrait,

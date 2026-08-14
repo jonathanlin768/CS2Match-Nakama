@@ -1,7 +1,7 @@
 [
   {
     "id": "player_apex",
-    "name": "豆豆",
+    "name": "apex",
     "teamId": "team_vitality",
     "nationality": "BA",
     "entry": 70,
@@ -25,14 +25,14 @@
     "rarity": "S",
     "portrait": "portraits/player_apex.jpg",
     "cardImage": "player-cards/apex.png",
-    "avatarCropX": 0.2,
-    "avatarCropY": 0.08,
-    "avatarCropWidth": 0.6,
-    "avatarCropHeight": 0.56
+    "avatarCropX": 0.29231,
+    "avatarCropY": 0.097308,
+    "avatarCropWidth": 0.470189,
+    "avatarCropHeight": 0.438843
   },
   {
     "id": "player_flamez",
-    "name": "火仔",
+    "name": "flameZ",
     "teamId": "team_vitality",
     "nationality": "BA",
     "entry": 60,
@@ -56,14 +56,14 @@
     "rarity": "SS",
     "portrait": "portraits/player_flamez.jpg",
     "cardImage": "player-cards/flamez.png",
-    "avatarCropX": 0.2,
-    "avatarCropY": 0.08,
-    "avatarCropWidth": 0.6,
-    "avatarCropHeight": 0.56
+    "avatarCropX": 0.260579,
+    "avatarCropY": 0.112693,
+    "avatarCropWidth": 0.435572,
+    "avatarCropHeight": 0.406534
   },
   {
     "id": "player_zywoo",
-    "name": "载物",
+    "name": "ZyWOo",
     "teamId": "team_vitality",
     "nationality": "DK",
     "entry": 83,
@@ -87,14 +87,14 @@
     "rarity": "B",
     "portrait": "portraits/player_zywoo.jpg",
     "cardImage": "player-cards/zywoo.png",
-    "avatarCropX": 0.2,
-    "avatarCropY": 0.08,
-    "avatarCropWidth": 0.6,
-    "avatarCropHeight": 0.56
+    "avatarCropX": 0.246155,
+    "avatarCropY": 0.105001,
+    "avatarCropWidth": 0.484612,
+    "avatarCropHeight": 0.452304
   },
   {
     "id": "player_mezii",
-    "name": "妹子",
+    "name": "mezii",
     "teamId": "team_vitality",
     "nationality": "UA",
     "entry": 60,
@@ -119,14 +119,14 @@
     "rarity": "SS",
     "portrait": "portraits/player_mezii.jpg",
     "cardImage": "player-cards/mezii.png",
-    "avatarCropX": 0.2,
-    "avatarCropY": 0.08,
-    "avatarCropWidth": 0.6,
-    "avatarCropHeight": 0.56
+    "avatarCropX": 0.260579,
+    "avatarCropY": 0.087693,
+    "avatarCropWidth": 0.473073,
+    "avatarCropHeight": 0.441535
   },
   {
     "id": "player_ropz",
-    "name": "车主",
+    "name": "ropz",
     "teamId": "team_vitality",
     "nationality": "FI",
     "entry": 79,
@@ -151,14 +151,14 @@
     "rarity": "C",
     "portrait": "portraits/player_ropz.jpg",
     "cardImage": "player-cards/ropz.png",
-    "avatarCropX": 0.2,
-    "avatarCropY": 0.08,
-    "avatarCropWidth": 0.6,
-    "avatarCropHeight": 0.56
+    "avatarCropX": 0.237501,
+    "avatarCropY": 0.091538,
+    "avatarCropWidth": 0.461534,
+    "avatarCropHeight": 0.430766
   },
   {
     "id": "player_kyousuke",
-    "name": "京介",
+    "name": "kyousuke",
     "teamId": "team_falcons",
     "nationality": "US",
     "entry": 69,
@@ -182,15 +182,15 @@
     ],
     "rarity": "B",
     "portrait": "portraits/player_kyousuke.jpg",
-    "cardImage": "player-cards/kyousuke.png",
-    "avatarCropX": 0.2,
-    "avatarCropY": 0.08,
-    "avatarCropWidth": 0.6,
-    "avatarCropHeight": 0.56
+    "cardImage": "player-cards/kyousuke2.png",
+    "avatarCropX": 0.262508,
+    "avatarCropY": 0.06154,
+    "avatarCropWidth": 0.524024,
+    "avatarCropHeight": 0.489089
   },
   {
     "id": "player_kyxsan",
-    "name": "K3",
+    "name": "karrigan",
     "teamId": "team_falcons",
     "nationality": "NO",
     "entry": 68,
@@ -213,15 +213,15 @@
     ],
     "rarity": "S",
     "portrait": "portraits/player_kyxsan.jpg",
-    "cardImage": "",
-    "avatarCropX": 0,
-    "avatarCropY": 0,
-    "avatarCropWidth": 0,
-    "avatarCropHeight": 0
+    "cardImage": "player-cards/karrigan.png",
+    "avatarCropX": 0.233661,
+    "avatarCropY": 0.096797,
+    "avatarCropWidth": 0.512485,
+    "avatarCropHeight": 0.47832
   },
   {
     "id": "player_monesy",
-    "name": "孩神",
+    "name": "m0NESY",
     "teamId": "team_falcons",
     "nationality": "SE",
     "entry": 95,
@@ -245,14 +245,14 @@
     "rarity": "S",
     "portrait": "portraits/player_monesy.jpg",
     "cardImage": "player-cards/monesy.png",
-    "avatarCropX": 0.2,
-    "avatarCropY": 0.08,
-    "avatarCropWidth": 0.6,
-    "avatarCropHeight": 0.56
+    "avatarCropX": 0.217308,
+    "avatarCropY": 0.078077,
+    "avatarCropWidth": 0.559614,
+    "avatarCropHeight": 0.522307
   },
   {
     "id": "player_niko",
-    "name": "老尼",
+    "name": "NiKo",
     "teamId": "team_falcons",
     "nationality": "UA",
     "entry": 68,
@@ -271,20 +271,19 @@
     "endurance": 77,
     "discipline": 80,
     "positions": [
-      "AWPer",
-      "IGL"
+      "Rifler"
     ],
-    "rarity": "B",
+    "rarity": "S",
     "portrait": "portraits/player_niko.jpg",
     "cardImage": "player-cards/niko2.png",
-    "avatarCropX": 0.2,
-    "avatarCropY": 0.08,
-    "avatarCropWidth": 0.6,
-    "avatarCropHeight": 0.56
+    "avatarCropX": 0.217308,
+    "avatarCropY": 0.108847,
+    "avatarCropWidth": 0.499035,
+    "avatarCropHeight": 0.465766
   },
   {
     "id": "player_teses",
-    "name": "龙哥",
+    "name": "TeSeS",
     "teamId": "team_falcons",
     "nationality": "RU",
     "entry": 90,
@@ -306,13 +305,13 @@
       "IGL",
       "AWPer"
     ],
-    "rarity": "B",
+    "rarity": "A",
     "portrait": "portraits/player_teses.jpg",
     "cardImage": "player-cards/TeSeS.png",
     "avatarCropX": 0.2,
-    "avatarCropY": 0.08,
-    "avatarCropWidth": 0.6,
-    "avatarCropHeight": 0.56
+    "avatarCropY": 0.068461,
+    "avatarCropWidth": 0.545191,
+    "avatarCropHeight": 0.508845
   },
   {
     "id": "player_donk",
@@ -340,10 +339,10 @@
     "rarity": "SS",
     "portrait": "portraits/player_donk.jpg",
     "cardImage": "player-cards/donk.png",
-    "avatarCropX": 0.2,
-    "avatarCropY": 0.08,
-    "avatarCropWidth": 0.6,
-    "avatarCropHeight": 0.56
+    "avatarCropX": 0.257695,
+    "avatarCropY": 0.081923,
+    "avatarCropWidth": 0.40961,
+    "avatarCropHeight": 0.382303
   },
   {
     "id": "player_sh1ro",
@@ -371,14 +370,14 @@
     "rarity": "SS",
     "portrait": "portraits/player_sh1ro.jpg",
     "cardImage": "player-cards/sh1ro.png",
-    "avatarCropX": 0.2,
-    "avatarCropY": 0.08,
-    "avatarCropWidth": 0.6,
-    "avatarCropHeight": 0.56
+    "avatarCropX": 0.231732,
+    "avatarCropY": 0.072307,
+    "avatarCropWidth": 0.421148,
+    "avatarCropHeight": 0.393072
   },
   {
     "id": "player_chopper",
-    "name": "chopper",
+    "name": "tn1r",
     "teamId": "team_spirit",
     "nationality": "RU",
     "entry": 72,
@@ -401,11 +400,11 @@
     ],
     "rarity": "S",
     "portrait": "portraits/player_chopper.jpg",
-    "cardImage": "",
-    "avatarCropX": 0,
-    "avatarCropY": 0,
-    "avatarCropWidth": 0,
-    "avatarCropHeight": 0
+    "cardImage": "player-cards/tn1r.png",
+    "avatarCropX": 0.265393,
+    "avatarCropY": 0.090258,
+    "avatarCropWidth": 0.425944,
+    "avatarCropHeight": 0.397548
   },
   {
     "id": "player_zont1x",
@@ -433,10 +432,10 @@
     "rarity": "S",
     "portrait": "portraits/player_zont1x.jpg",
     "cardImage": "player-cards/zont1x.png",
-    "avatarCropX": 0.2,
-    "avatarCropY": 0.08,
-    "avatarCropWidth": 0.6,
-    "avatarCropHeight": 0.56
+    "avatarCropX": 0.286541,
+    "avatarCropY": 0.09,
+    "avatarCropWidth": 0.389417,
+    "avatarCropHeight": 0.363456
   },
   {
     "id": "player_magixx",
@@ -464,10 +463,10 @@
     "rarity": "S",
     "portrait": "portraits/player_magixx.jpg",
     "cardImage": "player-cards/magixx.png",
-    "avatarCropX": 0.2,
-    "avatarCropY": 0.08,
-    "avatarCropWidth": 0.6,
-    "avatarCropHeight": 0.56
+    "avatarCropX": 0.277887,
+    "avatarCropY": 0.07,
+    "avatarCropWidth": 0.377878,
+    "avatarCropHeight": 0.352686
   },
   {
     "id": "player_b1t",
@@ -495,10 +494,10 @@
     "rarity": "SS",
     "portrait": "portraits/player_b1t.jpg",
     "cardImage": "player-cards/b1t.png",
-    "avatarCropX": 0.2,
-    "avatarCropY": 0.08,
-    "avatarCropWidth": 0.6,
-    "avatarCropHeight": 0.56
+    "avatarCropX": 0.286541,
+    "avatarCropY": 0.06923,
+    "avatarCropWidth": 0.380763,
+    "avatarCropHeight": 0.355379
   },
   {
     "id": "player_w0nderful",
@@ -526,10 +525,10 @@
     "rarity": "SS",
     "portrait": "portraits/player_w0nderful.jpg",
     "cardImage": "player-cards/wonderful.png",
-    "avatarCropX": 0.2,
-    "avatarCropY": 0.08,
-    "avatarCropWidth": 0.6,
-    "avatarCropHeight": 0.56
+    "avatarCropX": 0.251925,
+    "avatarCropY": 0.082308,
+    "avatarCropWidth": 0.389417,
+    "avatarCropHeight": 0.363456
   },
   {
     "id": "player_im",
@@ -557,10 +556,10 @@
     "rarity": "S",
     "portrait": "portraits/player_im.jpg",
     "cardImage": "player-cards/im.png",
-    "avatarCropX": 0.2,
-    "avatarCropY": 0.08,
-    "avatarCropWidth": 0.6,
-    "avatarCropHeight": 0.56
+    "avatarCropX": 0.277887,
+    "avatarCropY": 0.066922,
+    "avatarCropWidth": 0.389417,
+    "avatarCropHeight": 0.363456
   },
   {
     "id": "player_aleksib",
@@ -588,10 +587,10 @@
     "rarity": "S",
     "portrait": "portraits/player_aleksib.jpg",
     "cardImage": "player-cards/aleksib.png",
-    "avatarCropX": 0.2,
-    "avatarCropY": 0.08,
-    "avatarCropWidth": 0.6,
-    "avatarCropHeight": 0.56
+    "avatarCropX": 0.257694,
+    "avatarCropY": 0.076154,
+    "avatarCropWidth": 0.400956,
+    "avatarCropHeight": 0.374225
   },
   {
     "id": "player_makazze",
@@ -619,9 +618,9 @@
     "rarity": "S",
     "portrait": "portraits/player_makazze.jpg",
     "cardImage": "player-cards/makazee.png",
-    "avatarCropX": 0.2,
-    "avatarCropY": 0.08,
-    "avatarCropWidth": 0.6,
-    "avatarCropHeight": 0.56
+    "avatarCropX": 0.292311,
+    "avatarCropY": 0.090385,
+    "avatarCropWidth": 0.395186,
+    "avatarCropHeight": 0.36884
   }
 ]

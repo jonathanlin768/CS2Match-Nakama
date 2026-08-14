@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, CheckCircle2, Download, FileInput, FilePlus2, FolderOpen, GitBranch, MousePointer2, Play, Radar, Redo2, Route, Save, Search, ShieldAlert, Undo2, Waypoints, X } from 'lucide-react'
+import { Check, CheckCircle2, Download, FileInput, FilePlus2, FolderOpen, GitBranch, MousePointer2, Play, Radar, Redo2, Route, Save, Search, ServerCog, ShieldAlert, Undo2, Waypoints, X } from 'lucide-react'
 import { useEditorStore } from '../store/editorStore'
 import type { ToolMode } from '../lib/model'
 
@@ -36,6 +36,7 @@ export function Toolbar() {
   const cancelRouteDraft = useEditorStore((state) => state.cancelRouteDraft)
   const write = useEditorStore((state) => state.write)
   const runExport = useEditorStore((state) => state.runExport)
+  const updateLocal = useEditorStore((state) => state.updateLocal)
   const centerView = useEditorStore((state) => state.centerView)
 
   function confirmNewProject() {
@@ -80,6 +81,10 @@ export function Toolbar() {
           <button type="button" className="primaryButton secondary" disabled={busy} onClick={() => void runExport()} title="执行 scripts/gen-config.ps1">
             <Play size={16} />
             {genConfig?.status === 'running' ? '导表中' : '运行导表'}
+          </button>
+          <button type="button" className="primaryButton secondary" disabled={busy} onClick={() => void updateLocal()} title="导表、编译后端插件、重建前端并重启本地 Docker 服务">
+            <ServerCog size={16} />
+            更新本地前后端
           </button>
         </div>
 

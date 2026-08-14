@@ -31,6 +31,21 @@ describe('Luban 通用表模型', () => {
     const messages = validateDocuments([team, player, tutorial]).map((issue) => issue.message)
     expect(messages).toContain('候选池无法在预算内组成完整阵容')
     expect(messages).toContain('对手阵容必须恰好包含 5 名选手')
+    expect(messages).not.toContain('对手选手 p1 同时存在于费用档候选池')
+	})
+
+  it('允许 TutorialBattle 候选池与对手阵容共享选手', () => {
+    const team = document('#Team.xlsx', 'TbTeam', [{ id: 'team_a', name: 'A' }])
+    const player = document('#Player.xlsx', 'TbPlayer', [
+      playerRow('p1', 'team_a'), playerRow('p2', 'team_a'), playerRow('p3', 'team_a'), playerRow('p4', 'team_a'), playerRow('p5', 'team_a'),
+    ])
+    const tutorial = document('#TutorialBattle.xlsx', 'TbTutorialBattle', [{
+      id: 'tutorial', enabled: true, budget: 15, rosterSize: 5,
+      tier5PlayerIds: ['p1'], tier4PlayerIds: ['p2'], tier3PlayerIds: ['p3'], tier2PlayerIds: ['p4'], tier1PlayerIds: ['p5'],
+      opponentTeamId: 'team_a', opponentPlayerIds: ['p1', 'p2', 'p3', 'p4', 'p5'],
+    }])
+    const messages = validateDocuments([team, player, tutorial]).map((issue) => issue.message)
+    expect(messages.some((message) => message.includes('同时存在于费用档候选池'))).toBe(false)
   })
 
   it('校验 Player 的归一化 5:7 头像裁切', () => {

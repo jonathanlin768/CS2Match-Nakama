@@ -294,7 +294,7 @@ TBD - created by archiving change add-map-semantic-config-editor. Update Purpose
 - **GIVEN** 编辑器已经将地图语义配表写入 `configs/Datas/`
 - **WHEN** 用户在 Web 编辑器点击 `运行导表`
 - **THEN** 本地写入服务在项目根目录执行 `scripts/gen-config.ps1`
-- **AND** Web 编辑器自动切换到底部 `导表输出` 面板并显示执行中状态
+- **AND** Web 编辑器自动切换到底部 `任务输出` 面板并显示执行中状态
 - **AND** Web 编辑器显示导表状态、退出码、耗时、stdout 和 stderr
 - **AND** 导表脚本成功生成 Server 和 Client 配置产物
 - **AND** 地图语义表没有产生 Luban 结构或数据错误
@@ -303,10 +303,18 @@ TBD - created by archiving change add-map-semantic-config-editor. Update Purpose
 
 - **GIVEN** 编辑器已经将地图语义配表写入 `configs/Datas/`
 - **AND** `scripts/gen-config.ps1` 因 Luban 配置错误以非零退出码结束
-- **WHEN** 用户查看 `导表输出`
+- **WHEN** 用户查看 `任务输出`
 - **THEN** Web 编辑器显示非零退出码
 - **AND** Web 编辑器显示 stderr 或 stdout 中的失败信息
 - **AND** 系统不隐藏导表失败状态
+
+#### Scenario: 从地图编辑器更新本地前后端配置
+
+- **GIVEN** 编辑器已经将地图语义配表写入 `configs/Datas/`
+- **WHEN** 用户点击 `更新本地前后端`
+- **THEN** 本地服务依次运行 Luban 导表、编译 Nakama Go 插件、重载 Nakama、重建并重新创建 Docker 前端容器
+- **AND** 页面在 `任务输出` 面板显示完整执行结果
+- **AND** 任一步骤失败时停止后续步骤并明确显示失败状态
 
 ### Requirement: 本地写入服务限制文件权限边界
 
@@ -390,4 +398,3 @@ TBD - created by archiving change add-map-semantic-config-editor. Update Purpose
 - **THEN** 系统继续切换到对应地图编辑工具
 - **WHEN** 用户切换到非地图配置页
 - **THEN** 这些按键不再触发地图工具切换
-
