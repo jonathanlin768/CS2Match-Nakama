@@ -26,6 +26,7 @@
 - [x] 4.3 提供 Cloudflare Tunnel 配置模板，使用一条 API hostname HTTP ingress 同时代理 REST/WebSocket 并以 404 catch-all 结束；不得为 Console 创建公开路由。
 - [x] 4.4 提供 Tailscale 主机初始化和 ACL/CI 身份配置说明，使管理员、Nakama Console 和 GitHub Runner 仅通过私网访问，并保留 Lightsail 浏览器控制台作为紧急通道。
 - [x] 4.5 添加生产 Compose 静态验证和本地集成测试，确认数据库仅内部可达、Nakama/Cloudflared 启动顺序正确、主机重启后自动恢复且开发 Compose 行为不变。
+- [x] 4.6 将生产/开发 Compose、镜像集成测试、发布前备份和隔离恢复的 PostgreSQL 就绪检查统一为正式 TCP 探针；集成测试增加真实 SQL 认证检查、超时日志和防止临时 Unix Socket 误判的回归覆盖。
 
 ## 5. 备份、恢复与停服保护
 

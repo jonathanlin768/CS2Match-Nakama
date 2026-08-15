@@ -21,8 +21,11 @@ fi
 if docker volume inspect cs2match-postgres-data >/dev/null 2>&1; then
   log "existing database volume detected; starting database for pre-deploy backup"
   compose up -d db
-  for _ in {1..30}; do compose exec -T db pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1 && break; sleep 1; done
-  compose exec -T db pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1 || die "database did not become ready for pre-deploy backup"
+  for _ in {1..30}; do compose exec -T db pg_isready -h 127.0.0.1 -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1 && break; sleep 1; done
+  if ! compose exec -T db pg_isready -h 127.0.0.1 -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1; then
+    compose logs --tail=100 db >&2 || true
+    die "database TCP service did not become ready for pre-deploy backup"
+  fi
   "$SCRIPT_DIR/backup-db.sh" pre-deploy
 else
   bootstrap=true

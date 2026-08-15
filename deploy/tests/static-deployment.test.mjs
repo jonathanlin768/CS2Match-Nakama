@@ -9,6 +9,8 @@ const env = readFileSync(new URL("../../.env.production.example", import.meta.ur
 const workflow = readFileSync(new URL("../../.github/workflows/deploy-production.yml", import.meta.url), "utf8")
 const deploy = readFileSync(new URL("../scripts/deploy-backend.sh", import.meta.url), "utf8")
 const backup = readFileSync(new URL("../scripts/backup-db.sh", import.meta.url), "utf8")
+const restore = readFileSync(new URL("../scripts/restore-verify.sh", import.meta.url), "utf8")
+const imageIntegration = readFileSync(new URL("./image-integration.sh", import.meta.url), "utf8")
 const dockerBuildRetry = readFileSync(new URL("../scripts/docker-build-retry.sh", import.meta.url), "utf8")
 const backendDockerfile = readFileSync(new URL("../../server/Dockerfile.prod", import.meta.url), "utf8")
 const nginx = readFileSync(new URL("../../client/nginx.conf", import.meta.url), "utf8")
@@ -44,6 +46,17 @@ test("production template contains no real credentials and pins immutable backen
 test("development compose remains a separate local stack", () => {
   assert.match(devCompose, /7350:7350/)
   assert.doesNotMatch(devCompose, /cloudflared/)
+})
+
+test("PostgreSQL readiness waits for the final TCP listener", () => {
+  for (const [name, source] of Object.entries({ compose, devCompose, deploy, restore, imageIntegration })) {
+    const probes = source.split(/\r?\n/).filter((line) => line.includes("pg_isready"))
+    assert.ok(probes.length > 0, `${name} must contain a PostgreSQL readiness probe`)
+    for (const probe of probes) assert.match(probe, /pg_isready -h 127\.0\.0\.1/, `${name} must probe TCP readiness`)
+  }
+  assert.match(imageIntegration, /psql -h 127\.0\.0\.1 .*SELECT 1/)
+  assert.match(imageIntegration, /docker logs "\$db"/)
+  assert.match(restore, /docker logs "\$container"/)
 })
 
 test("both Nginx and Pages preserve SPA route fallback", () => {

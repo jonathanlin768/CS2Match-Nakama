@@ -9,6 +9,7 @@
 - **GIVEN** 运维者已在支持 Docker Compose 的 Lightsail 实例准备生产环境文件和所需密钥
 - **WHEN** 运维者执行文档规定的生产启动命令
 - **THEN** PostgreSQL 健康后 Nakama 完成迁移并加载与 Nakama 3.30.0 ABI 匹配的 Go 插件
+- **AND** PostgreSQL 健康条件验证正式 TCP 服务，不会被首次初始化期间仅监听 Unix Socket 的临时服务提前满足
 - **AND** Cloudflare Tunnel 将指定 API 域名转发到 Nakama 7350
 - **AND** 开发用 `docker-compose.yml` 未被生产配置覆盖
 
@@ -124,6 +125,7 @@
 - **GIVEN** 对象存储中存在一个已验证备份
 - **WHEN** 运维者执行恢复验证流程
 - **THEN** 数据被恢复到独立的临时 PostgreSQL 容器或数据库
+- **AND** 恢复只在临时 PostgreSQL 的正式 TCP 服务就绪后开始
 - **AND** 流程校验 Nakama 关键表可读后销毁临时恢复目标
 - **AND** 当前生产数据库未被覆盖
 
