@@ -103,6 +103,7 @@
 - **WHEN** Linux Runner 执行首次部署和回滚脚本测试
 - **THEN** 部署入口通过显式 Bash 解释器调用预检和备份子脚本
 - **AND** 验证结果不依赖 Windows、WSL 与原生 Linux 的文件模式差异
+- **AND** 首次成功部署、备份失败和恢复失败场景使用隔离的 mock 状态，不会读取前序场景的 marker 或调用记录
 
 ### Requirement: 部署健康检查和自动回滚
 

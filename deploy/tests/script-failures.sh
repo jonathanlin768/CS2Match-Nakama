@@ -104,6 +104,7 @@ bootstrap_image=ghcr.io/test/cs2match@sha256:22222222222222222222222222222222222
 MOCK_VOLUME_EXISTS=0 ENV_FILE="$work/bootstrap.env" bash "$repo_root/deploy/scripts/deploy-backend.sh" "$bootstrap_image" >/dev/null
 grep -Fxq "BACKEND_IMAGE_REF=$bootstrap_image" "$work/bootstrap.env"
 ! grep -q 'OWNER/REPOSITORY\|REPLACE_ME' "$work/calls"
+rm -f -- "$work/forget-ran"
 cp "$work/prod.env" "$work/default.env"
 printf '\nNAKAMA_SERVER_KEY=defaultkey\n' >> "$work/default.env"
 ENV_FILE="$work/default.env" expect_failure bash "$repo_root/deploy/scripts/preflight.sh" --skip-permissions
@@ -124,6 +125,7 @@ MOCK_BACKUP_FAIL=1 expect_failure bash "$repo_root/deploy/scripts/backup-db.sh" 
 
 MOCK_LOCKED=1 expect_failure bash "$repo_root/deploy/scripts/backup-db.sh" concurrent
 
+: > "$work/calls"
 MOCK_RESTORE_FAIL=1 expect_failure bash "$repo_root/deploy/scripts/restore-verify.sh" latest
 MOCK_RESTORE_FAIL=0 MOCK_CORRUPT=1 expect_failure bash "$repo_root/deploy/scripts/restore-verify.sh" latest
 ! grep -q 'compose.*exec.*db' "$work/calls"
