@@ -501,7 +501,7 @@ bash deploy/scripts/deploy-backend.sh 'ghcr.io/owner/cs2match-nakama@sha256:已�
 | 首次 Actions 失败，但公网 `/healthcheck` 仍返回 200 | 旧脚本可能留下已运行的半部署 Tunnel。当前脚本在无旧健康版本时执行不带 `-v` 的 Compose `down`；数据库 volume 保留，Pages 不发布 |
 | 公网 smoke 只显示 `Response {}` | Nakama JS 会直接抛出非 2xx `Response`。本项目还禁止注册时自定义用户名；smoke 必须让服务端生成 8 位玩家码。当前脚本按认证、RPC、WebSocket 分阶段输出 HTTP 状态和错误正文；后端在 smoke 通过前处于 pending，失败会恢复旧 digest，首次部署则停掉半部署栈并保留数据库卷 |
 | 认证与 RPC 均通过，但 WebSocket 显示 `[object ErrorEvent]` | Nakama JS 的 `createSocket()` 不继承 Client 的 HTTPS 设置，默认使用 `ws://`；生产 smoke 和浏览器必须显式传入 SSL 配置以使用 `wss://`。错误诊断不能序列化 WebSocket event target，因为连接 URL 可能含 Session token |
-| Actions 全部成功，但 Pages 显示 `Nothing is here yet` | 先看 Wrangler 输出：若同时出现 hash URL 和 `<branch>.<project>.pages.dev` alias，说明发布成了 preview。Direct Upload 的生产命令不得传 `--branch`；生产完成后应确认 `<project>.pages.dev` 与自定义域名都返回 React 页面，而不是只验证 preview URL |
+| Actions 的 Pages 上传成功，但显示 `production.<project>.pages.dev` 或 `head.<project>.pages.dev`，自定义域名仍是 `Nothing is here yet` | hash URL 加分支 alias 说明发布成了 preview。`--branch production` 只有 project 的生产分支也叫 `production` 时才是生产；省略参数又会在 Actions detached HEAD 中被 Wrangler 推断为 `HEAD`。本项目必须通过 Pages API 确认 `production_branch=master`，再显式 `--branch master`，最后验证 `<project>.pages.dev` 和自定义域名 |
 | GitGuardian 报 Generic Password | 先定位具体 commit/行；如果是真 secret，立即轮换/撤销并清理历史。即使怀疑是示例值，也不要在确认前忽略告警 |
 | WSL 中找不到 Docker | 在 Docker Desktop 启用该发行版的 WSL integration；也可用 Git Bash 调本机 Docker。Git Bash 给容器传 `/nakama/...` 时设置 `MSYS_NO_PATHCONV=1`，避免 MSYS 把容器路径改写成 Windows 路径 |
 | 已 push 但 AWS 没更新 | 这是手动工作流；还要到 Actions 点击 **Run workflow**。服务器不需要 `git pull` |

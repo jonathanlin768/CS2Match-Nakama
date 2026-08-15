@@ -73,7 +73,8 @@
 
 - **GIVEN** 前端目标是预先创建并绑定自定义域名的 Cloudflare Pages Direct Upload project
 - **WHEN** 工作流使用 Wrangler 上传生产前端产物
-- **THEN** 发布命令不传入会创建 preview deployment 的 `--branch` 参数
+- **THEN** 工作流通过 Pages API 将 project 的 `production_branch` 验证或校准为仓库生产分支 `master`
+- **AND** Wrangler 显式传入 `--branch master`，不依赖 detached HEAD 下会被推断成 `HEAD` 的隐式分支
 - **AND** project 的根 `pages.dev` 域名与生产自定义域名均返回新前端，而不是 `Deployment Not Found`
 - **AND** 工作流在成功结束前通过生产自定义域名验证 React 入口
 

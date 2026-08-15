@@ -73,7 +73,7 @@ GitHub Actions 使用 Tailscale 的短生命周期 CI 身份，优先采用 work
 
 失败回滚恢复上一个明确 tag 并再次健康检查。若回滚也失败，工作流停止自动重试并输出人工恢复命令，避免循环破坏。Pages 保留平台部署版本，文档提供回滚到上一次成功 production deployment 的步骤。
 
-Cloudflare Pages 使用 Direct Upload project。Wrangler 生产发布不传 `--branch`；该参数用于创建分支 preview deployment，即使上传成功也不会更新 project 根域名或普通自定义域名。发布后工作流通过 `FRONTEND_HOST` 拉取并识别 React 入口，防止预览发布成功但生产域名仍显示 `Deployment Not Found` 的假成功。
+Cloudflare Pages 使用 Direct Upload project。Wrangler 在 Git 仓库内即使未传 `--branch` 也会推断当前分支；GitHub Actions checkout 指定 SHA 时处于 detached HEAD，推断结果为字面值 `HEAD`，仍会创建 preview deployment。工作流因此使用 Pages API 验证或将 project 的 `production_branch` 校准为本仓库的 `master`，随后显式传 `--branch master`。发布后再通过 `FRONTEND_HOST` 拉取并识别 React 入口，防止上传成功但生产域名仍显示 `Deployment Not Found` 的假成功。
 
 Lightsail 本机的 RPC 就绪探针使用 server-only 的 `runtime.http_key` 通过 HTTP Basic Auth 调用规范化的小写 `healthcheck` RPC；不得使用会进入浏览器的 `socket.server_key`，也不把 runtime key 放入 URL。镜像集成测试必须实际请求同一 RPC 并校验成功 JSON，而不只检查“RPC registered”启动日志。首次部署没有上一健康镜像可回滚时，探针失败后使用不带 `-v` 的 Compose `down` 关闭 Tunnel、Nakama 和数据库容器，保留 PostgreSQL named volume，并恢复环境文件中的首次部署占位状态，避免工作流失败但半部署 API 仍公开在线。
 
