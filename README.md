@@ -309,7 +309,7 @@ A:
 # 1. 重新编译
 docker run --rm --entrypoint "" \
   -v "$(pwd)/server:/app" -w /app \
-  registry.heroiclabs.com/heroiclabs/nakama-pluginbuilder:3.30.0 \
+  heroiclabs/nakama-pluginbuilder:3.30.0 \
   go build -buildmode=plugin -trimpath -o build/backend.so .
 
 # 2. 重启 Nakama 加载新插件
@@ -347,4 +347,4 @@ docker tag docker.m.daocloud.io/node:22-alpine node:22-alpine
 docker pull docker.m.daocloud.io/nginx:alpine
 docker tag docker.m.daocloud.io/nginx:alpine nginx:alpine
 ```
-Nakama 相关镜像走 Heroic Labs 官方仓库 `registry.heroiclabs.com`，不受影响。
+Nakama 与 pluginbuilder 使用 Docker Hub 上的 Heroic Labs 官方 `heroiclabs/*` 镜像；两者必须保持相同的 Nakama 版本。若 Docker Hub 返回限流，请稍后重试或登录 Docker Hub，不要随意替换 pluginbuilder 版本。

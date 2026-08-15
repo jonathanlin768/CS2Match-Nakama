@@ -12,6 +12,8 @@
 4. 把精确 commit 传到 `/opt/cs2match`，先备份，再拉取 digest、更新 Compose、检查本地 RPC。失败会恢复旧 digest 并再次检查；二次失败停止循环并保留日志。
 5. 从 GitHub Runner 经公网域名验证设备认证、`HealthCheck`、`SimuMatch` 和 WebSocket，成功后才发布同一提交的 Pages 产物。
 
+后端构建直接使用 Docker Hub 上的 Heroic Labs 官方 Nakama 3.30.0/pluginbuilder 3.30.0 镜像，避开 `registry.heroiclabs.com` Scarf Gateway 的独立限流。验证与发布 job 都通过 `deploy/scripts/docker-build-retry.sh` 最多尝试三次；版本仍必须严格一致，不能用通用 Go 镜像替代 pluginbuilder。
+
 工作流不会创建 AWS 实例、DNS、Tunnel、Tailnet、R2 bucket、Pages project、Budget，也不会删除资源。这些是首次部署的人工步骤。
 
 ## GitHub 首次配置

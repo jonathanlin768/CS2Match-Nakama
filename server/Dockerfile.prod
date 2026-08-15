@@ -1,4 +1,4 @@
-FROM registry.heroiclabs.com/heroiclabs/nakama-pluginbuilder:3.30.0 AS plugin-builder
+FROM heroiclabs/nakama-pluginbuilder:3.30.0 AS plugin-builder
 
 WORKDIR /workspace
 
@@ -11,7 +11,7 @@ RUN mkdir -p build \
     && go build -v -mod=mod -buildmode=plugin -trimpath -o build/backend.so . \
     && test -s build/backend.so
 
-FROM registry.heroiclabs.com/heroiclabs/nakama:3.30.0
+FROM heroiclabs/nakama:3.30.0
 
 ARG VCS_REF=unknown
 ARG BUILD_DATE=unknown

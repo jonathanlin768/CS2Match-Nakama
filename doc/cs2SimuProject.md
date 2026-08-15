@@ -204,7 +204,7 @@ db:
     - postgres-data:/var/lib/postgresql/data
 
 nakama:
-  image: registry.heroiclabs.com/heroiclabs/nakama:3.30.0
+  image: heroiclabs/nakama:3.30.0
   command: >
     sh -cx "nakama migrate up --database.address postgres://nakama:password@db:5432/nakama &&
             exec nakama --database.address postgres://nakama:password@db:5432/nakama"

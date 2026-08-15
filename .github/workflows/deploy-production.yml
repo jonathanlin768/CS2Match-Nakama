@@ -76,7 +76,7 @@ jobs:
           ! grep -R -E 'RESTIC_PASSWORD|AWS_SECRET_ACCESS_KEY|SESSION_ENCRYPTION_KEY|CLOUDFLARE_TUNNEL_TOKEN' dist
       - name: Build and inspect backend image
         run: |
-          docker build --build-arg VCS_REF="${{ steps.source.outputs.sha }}" --build-arg BUILD_DATE="$(date -u +%FT%TZ)" -f server/Dockerfile.prod -t cs2match-nakama:test .
+          bash deploy/scripts/docker-build-retry.sh --build-arg VCS_REF="${{ steps.source.outputs.sha }}" --build-arg BUILD_DATE="$(date -u +%FT%TZ)" -f server/Dockerfile.prod -t cs2match-nakama:test .
           test "$(docker run --rm --entrypoint /bin/sh cs2match-nakama:test -c 'test -s /nakama/data/modules/backend.so && echo ok')" = ok
           bash deploy/tests/image-integration.sh cs2match-nakama:test
 
@@ -103,7 +103,7 @@ jobs:
           image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${GITHUB_REPOSITORY#*/}-nakama"
           tag="$image:${{ steps.commit.outputs.sha }}"
           printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          docker build --build-arg VCS_REF="${{ steps.commit.outputs.sha }}" --build-arg BUILD_DATE="$(date -u +%FT%TZ)" -f server/Dockerfile.prod -t "$tag" .
+          bash deploy/scripts/docker-build-retry.sh --build-arg VCS_REF="${{ steps.commit.outputs.sha }}" --build-arg BUILD_DATE="$(date -u +%FT%TZ)" -f server/Dockerfile.prod -t "$tag" .
           docker push "$tag"
           docker pull "$tag" >/dev/null
           digest="$(docker inspect --format='{{index .RepoDigests 0}}' "$tag")"

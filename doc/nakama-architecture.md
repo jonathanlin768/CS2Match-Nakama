@@ -160,7 +160,7 @@ Go plugin 的 `.so` 文件要求**编译时的 Go 版本、依赖版本和运行
 docker run --rm \
   -v "${SCRIPT_DIR}:/app" \
   -w /app \
-  registry.heroiclabs.com/heroiclabs/nakama-pluginbuilder:3.30.0 \
+  heroiclabs/nakama-pluginbuilder:3.30.0 \
   go build -v -mod=mod -buildmode=plugin -trimpath -o build/backend.so .
 ```
 

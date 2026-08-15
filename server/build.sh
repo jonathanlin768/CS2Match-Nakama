@@ -36,7 +36,7 @@ docker run --rm \
   --entrypoint "" \
   -v "${SCRIPT_DIR}:/app" \
   -w /app \
-  registry.heroiclabs.com/heroiclabs/nakama-pluginbuilder:3.30.0 \
+  heroiclabs/nakama-pluginbuilder:3.30.0 \
   go build -v -mod=mod -buildmode=plugin -trimpath -o build/backend.so .
 
 echo "=== Build complete: ${OUTPUT} ==="

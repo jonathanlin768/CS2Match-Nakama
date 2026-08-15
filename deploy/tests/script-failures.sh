@@ -12,6 +12,10 @@ cat > "$work/bin/docker" <<'MOCK'
 set -eu
 printf '%s\n' "$*" >> "${MOCK_CALLS:?}"
 case "$*" in
+  "build "*)
+    build_count="$(grep -c '^build ' "${MOCK_CALLS:?}" || true)"
+    [[ "$build_count" -ge "${MOCK_BUILD_SUCCEEDS_ON:-1}" ]] || exit 42
+    ;;
   *"compose"*"pg_dump"*)
     [[ "${MOCK_DUMP_FAIL:-0}" == 0 ]] || exit 40
     printf 'mock-pg-dump'
@@ -103,4 +107,15 @@ MOCK_LOCKED=1 expect_failure bash "$repo_root/deploy/scripts/backup-db.sh" concu
 MOCK_RESTORE_FAIL=1 expect_failure bash "$repo_root/deploy/scripts/restore-verify.sh" latest
 MOCK_RESTORE_FAIL=0 MOCK_CORRUPT=1 expect_failure bash "$repo_root/deploy/scripts/restore-verify.sh" latest
 ! grep -q 'compose.*exec.*db' "$work/calls"
-echo "backup and restore fail-closed tests passed"
+
+: > "$work/calls"
+MOCK_BUILD_SUCCEEDS_ON=3 DOCKER_BUILD_ATTEMPTS=3 DOCKER_BUILD_RETRY_DELAY_SECONDS=0 \
+  bash "$repo_root/deploy/scripts/docker-build-retry.sh" -t retry-test .
+[[ "$(grep -c '^build ' "$work/calls")" == 3 ]]
+
+: > "$work/calls"
+MOCK_BUILD_SUCCEEDS_ON=3 DOCKER_BUILD_ATTEMPTS=2 DOCKER_BUILD_RETRY_DELAY_SECONDS=0 \
+  expect_failure bash "$repo_root/deploy/scripts/docker-build-retry.sh" -t retry-test .
+[[ "$(grep -c '^build ' "$work/calls")" == 2 ]]
+
+echo "deployment script failure and retry tests passed"

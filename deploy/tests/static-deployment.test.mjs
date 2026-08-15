@@ -9,6 +9,8 @@ const env = readFileSync(new URL("../../.env.production.example", import.meta.ur
 const workflow = readFileSync(new URL("../../.github/workflows/deploy-production.yml", import.meta.url), "utf8")
 const deploy = readFileSync(new URL("../scripts/deploy-backend.sh", import.meta.url), "utf8")
 const backup = readFileSync(new URL("../scripts/backup-db.sh", import.meta.url), "utf8")
+const dockerBuildRetry = readFileSync(new URL("../scripts/docker-build-retry.sh", import.meta.url), "utf8")
+const backendDockerfile = readFileSync(new URL("../../server/Dockerfile.prod", import.meta.url), "utf8")
 const nginx = readFileSync(new URL("../../client/nginx.conf", import.meta.url), "utf8")
 const redirects = readFileSync(new URL("../../client/public/_redirects", import.meta.url), "utf8")
 
@@ -61,6 +63,15 @@ test("workflow actions are immutable and deployment uses Tailscale OIDC", () => 
   assert.match(workflow, /docker login ghcr\.io/)
   assert.match(workflow, /docker logout ghcr\.io/)
   assert.doesNotMatch(workflow, /LIGHTSAIL_IP|SSH_PRIVATE_KEY/)
+})
+
+test("backend builds bypass the rate-limited gateway and retry transient failures", () => {
+  assert.match(backendDockerfile, /FROM heroiclabs\/nakama-pluginbuilder:3\.30\.0/)
+  assert.match(backendDockerfile, /FROM heroiclabs\/nakama:3\.30\.0/)
+  assert.doesNotMatch(backendDockerfile, /registry\.heroiclabs\.com/)
+  assert.equal((workflow.match(/bash deploy\/scripts\/docker-build-retry\.sh/g) ?? []).length, 2)
+  assert.match(dockerBuildRetry, /DOCKER_BUILD_ATTEMPTS:-3/)
+  assert.match(dockerBuildRetry, /docker build "\$@"/)
 })
 
 test("deployment backs up, locks, health checks and rolls back", () => {
