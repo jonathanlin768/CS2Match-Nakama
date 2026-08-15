@@ -69,6 +69,14 @@
 - **AND** Cloudflare Pages 发布由同一提交构建的前端
 - **AND** 工作流输出提交 SHA、部署结果和公开 URL，但不输出任何密钥
 
+#### Scenario: Direct Upload 发布到 Pages 生产环境
+
+- **GIVEN** 前端目标是预先创建并绑定自定义域名的 Cloudflare Pages Direct Upload project
+- **WHEN** 工作流使用 Wrangler 上传生产前端产物
+- **THEN** 发布命令不传入会创建 preview deployment 的 `--branch` 参数
+- **AND** project 的根 `pages.dev` 域名与生产自定义域名均返回新前端，而不是 `Deployment Not Found`
+- **AND** 工作流在成功结束前通过生产自定义域名验证 React 入口
+
 #### Scenario: 首次部署替换镜像占位符
 
 - **GIVEN** 服务器生产环境文件中的 `BACKEND_IMAGE_REF` 仍是首次部署占位符

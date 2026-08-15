@@ -181,8 +181,15 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
+          set -o pipefail
           npm run build:production
-          npx --no-install wrangler pages deploy dist --project-name "${{ vars.CLOUDFLARE_PAGES_PROJECT }}" --branch production
+          # This is a Direct Upload project. Supplying --branch creates a
+          # preview deployment; omitting it publishes the production site and
+          # updates both <project>.pages.dev and the custom domain.
+          npx --no-install wrangler pages deploy dist --project-name "${{ vars.CLOUDFLARE_PAGES_PROJECT }}"
+          curl --fail --silent --show-error \
+            --retry 6 --retry-delay 5 --retry-all-errors \
+            "https://${{ vars.FRONTEND_HOST }}/" | grep -q '<div id="root"></div>'
           echo "Pages project ${{ vars.CLOUDFLARE_PAGES_PROJECT }} deployed from commit ${{ needs.publish.outputs.commit }}" >> "$GITHUB_STEP_SUMMARY"
       - name: Remove temporary GHCR credentials from the host
         if: always()

@@ -82,6 +82,10 @@ test("workflow actions are immutable and deployment uses Tailscale OIDC", () => 
   assert.match(workflow, /deploy-backend\.sh '\$IMAGE_REF' --defer-finalize/)
   assert.match(workflow, /rollback-backend\.sh '\$IMAGE_REF'/)
   assert.match(workflow, /finalize-backend\.sh '\$IMAGE_REF'/)
+  assert.match(workflow, /wrangler pages deploy dist --project-name "\$\{\{ vars\.CLOUDFLARE_PAGES_PROJECT \}\}"/)
+  assert.doesNotMatch(workflow, /wrangler pages deploy[^\n]*--branch/)
+  assert.match(workflow, /https:\/\/\$\{\{ vars\.FRONTEND_HOST \}\}\//)
+  assert.match(workflow, /grep -q '<div id="root"><\/div>'/)
   assert.doesNotMatch(workflow, /LIGHTSAIL_IP|SSH_PRIVATE_KEY/)
 })
 

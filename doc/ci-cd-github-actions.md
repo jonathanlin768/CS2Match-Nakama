@@ -48,7 +48,7 @@ GHCR package 可以保持 private。部署 job 用当次运行的短期 `GITHUB_
 1. AWS：创建 Lightsail 2 GB Ubuntu 实例，先临时把 SSH 22 限制为你的 IP；安装 Docker/Tailscale并完成 `/opt/cs2match` 初始化后关闭公网 22。5432/7350/7351 从不开放。
 2. Tailscale：给主机 `tag:prod`，应用 [`deploy/tailscale/policy.hujson.example`](../deploy/tailscale/policy.hujson.example)，配置 GitHub OIDC trust 只允许仓库的 `production` Environment 与 `tag:ci`。
 3. Cloudflare Tunnel：创建 remotely-managed Tunnel，API hostname 指向 `http://nakama:7350`；对应容器使用 token。不要再创建第二条 WebSocket ingress，也不要公开 Console。
-4. Cloudflare Pages：预先创建 project、绑定前端二级域名；部署由已锁定在 `client/package-lock.json` 的 Wrangler 完成。SPA 回退由 [`client/public/_redirects`](../client/public/_redirects) 提供。
+4. Cloudflare Pages：预先创建 Direct Upload project、绑定前端二级域名；部署由已锁定在 `client/package-lock.json` 的 Wrangler 完成。生产发布必须省略 `--branch`，因为传入该参数会创建 preview deployment，上传成功也不会更新 project 根域名和普通自定义域名。工作流发布后会从 `FRONTEND_HOST` 验证 React 入口。SPA 回退由 [`client/public/_redirects`](../client/public/_redirects) 提供。
 5. R2：创建私有 bucket 和仅该 bucket 的读写 token；restic 在客户端加密。把凭据只放服务器 `/opt/cs2match/.env.production`，不放 GitHub。
 6. AWS Billing：设置 50%、80%、100% 等多级 Budget 邮件告警；Budget 不是硬限额。
 
