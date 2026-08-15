@@ -56,6 +56,8 @@ GHCR package 可以保持 private。部署 job 用当次运行的短期 `GITHUB_
 
 在 Actions 页面手动运行并选定 ref。验证 job 失败不会触达生产；进入 deploy job 前按 Environment 提示批准。后端健康后前端才发布，所以前端失败不会破坏已经健康的 API；在 Cloudflare Pages 的 Deployments 页面把上一成功 deployment 重新提升/回滚即可。
 
+本机 RPC 就绪检查使用 `.env.production` 中的 `RUNTIME_HTTP_KEY`，不会使用浏览器可见的 `NAKAMA_SERVER_KEY`。第一次部署若尚无旧健康 digest 且检查失败，脚本会执行不带 `-v` 的 Compose `down`，关闭 Tunnel 和半部署容器但保留 PostgreSQL named volume；Pages 步骤不会执行。下一次运行会把已存在的数据库卷视为需要先备份的数据，不要手工删除该 volume。
+
 后端部署脚本记录当前镜像并执行发布前备份。新版本健康失败会自动恢复旧镜像；如果回滚也失败，工作流停止，登录 Tailscale 后运行：
 
 ```bash

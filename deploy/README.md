@@ -40,6 +40,8 @@ deploy/scripts/restore-verify.sh latest
 
 不要在第一次发布前直接运行 `docker compose up`，否则占位镜像无法拉取，也会绕过工作流的测试、健康检查和首次备份流程。
 
+本机部署探针使用服务器专属的 `RUNTIME_HTTP_KEY` 调用真实 `healthcheck` RPC；`NAKAMA_SERVER_KEY` 是浏览器可见值，不能代替该认证。首次发布尚无旧健康镜像时，如果探针失败，脚本会执行不带 `-v` 的 Compose `down`：公开 Tunnel 和所有半部署容器关闭，但 PostgreSQL named volume 保留，前端不会发布。
+
 按 [Tailscale 官方 Linux 安装说明](https://tailscale.com/kb/1031/install-linux) 安装后，在控制台先应用 `deploy/tailscale/policy.hujson.example`，再运行 `sudo tailscale up --ssh --advertise-tags=tag:prod`。用 `tailscale ip -4` 的结果填写 `TAILSCALE_IP`；确认管理员可经 Tailnet SSH 且 Console 可通过 `http://TAILSCALE_IP:7351` 访问后，关闭 Lightsail 公网 22。CI trust 必须限定到本仓库和 `production` Environment。
 
 脚本依赖 `bash`、`curl`、`flock`、Docker。生产文件采用简单的 `KEY=value`，随机值使用 hex，避免空格、引号和 shell 特殊字符。

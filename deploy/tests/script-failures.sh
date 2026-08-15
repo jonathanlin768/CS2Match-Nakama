@@ -43,9 +43,16 @@ MOCK
 chmod +x "$work/bin/docker"
 cat > "$work/bin/curl" <<'MOCK'
 #!/usr/bin/env bash
+printf 'curl %s\n' "$*" >> "${MOCK_CALLS:?}"
+printf '%s' "${MOCK_CURL_HTTP_STATUS:-200}"
 exit "${MOCK_CURL_STATUS:-0}"
 MOCK
 chmod +x "$work/bin/curl"
+cat > "$work/bin/sleep" <<'MOCK'
+#!/usr/bin/env bash
+exit 0
+MOCK
+chmod +x "$work/bin/sleep"
 cat > "$work/bin/flock" <<'MOCK'
 #!/usr/bin/env bash
 [[ "${MOCK_LOCKED:-0}" == 0 ]]
@@ -104,6 +111,21 @@ bootstrap_image=ghcr.io/test/cs2match@sha256:22222222222222222222222222222222222
 MOCK_VOLUME_EXISTS=0 ENV_FILE="$work/bootstrap.env" bash "$repo_root/deploy/scripts/deploy-backend.sh" "$bootstrap_image" >/dev/null
 grep -Fxq "BACKEND_IMAGE_REF=$bootstrap_image" "$work/bootstrap.env"
 ! grep -q 'OWNER/REPOSITORY\|REPLACE_ME' "$work/calls"
+grep -Fq -- '-u ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff:' "$work/calls"
+! grep '^curl ' "$work/calls" | grep -Fq 'unit-test-public-key'
+grep -Fq '/v2/rpc/healthcheck?unwrap' "$work/calls"
+
+cp "$work/prod.env" "$work/failed-bootstrap.env"
+chmod 600 "$work/failed-bootstrap.env"
+sed -i 's#^BACKEND_IMAGE_REF=.*#BACKEND_IMAGE_REF=ghcr.io/owner/cs2match-nakama@sha256:REPLACE_ME#' "$work/failed-bootstrap.env"
+mkdir -p "$work/failed-root/state"
+: > "$work/calls"
+MOCK_VOLUME_EXISTS=0 MOCK_CURL_STATUS=22 MOCK_CURL_HTTP_STATUS=401 \
+  DEPLOY_ROOT="$work/failed-root" ENV_FILE="$work/failed-bootstrap.env" \
+  expect_failure bash "$repo_root/deploy/scripts/deploy-backend.sh" "$bootstrap_image"
+grep -q 'compose .* down --remove-orphans' "$work/calls"
+grep -Fxq 'BACKEND_IMAGE_REF=ghcr.io/owner/cs2match-nakama@sha256:REPLACE_ME' "$work/failed-bootstrap.env"
+[[ ! -e "$work/failed-root/state/last-known-good-image" ]]
 rm -f -- "$work/forget-ran"
 cp "$work/prod.env" "$work/default.env"
 printf '\nNAKAMA_SERVER_KEY=defaultkey\n' >> "$work/default.env"

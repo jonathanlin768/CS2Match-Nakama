@@ -41,10 +41,18 @@ update_image() {
   export BACKEND_IMAGE_REF
 }
 healthy() {
+  local status="not-run"
   for _ in {1..30}; do
-    curl --fail --silent --show-error -u "${NAKAMA_SERVER_KEY}:" -H "Content-Type: application/json" -d '{}' "http://127.0.0.1:7350/v2/rpc/HealthCheck?unwrap" >/dev/null 2>&1 && return 0
+    status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
+      --connect-timeout 2 --max-time 5 \
+      -u "${RUNTIME_HTTP_KEY}:" \
+      -H "Content-Type: application/json" \
+      -d '{}' \
+      "http://127.0.0.1:7350/v2/rpc/healthcheck?unwrap" || true)"
+    [[ "$status" == 200 ]] && return 0
     sleep 2
   done
+  log "local runtime RPC health probe failed after 30 attempts (last HTTP status: ${status:-transport-error})"
   return 1
 }
 
@@ -61,8 +69,12 @@ fi
 log "new deployment failed; rolling back to previous image"
 compose logs --tail=200 nakama >&2 || true
 if [[ "$has_previous" != true ]]; then
+  if ! compose down --remove-orphans; then
+    update_image "$previous"
+    die "initial deployment failed and the incomplete stack could not be stopped; close the Tunnel and application manually before retrying"
+  fi
   update_image "$previous"
-  die "initial deployment failed and no previous healthy image exists; fix the reported error and rerun the workflow"
+  die "initial deployment failed and no previous healthy image exists; the incomplete stack was stopped and the database volume was preserved"
 fi
 update_image "$previous"
 if compose pull nakama && compose up -d nakama cloudflared && healthy; then

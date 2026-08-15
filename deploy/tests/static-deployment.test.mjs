@@ -103,7 +103,11 @@ test("deployment backs up, locks, health checks and rolls back", () => {
   assert.match(deploy, /previous=.*BACKEND_IMAGE_REF/)
   assert.match(deploy, /BACKEND_IMAGE_REF="\$value"\s+export BACKEND_IMAGE_REF/)
   assert.match(deploy, /rolling back/)
-  assert.match(deploy, /HealthCheck/)
+  assert.match(deploy, /-u "\$\{RUNTIME_HTTP_KEY\}:"/)
+  assert.doesNotMatch(deploy, /-u "\$\{NAKAMA_SERVER_KEY\}:"/)
+  assert.match(deploy, /\/v2\/rpc\/healthcheck\?unwrap/)
+  assert.match(deploy, /compose down --remove-orphans/)
+  assert.match(imageIntegration, /"status":"ok"/)
 })
 
 test("backup is locked, encrypted offsite and retained", () => {

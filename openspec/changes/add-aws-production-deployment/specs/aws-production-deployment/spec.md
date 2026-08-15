@@ -109,6 +109,22 @@
 
 生产发布 SHALL 在切换前记录当前后端镜像版本，并在更新后验证容器健康、Nakama `/healthcheck`、关键认证/RPC 可达性和公开 Tunnel 路径。任何后端发布后检查失败时 SHALL 自动恢复上一已知健康镜像并再次验证；前端发布 SHALL 在后端健康后进行，并记录 Cloudflare Pages 可回滚版本。单实例 Go 插件更新 MUST 被描述为有短暂断连的重启更新，而非无中断热加载。
 
+#### Scenario: 本机 Runtime RPC 健康探针
+
+- **GIVEN** Nakama 容器已启动并注册 `HealthCheck` RPC
+- **WHEN** 部署脚本从 Lightsail 本机验证该 RPC
+- **THEN** 探针使用仅存在于服务器生产环境文件中的 runtime HTTP key 认证
+- **AND** 探针不得使用会嵌入浏览器的 Nakama server key 代替 runtime HTTP key
+- **AND** 镜像集成测试必须真实请求 RPC 并验证成功响应，不能只根据启动日志推断 RPC 可用
+
+#### Scenario: 首次部署健康失败且没有旧版本
+
+- **GIVEN** 首次部署尚无上一已知健康镜像
+- **WHEN** 新镜像无法通过本机 Runtime RPC 健康探针
+- **THEN** 部署脚本停止并移除不完整的生产容器和网络，使 Tunnel 不继续公开半部署服务
+- **AND** PostgreSQL named volume 被保留且不执行 `down -v` 或等价数据删除
+- **AND** 失败镜像不写入上一已知健康状态，Cloudflare Pages 不发布新前端
+
 #### Scenario: 新后端镜像启动失败
 
 - **GIVEN** 当前生产版本健康且新镜像无法加载 Go 插件或无法通过健康检查

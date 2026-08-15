@@ -73,6 +73,8 @@ GitHub Actions 使用 Tailscale 的短生命周期 CI 身份，优先采用 work
 
 失败回滚恢复上一个明确 tag 并再次健康检查。若回滚也失败，工作流停止自动重试并输出人工恢复命令，避免循环破坏。Pages 保留平台部署版本，文档提供回滚到上一次成功 production deployment 的步骤。
 
+Lightsail 本机的 RPC 就绪探针使用 server-only 的 `runtime.http_key` 通过 HTTP Basic Auth 调用规范化的小写 `healthcheck` RPC；不得使用会进入浏览器的 `socket.server_key`，也不把 runtime key 放入 URL。镜像集成测试必须实际请求同一 RPC 并校验成功 JSON，而不只检查“RPC registered”启动日志。首次部署没有上一健康镜像可回滚时，探针失败后使用不带 `-v` 的 Compose `down` 关闭 Tunnel、Nakama 和数据库容器，保留 PostgreSQL named volume，并恢复环境文件中的首次部署占位状态，避免工作流失败但半部署 API 仍公开在线。
+
 部署脚本加载生产环境文件后，Shell 中已导出的变量优先级高于 Docker Compose 的 `--env-file`。因此首次部署用工作流传入的真实镜像 digest 替换模板占位符时，必须同时原子更新环境文件和当前部署进程的 `BACKEND_IMAGE_REF`；回滚时也必须同步两者，避免 Compose 继续解析旧占位符或失败镜像。
 
 部署入口调用同目录的预检和备份脚本时显式使用 Bash，不依赖 Git checkout 是否保留可执行位。这样 Windows/WSL 本地验证与 GitHub 原生 Linux Runner 的行为一致；服务器初始化和工作流仍设置脚本可执行位，支持文档中的人工直接运行命令。

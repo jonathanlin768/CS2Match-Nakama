@@ -50,6 +50,7 @@
 - [x] 6.10 修复首次部署写入真实镜像 digest 后当前 Shell 仍覆盖 Compose env 文件的问题；镜像切换与回滚同步更新文件和进程环境，并增加首次部署占位符回归测试。
 - [x] 6.11 修复 GitHub Linux Runner 因部署子脚本缺少可执行位导致的验证失败；入口显式使用 Bash 调用预检/备份脚本并增加跨平台文件模式回归断言。
 - [x] 6.12 隔离首次部署、备份失败和恢复失败脚本测试的 marker/调用记录，并在本地 WSL2/Linux 容器中按 GitHub `validate` 顺序完成提交前验证。
+- [x] 6.13 修复生产就绪探针误用浏览器可见 server key 导致真实 Runtime RPC 返回 401 的问题；改用 runtime HTTP key、增加真实 RPC 镜像集成验证，并在首次部署无旧健康版本时关闭半部署栈且保留 PostgreSQL volume。
 
 ## 7. 安全、运行时与性能验证
 

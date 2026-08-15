@@ -258,6 +258,8 @@ GitHub 仓库 → Actions → Deploy production → Run workflow
 
 后续部署已有数据库 volume，会在更新 Nakama 前强制完成异地备份；新镜像健康检查失败时自动恢复上一 digest。
 
+本机健康检查会用服务器专属的 `RUNTIME_HTTP_KEY` 请求真实 `healthcheck` RPC，不能用浏览器可见的 `NAKAMA_SERVER_KEY` 代替。第一次部署还没有上一健康 digest 时，如果该检查失败，脚本会执行不带 `-v` 的 Compose `down`，关闭 Tunnel 和半部署容器但保留 PostgreSQL named volume；修正错误后直接重新运行工作流，不要删除数据库卷。
+
 ## 8. 第一次部署后验证
 
 通过 Tailscale 登录服务器：
