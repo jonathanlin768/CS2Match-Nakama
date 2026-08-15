@@ -63,9 +63,17 @@
 - **GIVEN** `master` 分支上的指定提交通过全部构建和测试且外部服务凭据有效
 - **WHEN** 授权用户在 GitHub Actions 点击生产部署按钮
 - **THEN** GHCR 中存在以该 commit SHA 标识的后端镜像
+- **AND** 镜像路径由 GitHub 的 `owner/repository` 转为全小写，仓库显示名无需重命名且不追加重复组件名
 - **AND** Lightsail 运行该不可变镜像并通过本地及公开健康检查
 - **AND** Cloudflare Pages 发布由同一提交构建的前端
 - **AND** 工作流输出提交 SHA、部署结果和公开 URL，但不输出任何密钥
+
+#### Scenario: 发布构建发生失败
+
+- **GIVEN** 工作流正在构建待发布的后端镜像
+- **WHEN** Docker 返回 429、超时、连接重置、临时 DNS 故障或 HTTP 502/503/504
+- **THEN** 构建按有界退避策略重试
+- **AND** 非法镜像名、Dockerfile 语法错误、Go 编译错误或文件缺失立即失败且不重试
 
 #### Scenario: 并发触发生产部署
 

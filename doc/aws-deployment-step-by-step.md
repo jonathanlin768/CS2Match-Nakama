@@ -161,7 +161,7 @@ openssl rand -hex 32
 COMPOSE_PROJECT_NAME=cs2match-prod
 
 # 第一次部署前暂时保留占位符；工作流发布镜像后会自动写入真实 digest。
-BACKEND_IMAGE_REF=ghcr.io/OWNER/REPOSITORY-nakama@sha256:REPLACE_ME
+BACKEND_IMAGE_REF=ghcr.io/owner/cs2match-nakama@sha256:REPLACE_ME
 POSTGRES_IMAGE=postgres:15.18-alpine
 CLOUDFLARED_IMAGE_REF=cloudflare/cloudflared:2026.7.2@sha256:4f6655284ab3d252b7f28fedb19fe6c8fc82ee5b1295c20ac74d475e5398a52d
 RESTIC_IMAGE=restic/restic:0.18.0
@@ -401,7 +401,7 @@ cat deploy/state/last-known-good-image
 需要手工重发已确认的旧版本时：
 
 ```bash
-deploy/scripts/deploy-backend.sh 'ghcr.io/OWNER/IMAGE@sha256:已确认的64位digest'
+deploy/scripts/deploy-backend.sh 'ghcr.io/owner/cs2match-nakama@sha256:已确认的64位digest'
 ```
 
 不要把 `.env.production`、完整日志中的凭据、Tunnel token 或 R2 密钥粘贴到 GitHub issue 或聊天中。

@@ -12,7 +12,9 @@
 4. 把精确 commit 传到 `/opt/cs2match`，先备份，再拉取 digest、更新 Compose、检查本地 RPC。失败会恢复旧 digest 并再次检查；二次失败停止循环并保留日志。
 5. 从 GitHub Runner 经公网域名验证设备认证、`HealthCheck`、`SimuMatch` 和 WebSocket，成功后才发布同一提交的 Pages 产物。
 
-后端构建直接使用 Docker Hub 上的 Heroic Labs 官方 Nakama 3.30.0/pluginbuilder 3.30.0 镜像，避开 `registry.heroiclabs.com` Scarf Gateway 的独立限流。验证与发布 job 都通过 `deploy/scripts/docker-build-retry.sh` 最多尝试三次；版本仍必须严格一致，不能用通用 Go 镜像替代 pluginbuilder。
+后端构建直接使用 Docker Hub 上的 Heroic Labs 官方 Nakama 3.30.0/pluginbuilder 3.30.0 镜像，避开 `registry.heroiclabs.com` Scarf Gateway 的独立限流。验证与发布 job 都通过 `deploy/scripts/docker-build-retry.sh` 构建；只有 429、超时、连接重置、临时 DNS 故障和 HTTP 502/503/504 等瞬时网络错误最多尝试三次，非法 tag、Dockerfile 语法、Go 编译或文件缺失会立即失败。版本仍必须严格一致，不能用通用 Go 镜像替代 pluginbuilder。
+
+GitHub 仓库显示名可以继续使用 `CS2Match-Nakama`。工作流只在生成 GHCR 路径时将完整 `owner/repository` 转为小写，因此本仓库发布为 `ghcr.io/jonathanlin768/cs2match-nakama:<commit SHA>`，不会重复追加 `-nakama`。
 
 工作流不会创建 AWS 实例、DNS、Tunnel、Tailnet、R2 bucket、Pages project、Budget，也不会删除资源。这些是首次部署的人工步骤。
 
@@ -60,7 +62,7 @@ GHCR package 可以保持 private。部署 job 用当次运行的短期 `GITHUB_
 cd /opt/cs2match
 docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail=200 nakama
 cat deploy/state/last-known-good-image
-deploy/scripts/deploy-backend.sh 'ghcr.io/OWNER/IMAGE@sha256:已确认的digest'
+deploy/scripts/deploy-backend.sh 'ghcr.io/owner/cs2match-nakama@sha256:已确认的digest'
 ```
 
 不要把 `.env.production`、Tunnel token、restic 密码或日志全文粘贴到 issue。脚本日志只输出 tag/digest/状态，不打印秘密。

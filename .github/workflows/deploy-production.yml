@@ -100,7 +100,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${GITHUB_REPOSITORY#*/}-nakama"
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
           tag="$image:${{ steps.commit.outputs.sha }}"
           printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           bash deploy/scripts/docker-build-retry.sh --build-arg VCS_REF="${{ steps.commit.outputs.sha }}" --build-arg BUILD_DATE="$(date -u +%FT%TZ)" -f server/Dockerfile.prod -t "$tag" .

@@ -38,6 +38,8 @@ OpenSpec 全局上下文仍写 RDS PostgreSQL，但在当前预算下 RDS 会显
 
 新增后端生产 Dockerfile：构建阶段使用与 Nakama 3.30.0 精确匹配的 pluginbuilder 生成 `backend.so`，运行阶段基于相同 Nakama 版本并复制插件。CI 将镜像推送到 GHCR，以完整 commit SHA 作为不可变 tag；生产 Compose 接收明确的 `BACKEND_IMAGE` 或 `BACKEND_TAG`，不得隐式使用 `latest`。
 
+GitHub 仓库显示名可以包含大写字母，但 OCI/GHCR 镜像路径必须为小写。工作流仅在生成镜像路径时将完整 `owner/repository` 转为小写，不重命名 GitHub 仓库，也不额外追加会造成重复的 `-nakama` 后缀。Docker 构建仅对 429、超时、连接重置、临时 DNS 故障和 HTTP 502/503/504 等瞬时网络错误重试；非法 tag、Dockerfile 语法、Go 编译和文件缺失等确定性错误立即失败。
+
 不可变镜像将 Nakama 版本、Go ABI 和插件绑定在一起，解决旧文档中路径剥离、Runner 缺少旧 artifact 和裸文件半上传问题，也使回滚只需恢复旧 tag。服务器拉取私有 GHCR 镜像时使用只读、最小范围凭据；CI 发布使用仓库临时 `GITHUB_TOKEN`。
 
 替代方案：SCP `backend.so` 更少文件，但难以证明 ABI、完整性和版本对应关系，失败时容易留下半更新状态。

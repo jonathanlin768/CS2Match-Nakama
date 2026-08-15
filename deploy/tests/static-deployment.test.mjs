@@ -37,7 +37,7 @@ test("Tunnel has one API ingress and a terminal 404", () => {
 })
 
 test("production template contains no real credentials and pins immutable backend", () => {
-  assert.match(env, /BACKEND_IMAGE_REF=.*@sha256:REPLACE_ME/)
+  assert.match(env, /BACKEND_IMAGE_REF=ghcr\.io\/owner\/cs2match-nakama@sha256:REPLACE_ME/)
   assert.doesNotMatch(env, /defaultkey|localpass/)
 })
 
@@ -70,8 +70,15 @@ test("backend builds bypass the rate-limited gateway and retry transient failure
   assert.match(backendDockerfile, /FROM heroiclabs\/nakama:3\.30\.0/)
   assert.doesNotMatch(backendDockerfile, /registry\.heroiclabs\.com/)
   assert.equal((workflow.match(/bash deploy\/scripts\/docker-build-retry\.sh/g) ?? []).length, 2)
+  assert.match(workflow, /image="ghcr\.io\/\$\{GITHUB_REPOSITORY,,\}"/)
+  assert.doesNotMatch(workflow, /\$\{GITHUB_REPOSITORY#\*\/\}-nakama/)
   assert.match(dockerBuildRetry, /DOCKER_BUILD_ATTEMPTS:-3/)
   assert.match(dockerBuildRetry, /docker build "\$@"/)
+  assert.match(dockerBuildRetry, /429\[\[:space:\]\]\+Too Many Requests/)
+  assert.match(dockerBuildRetry, /connection reset/)
+  assert.match(dockerBuildRetry, /temporary failure in name resolution/)
+  assert.match(dockerBuildRetry, /502\[\[:space:\]\]\+Bad Gateway/)
+  assert.match(dockerBuildRetry, /non-retryable error/)
 })
 
 test("deployment backs up, locks, health checks and rolls back", () => {

@@ -14,7 +14,10 @@ printf '%s\n' "$*" >> "${MOCK_CALLS:?}"
 case "$*" in
   "build "*)
     build_count="$(grep -c '^build ' "${MOCK_CALLS:?}" || true)"
-    [[ "$build_count" -ge "${MOCK_BUILD_SUCCEEDS_ON:-1}" ]] || exit 42
+    if [[ "$build_count" -lt "${MOCK_BUILD_SUCCEEDS_ON:-1}" ]]; then
+      printf '%s\n' "${MOCK_BUILD_ERROR:-429 Too Many Requests}" >&2
+      exit 42
+    fi
     ;;
   *"compose"*"pg_dump"*)
     [[ "${MOCK_DUMP_FAIL:-0}" == 0 ]] || exit 40
@@ -81,7 +84,7 @@ expect_failure() {
 
 bash "$repo_root/deploy/scripts/preflight.sh" --skip-permissions >/dev/null
 cp "$work/prod.env" "$work/bootstrap.env"
-sed -i 's#^BACKEND_IMAGE_REF=.*#BACKEND_IMAGE_REF=ghcr.io/OWNER/REPOSITORY-nakama@sha256:REPLACE_ME#' "$work/bootstrap.env"
+sed -i 's#^BACKEND_IMAGE_REF=.*#BACKEND_IMAGE_REF=ghcr.io/owner/cs2match-nakama@sha256:REPLACE_ME#' "$work/bootstrap.env"
 ENV_FILE="$work/bootstrap.env" bash "$repo_root/deploy/scripts/preflight.sh" --skip-permissions \
   --backend-image ghcr.io/test/cs2match@sha256:2222222222222222222222222222222222222222222222222222222222222222 >/dev/null
 cp "$work/prod.env" "$work/default.env"
@@ -117,5 +120,21 @@ MOCK_BUILD_SUCCEEDS_ON=3 DOCKER_BUILD_ATTEMPTS=3 DOCKER_BUILD_RETRY_DELAY_SECOND
 MOCK_BUILD_SUCCEEDS_ON=3 DOCKER_BUILD_ATTEMPTS=2 DOCKER_BUILD_RETRY_DELAY_SECONDS=0 \
   expect_failure bash "$repo_root/deploy/scripts/docker-build-retry.sh" -t retry-test .
 [[ "$(grep -c '^build ' "$work/calls")" == 2 ]]
+
+: > "$work/calls"
+MOCK_BUILD_SUCCEEDS_ON=3 MOCK_BUILD_ERROR='ERROR: failed to build: invalid tag "ghcr.io/test/Uppercase:sha": repository name must be lowercase' \
+  DOCKER_BUILD_ATTEMPTS=3 DOCKER_BUILD_RETRY_DELAY_SECONDS=0 \
+  expect_failure bash "$repo_root/deploy/scripts/docker-build-retry.sh" -t retry-test .
+[[ "$(grep -c '^build ' "$work/calls")" == 1 ]]
+
+: > "$work/calls"
+MOCK_BUILD_SUCCEEDS_ON=3 MOCK_BUILD_ERROR='# example/server: server/main.go:10:2: undefined: missingSymbol' \
+  DOCKER_BUILD_ATTEMPTS=3 DOCKER_BUILD_RETRY_DELAY_SECONDS=0 \
+  expect_failure bash "$repo_root/deploy/scripts/docker-build-retry.sh" -t retry-test .
+[[ "$(grep -c '^build ' "$work/calls")" == 1 ]]
+
+GITHUB_REPOSITORY='jonathanlin768/CS2Match-Nakama'
+image="ghcr.io/${GITHUB_REPOSITORY,,}"
+[[ "$image" == 'ghcr.io/jonathanlin768/cs2match-nakama' ]]
 
 echo "deployment script failure and retry tests passed"
