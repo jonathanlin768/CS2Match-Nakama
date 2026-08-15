@@ -11,7 +11,13 @@ cat > "$work/bin/docker" <<'MOCK'
 #!/usr/bin/env bash
 set -eu
 printf '%s\n' "$*" >> "${MOCK_CALLS:?}"
+if [[ "${1:-}" == compose ]]; then
+  printf 'compose-image=%s\n' "${BACKEND_IMAGE_REF:-}" >> "${MOCK_CALLS:?}"
+fi
 case "$*" in
+  "volume inspect cs2match-postgres-data")
+    [[ "${MOCK_VOLUME_EXISTS:-1}" == 1 ]]
+    ;;
   "build "*)
     build_count="$(grep -c '^build ' "${MOCK_CALLS:?}" || true)"
     if [[ "$build_count" -lt "${MOCK_BUILD_SUCCEEDS_ON:-1}" ]]; then
@@ -35,6 +41,11 @@ case "$*" in
 esac
 MOCK
 chmod +x "$work/bin/docker"
+cat > "$work/bin/curl" <<'MOCK'
+#!/usr/bin/env bash
+exit "${MOCK_CURL_STATUS:-0}"
+MOCK
+chmod +x "$work/bin/curl"
 cat > "$work/bin/flock" <<'MOCK'
 #!/usr/bin/env bash
 [[ "${MOCK_LOCKED:-0}" == 0 ]]
@@ -84,9 +95,15 @@ expect_failure() {
 
 bash "$repo_root/deploy/scripts/preflight.sh" --skip-permissions >/dev/null
 cp "$work/prod.env" "$work/bootstrap.env"
+chmod 600 "$work/bootstrap.env"
 sed -i 's#^BACKEND_IMAGE_REF=.*#BACKEND_IMAGE_REF=ghcr.io/owner/cs2match-nakama@sha256:REPLACE_ME#' "$work/bootstrap.env"
 ENV_FILE="$work/bootstrap.env" bash "$repo_root/deploy/scripts/preflight.sh" --skip-permissions \
   --backend-image ghcr.io/test/cs2match@sha256:2222222222222222222222222222222222222222222222222222222222222222 >/dev/null
+bootstrap_image=ghcr.io/test/cs2match@sha256:2222222222222222222222222222222222222222222222222222222222222222
+: > "$work/calls"
+MOCK_VOLUME_EXISTS=0 ENV_FILE="$work/bootstrap.env" bash "$repo_root/deploy/scripts/deploy-backend.sh" "$bootstrap_image" >/dev/null
+grep -Fxq "BACKEND_IMAGE_REF=$bootstrap_image" "$work/bootstrap.env"
+! grep -q 'OWNER/REPOSITORY\|REPLACE_ME' "$work/calls"
 cp "$work/prod.env" "$work/default.env"
 printf '\nNAKAMA_SERVER_KEY=defaultkey\n' >> "$work/default.env"
 ENV_FILE="$work/default.env" expect_failure bash "$repo_root/deploy/scripts/preflight.sh" --skip-permissions

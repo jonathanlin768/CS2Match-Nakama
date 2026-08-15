@@ -37,6 +37,8 @@ update_image() {
   awk -v image="$value" 'BEGIN{done=0} /^BACKEND_IMAGE_REF=/{print "BACKEND_IMAGE_REF=" image; done=1; next} {print} END{if(!done) print "BACKEND_IMAGE_REF=" image}' "$ENV_FILE" > "$tmp"
   chmod 600 "$tmp"
   mv "$tmp" "$ENV_FILE"
+  BACKEND_IMAGE_REF="$value"
+  export BACKEND_IMAGE_REF
 }
 healthy() {
   for _ in {1..30}; do

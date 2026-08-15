@@ -73,6 +73,8 @@ GitHub Actions 使用 Tailscale 的短生命周期 CI 身份，优先采用 work
 
 失败回滚恢复上一个明确 tag 并再次健康检查。若回滚也失败，工作流停止自动重试并输出人工恢复命令，避免循环破坏。Pages 保留平台部署版本，文档提供回滚到上一次成功 production deployment 的步骤。
 
+部署脚本加载生产环境文件后，Shell 中已导出的变量优先级高于 Docker Compose 的 `--env-file`。因此首次部署用工作流传入的真实镜像 digest 替换模板占位符时，必须同时原子更新环境文件和当前部署进程的 `BACKEND_IMAGE_REF`；回滚时也必须同步两者，避免 Compose 继续解析旧占位符或失败镜像。
+
 ### 6. 将更新定义为可恢复的短中断发布
 
 Go plugin 只在 Nakama 启动时加载，单节点更新使用 `docker compose up -d` 重新创建 Nakama。当前一次性 `SimuMatch` RPC 在切换时可能失败，WebSocket 会断开；前端现有 session 恢复和 socket 重连能力必须通过 smoke 验证。部署输出记录中断开始、恢复和版本信息。

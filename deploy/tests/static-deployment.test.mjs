@@ -101,6 +101,7 @@ test("deployment backs up, locks, health checks and rolls back", () => {
   assert.match(deploy, /backup-db\.sh.*pre-deploy/)
   assert.match(deploy, /backup-db\.sh" initial/)
   assert.match(deploy, /previous=.*BACKEND_IMAGE_REF/)
+  assert.match(deploy, /BACKEND_IMAGE_REF="\$value"\s+export BACKEND_IMAGE_REF/)
   assert.match(deploy, /rolling back/)
   assert.match(deploy, /HealthCheck/)
 })

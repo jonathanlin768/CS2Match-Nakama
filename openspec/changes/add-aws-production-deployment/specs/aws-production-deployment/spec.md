@@ -69,6 +69,14 @@
 - **AND** Cloudflare Pages 发布由同一提交构建的前端
 - **AND** 工作流输出提交 SHA、部署结果和公开 URL，但不输出任何密钥
 
+#### Scenario: 首次部署替换镜像占位符
+
+- **GIVEN** 服务器生产环境文件中的 `BACKEND_IMAGE_REF` 仍是首次部署占位符
+- **AND** 工作流已发布后端镜像并向部署脚本传入有效的不可变 digest
+- **WHEN** 部署脚本验证配置并启动生产 Compose
+- **THEN** 环境文件和当前部署进程使用同一个真实 digest
+- **AND** Docker Compose 不会因 Shell 环境变量优先级继续解析旧占位符
+
 #### Scenario: 发布构建发生失败
 
 - **GIVEN** 工作流正在构建待发布的后端镜像
