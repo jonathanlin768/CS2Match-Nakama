@@ -1,0 +1,6 @@
+*
+!server/
+!server/**
+server/build/
+server/**/*.log
+!nakama-config.prod.yml

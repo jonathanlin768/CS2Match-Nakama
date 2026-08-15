@@ -1,0 +1,26 @@
+{
+  "tagOwners": {
+    "tag:prod": ["autogroup:admin"],
+    "tag:ci": ["autogroup:admin"]
+  },
+  "grants": [
+    {
+      "src": ["autogroup:admin"],
+      "dst": ["tag:prod"],
+      "ip": ["tcp:22", "tcp:7351"]
+    },
+    {
+      "src": ["tag:ci"],
+      "dst": ["tag:prod"],
+      "ip": ["tcp:22"]
+    }
+  ],
+  "ssh": [
+    {
+      "action": "accept",
+      "src": ["autogroup:admin", "tag:ci"],
+      "dst": ["tag:prod"],
+      "users": ["ubuntu"]
+    }
+  ]
+}

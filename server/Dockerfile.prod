@@ -1,0 +1,24 @@
+FROM registry.heroiclabs.com/heroiclabs/nakama-pluginbuilder:3.30.0 AS plugin-builder
+
+WORKDIR /workspace
+
+COPY server/go.mod server/go.sum ./
+COPY server/config ./config
+RUN go mod download
+
+COPY server/ ./
+RUN mkdir -p build \
+    && go build -v -mod=mod -buildmode=plugin -trimpath -o build/backend.so . \
+    && test -s build/backend.so
+
+FROM registry.heroiclabs.com/heroiclabs/nakama:3.30.0
+
+ARG VCS_REF=unknown
+ARG BUILD_DATE=unknown
+
+LABEL org.opencontainers.image.title="CS2Match Nakama backend" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.created="${BUILD_DATE}"
+
+COPY --from=plugin-builder /workspace/build/backend.so /nakama/data/modules/backend.so
+COPY nakama-config.prod.yml /nakama/data/nakama-config.yml

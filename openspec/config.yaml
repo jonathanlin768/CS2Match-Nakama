@@ -29,7 +29,8 @@ context: |
   - 目标环境: AWS (单区域)
   - 规模: 最多 100 人同时在线（实验项目）
   - 部署方式: Docker Compose（单节点 Nakama，不需要 K8s）
-  - 数据库: RDS PostgreSQL (托管)
+  - 预算内生产数据库: PostgreSQL 15 与 Nakama 同机运行并使用 Docker named volume；必须配置加密异地备份与恢复演练
+  - 未来扩容选项: RDS / Lightsail 托管 PostgreSQL（当前月度预算内不启用）
 
   ## 代码规范
   - 前端使用 TypeScript

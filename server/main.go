@@ -52,6 +52,7 @@ func InitModule(
 		logger.Error("Failed to register social subsystem: %v", err)
 		return err
 	}
+	logger.Info("Social RPCs registered")
 	logger.Info("Social contact exchange enabled=%t", socialEnabled)
 
 	return nil

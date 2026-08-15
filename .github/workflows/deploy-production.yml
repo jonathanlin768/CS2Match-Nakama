@@ -1,0 +1,180 @@
+name: Deploy production
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag, or commit to deploy
+        required: true
+        default: master
+
+concurrency:
+  group: cs2match-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: 1.24.5
+  NODE_VERSION: 24.5.0
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    outputs:
+      commit: ${{ steps.source.outputs.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+      - name: Allow only master or a full commit already contained in master
+        id: source
+        env:
+          REQUESTED_REF: ${{ inputs.ref }}
+        run: |
+          if [[ "$REQUESTED_REF" != master && ! "$REQUESTED_REF" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "ref must be master or a full 40-character commit SHA" >&2
+            exit 1
+          fi
+          sha="$(git rev-parse HEAD)"
+          git merge-base --is-ancestor "$sha" origin/master
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Install pinned Go and Node
+        run: |
+          curl -fsSLo /tmp/go.tgz "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz"
+          sudo tar -C /usr/local -xzf /tmp/go.tgz
+          curl -fsSLo /tmp/node.tar.xz "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz"
+          sudo tar -C /usr/local --strip-components=1 -xf /tmp/node.tar.xz
+      - name: Lint workflow syntax with pinned actionlint
+        run: |
+          curl -fsSLo /tmp/actionlint.tar.gz https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          echo '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  /tmp/actionlint.tar.gz' | sha256sum -c -
+          tar -C /tmp -xzf /tmp/actionlint.tar.gz actionlint
+          /tmp/actionlint .github/workflows/deploy-production.yml
+      - name: Test backend and deployment contracts
+        run: |
+          cd server
+          go test ./...
+          cd ..
+          node --test deploy/tests/*.test.mjs
+          bash deploy/tests/script-failures.sh
+      - name: Test and build frontend without production secrets
+        working-directory: client
+        env:
+          VITE_NAKAMA_HOST: api.ci.invalid
+          VITE_NAKAMA_PORT: "443"
+          VITE_NAKAMA_SERVER_KEY: ci-public-key
+          VITE_NAKAMA_USE_SSL: "true"
+        run: |
+          npm ci
+          npm test
+          npm run build:production
+          test "$(find dist -type f | wc -l)" -le 20000
+          test -z "$(find dist -type f -size +25M -print -quit)"
+          ! grep -R -E 'RESTIC_PASSWORD|AWS_SECRET_ACCESS_KEY|SESSION_ENCRYPTION_KEY|CLOUDFLARE_TUNNEL_TOKEN' dist
+      - name: Build and inspect backend image
+        run: |
+          docker build --build-arg VCS_REF="${{ steps.source.outputs.sha }}" --build-arg BUILD_DATE="$(date -u +%FT%TZ)" -f server/Dockerfile.prod -t cs2match-nakama:test .
+          test "$(docker run --rm --entrypoint /bin/sh cs2match-nakama:test -c 'test -s /nakama/data/modules/backend.so && echo ok')" = ok
+          bash deploy/tests/image-integration.sh cs2match-nakama:test
+
+  publish:
+    needs: validate
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image-ref: ${{ steps.image.outputs.ref }}
+      commit: ${{ steps.commit.outputs.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.validate.outputs.commit }}
+      - id: commit
+        run: echo "sha=${{ needs.validate.outputs.commit }}" >> "$GITHUB_OUTPUT"
+      - name: Build and publish immutable backend image
+        id: image
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${GITHUB_REPOSITORY#*/}-nakama"
+          tag="$image:${{ steps.commit.outputs.sha }}"
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker build --build-arg VCS_REF="${{ steps.commit.outputs.sha }}" --build-arg BUILD_DATE="$(date -u +%FT%TZ)" -f server/Dockerfile.prod -t "$tag" .
+          docker push "$tag"
+          docker pull "$tag" >/dev/null
+          digest="$(docker inspect --format='{{index .RepoDigests 0}}' "$tag")"
+          test "${digest#*@sha256:}" != "$digest"
+          echo "ref=$digest" >> "$GITHUB_OUTPUT"
+          echo "### Backend image" >> "$GITHUB_STEP_SUMMARY"
+          echo '\`'"$digest"'\`' >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    needs: publish
+    runs-on: ubuntu-24.04
+    environment:
+      name: production
+      url: https://${{ vars.FRONTEND_HOST }}
+    concurrency:
+      group: cs2match-production-deploy
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+      packages: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.publish.outputs.commit }}
+      - name: Install pinned Node
+        run: |
+          curl -fsSLo /tmp/node.tar.xz "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz"
+          sudo tar -C /usr/local --strip-components=1 -xf /tmp/node.tar.xz
+      - name: Join the private deployment network with OIDC
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ secrets.TS_AUDIENCE }}
+          tags: tag:ci
+          ping: ${{ vars.PRODUCTION_TAILSCALE_HOST }}
+      - name: Transfer exact commit and deploy backend
+        env:
+          TARGET: ${{ vars.PRODUCTION_TAILSCALE_HOST }}
+          IMAGE_REF: ${{ needs.publish.outputs.image-ref }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -o pipefail
+          tar --exclude=.git --exclude=.env.production --exclude=client/node_modules --exclude=client/dist -czf - . | tailscale ssh "ubuntu@$TARGET" "mkdir -p /opt/cs2match && tar -xzf - -C /opt/cs2match"
+          printf '%s' "$GH_TOKEN" | tailscale ssh "ubuntu@$TARGET" "docker login ghcr.io -u '$GITHUB_ACTOR' --password-stdin"
+          tailscale ssh "ubuntu@$TARGET" "cd /opt/cs2match && chmod +x deploy/scripts/*.sh && deploy/scripts/deploy-backend.sh '$IMAGE_REF'"
+      - name: Public authentication, RPC and WebSocket smoke
+        working-directory: client
+        env:
+          VITE_NAKAMA_HOST: ${{ vars.API_HOST }}
+          VITE_NAKAMA_PORT: "443"
+          VITE_NAKAMA_SERVER_KEY: ${{ secrets.NAKAMA_SERVER_KEY }}
+          VITE_NAKAMA_USE_SSL: "true"
+        run: |
+          npm ci
+          npm run smoke:production
+      - name: Build and publish Pages after backend succeeds
+        working-directory: client
+        env:
+          VITE_NAKAMA_HOST: ${{ vars.API_HOST }}
+          VITE_NAKAMA_PORT: "443"
+          VITE_NAKAMA_SERVER_KEY: ${{ secrets.NAKAMA_SERVER_KEY }}
+          VITE_NAKAMA_USE_SSL: "true"
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npm run build:production
+          npx --no-install wrangler pages deploy dist --project-name "${{ vars.CLOUDFLARE_PAGES_PROJECT }}" --branch production
+          echo "Pages project ${{ vars.CLOUDFLARE_PAGES_PROJECT }} deployed from commit ${{ needs.publish.outputs.commit }}" >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove temporary GHCR credentials from the host
+        if: always()
+        env:
+          TARGET: ${{ vars.PRODUCTION_TAILSCALE_HOST }}
+        run: tailscale ssh "ubuntu@$TARGET" "docker logout ghcr.io >/dev/null 2>&1 || true"

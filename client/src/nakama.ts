@@ -5,7 +5,8 @@ import { Client } from "@heroiclabs/nakama-js";
  *
  * 配置来源: Vite 环境变量 (import.meta.env)
  * - Option A (宿主机开发): VITE_NAKAMA_HOST=localhost
- * - Option B (Docker 构建):   VITE_NAKAMA_HOST=nakama
+ * - Option B (Docker 构建):   VITE_NAKAMA_HOST=localhost
+ * - Production:               explicit HTTPS hostname injected by CI
  */
 
 const NAKAMA_HOST = import.meta.env.VITE_NAKAMA_HOST ?? "localhost";

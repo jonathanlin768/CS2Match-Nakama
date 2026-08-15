@@ -1,0 +1,23 @@
+name: cs2match-prod
+
+console:
+  port: 7351
+
+socket:
+  port: 7350
+  allowed_origins:
+    - "https://REPLACE_WITH_FRONTEND_HOST"
+  max_request_size_bytes: 262144
+
+logger:
+  level: "INFO"
+  stdout: true
+
+runtime:
+  path: "/nakama/data/modules"
+  env:
+    - "SOCIAL_CONTACT_EXCHANGE_ENABLED=true"
+
+session:
+  token_expiry_sec: 86400
+  refresh_token_expiry_sec: 604800

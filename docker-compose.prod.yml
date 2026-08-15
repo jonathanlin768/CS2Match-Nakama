@@ -1,0 +1,95 @@
+name: ${COMPOSE_PROJECT_NAME:?COMPOSE_PROJECT_NAME is required}
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    image: ${POSTGRES_IMAGE:?POSTGRES_IMAGE is required}
+    container_name: cs2match-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:?DB_NAME is required}
+      POSTGRES_USER: ${DB_USER:?DB_USER is required}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    logging: *default-logging
+    mem_limit: 640m
+    cpus: 1.0
+
+  nakama:
+    image: ${BACKEND_IMAGE_REF:?BACKEND_IMAGE_REF must be an immutable digest}
+    container_name: cs2match-nakama
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        sed "s|https://REPLACE_WITH_FRONTEND_HOST|${FRONTEND_ORIGIN:?FRONTEND_ORIGIN is required}|g" \
+          /nakama/data/nakama-config.yml > /tmp/nakama-config.yml
+        /nakama/nakama migrate up \
+          --database.address "${DB_USER:?}:${DB_PASSWORD:?}@db:5432/${DB_NAME:?}?sslmode=disable" \
+          --logger.level INFO
+        exec /nakama/nakama \
+          --config /tmp/nakama-config.yml \
+          --database.address "${DB_USER:?}:${DB_PASSWORD:?}@db:5432/${DB_NAME:?}?sslmode=disable" \
+          --socket.server_key "${NAKAMA_SERVER_KEY:?}" \
+          --runtime.http_key "${RUNTIME_HTTP_KEY:?}" \
+          --session.encryption_key "${SESSION_ENCRYPTION_KEY:?}" \
+          --session.refresh_encryption_key "${SESSION_REFRESH_ENCRYPTION_KEY:?}" \
+          --console.username "${CONSOLE_USERNAME:?}" \
+          --console.password "${CONSOLE_PASSWORD:?}" \
+          --console.signing_key "${CONSOLE_SIGNING_KEY:?}"
+    ports:
+      - "127.0.0.1:7350:7350"
+      - "${TAILSCALE_IP:?TAILSCALE_IP is required}:7351:7351"
+    networks:
+      - backend
+      - edge
+    healthcheck:
+      test: ["CMD-SHELL", "kill -0 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    logging: *default-logging
+    mem_limit: 1g
+    cpus: 1.5
+
+  cloudflared:
+    image: ${CLOUDFLARED_IMAGE_REF:?CLOUDFLARED_IMAGE_REF must be pinned}
+    container_name: cs2match-cloudflared
+    restart: unless-stopped
+    depends_on:
+      nakama:
+        condition: service_healthy
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN is required}
+    networks:
+      - edge
+    logging: *default-logging
+    mem_limit: 128m
+    cpus: 0.25
+
+networks:
+  backend:
+    internal: true
+  edge:
+
+volumes:
+  postgres_data:
+    name: cs2match-postgres-data

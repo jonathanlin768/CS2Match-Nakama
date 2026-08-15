@@ -1,0 +1,9 @@
+# Reference for a locally managed tunnel. The production Compose uses a
+# remotely managed token; create this same single route in the Cloudflare UI.
+tunnel: REPLACE_WITH_TUNNEL_UUID
+credentials-file: /run/secrets/cloudflared-credentials.json
+
+ingress:
+  - hostname: api.example.com
+    service: http://nakama:7350
+  - service: http_status:404
