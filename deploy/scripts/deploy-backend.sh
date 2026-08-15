@@ -4,13 +4,21 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=common.sh
 source "$SCRIPT_DIR/common.sh"
 
-new_image="${1:?usage: deploy-backend.sh ghcr.io/owner/image@sha256:digest}"
+new_image="${1:?usage: deploy-backend.sh ghcr.io/owner/image@sha256:digest [--defer-finalize]}"
 [[ "$new_image" =~ ^ghcr\.io/.+@sha256:[0-9a-f]{64}$ ]] || die "deployment requires an immutable GHCR digest"
+defer_finalize=false
+case "${2:-}" in
+  "") ;;
+  --defer-finalize) defer_finalize=true ;;
+  *) die "unknown deploy option: $2" ;;
+esac
 load_env
 bash "$SCRIPT_DIR/preflight.sh" --backend-image "$new_image"
 mkdir -p "${DEPLOY_ROOT}/state"
 exec 8>"${DEPLOY_ROOT}/state/deploy.lock"
 flock -n 8 || die "another deployment is already running"
+pending_file="${DEPLOY_ROOT}/state/pending-backend-deployment"
+[[ ! -e "$pending_file" ]] || die "an unfinished backend deployment exists; finalize or roll it back before deploying again"
 
 previous="$BACKEND_IMAGE_REF"
 has_previous=false
@@ -40,6 +48,7 @@ update_image() {
   BACKEND_IMAGE_REF="$value"
   export BACKEND_IMAGE_REF
 }
+clear_pending() { rm -f -- "$pending_file"; }
 healthy() {
   local status="not-run"
   for _ in {1..30}; do
@@ -56,13 +65,30 @@ healthy() {
   return 1
 }
 
+if [[ "$defer_finalize" == true ]]; then
+  pending_tmp="$(mktemp "${pending_file}.XXXXXX")"
+  printf '%s\n%s\n' "$new_image" "$previous" > "$pending_tmp"
+  chmod 600 "$pending_tmp"
+  mv "$pending_tmp" "$pending_file"
+fi
 update_image "$new_image"
 if compose pull nakama && compose up -d --remove-orphans db nakama cloudflared && healthy; then
   if [[ "$bootstrap" == true ]]; then
-    bash "$SCRIPT_DIR/backup-db.sh" initial || die "application is healthy, but the required initial offsite backup failed"
+    if ! bash "$SCRIPT_DIR/backup-db.sh" initial; then
+      if compose down --remove-orphans; then
+        update_image "$previous"
+        clear_pending
+        die "initial offsite backup failed; the incomplete stack was stopped and the database volume was preserved"
+      fi
+      die "initial offsite backup failed and the incomplete stack could not be stopped; close the Tunnel and application manually"
+    fi
   fi
-  printf '%s\n' "$new_image" > "${DEPLOY_ROOT}/state/last-known-good-image"
-  log "backend deployment healthy: $new_image"
+  if [[ "$defer_finalize" == true ]]; then
+    log "backend deployment locally healthy and awaiting public smoke: $new_image"
+  else
+    printf '%s\n' "$new_image" > "${DEPLOY_ROOT}/state/last-known-good-image"
+    log "backend deployment healthy: $new_image"
+  fi
   exit 0
 fi
 
@@ -74,10 +100,12 @@ if [[ "$has_previous" != true ]]; then
     die "initial deployment failed and the incomplete stack could not be stopped; close the Tunnel and application manually before retrying"
   fi
   update_image "$previous"
+  clear_pending
   die "initial deployment failed and no previous healthy image exists; the incomplete stack was stopped and the database volume was preserved"
 fi
 update_image "$previous"
 if compose pull nakama && compose up -d nakama cloudflared && healthy; then
+  clear_pending
   die "deployment failed; rollback succeeded to $previous"
 fi
 compose logs --tail=200 nakama >&2 || true

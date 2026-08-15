@@ -13,6 +13,7 @@ const restore = readFileSync(new URL("../scripts/restore-verify.sh", import.meta
 const imageIntegration = readFileSync(new URL("./image-integration.sh", import.meta.url), "utf8")
 const dockerBuildRetry = readFileSync(new URL("../scripts/docker-build-retry.sh", import.meta.url), "utf8")
 const backendDockerfile = readFileSync(new URL("../../server/Dockerfile.prod", import.meta.url), "utf8")
+const productionSmoke = readFileSync(new URL("../../client/scripts/production-smoke.mjs", import.meta.url), "utf8")
 const nginx = readFileSync(new URL("../../client/nginx.conf", import.meta.url), "utf8")
 const redirects = readFileSync(new URL("../../client/public/_redirects", import.meta.url), "utf8")
 
@@ -75,6 +76,9 @@ test("workflow actions are immutable and deployment uses Tailscale OIDC", () => 
   assert.match(workflow, /packages: read/)
   assert.match(workflow, /docker login ghcr\.io/)
   assert.match(workflow, /docker logout ghcr\.io/)
+  assert.match(workflow, /deploy-backend\.sh '\$IMAGE_REF' --defer-finalize/)
+  assert.match(workflow, /rollback-backend\.sh '\$IMAGE_REF'/)
+  assert.match(workflow, /finalize-backend\.sh '\$IMAGE_REF'/)
   assert.doesNotMatch(workflow, /LIGHTSAIL_IP|SSH_PRIVATE_KEY/)
 })
 
@@ -108,6 +112,14 @@ test("deployment backs up, locks, health checks and rolls back", () => {
   assert.match(deploy, /\/v2\/rpc\/healthcheck\?unwrap/)
   assert.match(deploy, /compose down --remove-orphans/)
   assert.match(imageIntegration, /"status":"ok"/)
+})
+
+test("production smoke follows the server-generated username contract and reports HTTP failures", () => {
+  assert.match(productionSmoke, /authenticateDevice\(randomUUID\(\), true\)/)
+  assert.doesNotMatch(productionSmoke, /authenticateDevice\(randomUUID\(\), true,\s*`smoke-/)
+  assert.match(productionSmoke, /stage\("device authentication"/)
+  assert.match(productionSmoke, /HTTP \$\{error\.status\}/)
+  assert.match(productionSmoke, /await error\.text\(\)/)
 })
 
 test("backup is locked, encrypted offsite and retained", () => {

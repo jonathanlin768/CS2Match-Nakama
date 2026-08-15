@@ -114,6 +114,51 @@ grep -Fxq "BACKEND_IMAGE_REF=$bootstrap_image" "$work/bootstrap.env"
 grep -Fq -- '-u ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff:' "$work/calls"
 ! grep '^curl ' "$work/calls" | grep -Fq 'unit-test-public-key'
 grep -Fq '/v2/rpc/healthcheck?unwrap' "$work/calls"
+[[ ! -e "$work/root/state/pending-backend-deployment" ]]
+grep -Fxq "$bootstrap_image" "$work/root/state/last-known-good-image"
+
+previous_image=ghcr.io/test/cs2match@sha256:0000000000000000000000000000000000000000000000000000000000000000
+deferred_image=ghcr.io/test/cs2match@sha256:3333333333333333333333333333333333333333333333333333333333333333
+cp "$work/prod.env" "$work/deferred.env"
+chmod 600 "$work/deferred.env"
+mkdir -p "$work/deferred-root/state"
+: > "$work/calls"
+DEPLOY_ROOT="$work/deferred-root" ENV_FILE="$work/deferred.env" \
+  bash "$repo_root/deploy/scripts/deploy-backend.sh" "$deferred_image" --defer-finalize >/dev/null
+grep -Fxq "BACKEND_IMAGE_REF=$deferred_image" "$work/deferred.env"
+mapfile -t pending < "$work/deferred-root/state/pending-backend-deployment"
+[[ "${pending[0]}" == "$deferred_image" && "${pending[1]}" == "$previous_image" ]]
+[[ ! -e "$work/deferred-root/state/last-known-good-image" ]]
+DEPLOY_ROOT="$work/deferred-root" ENV_FILE="$work/deferred.env" \
+  bash "$repo_root/deploy/scripts/rollback-backend.sh" "$deferred_image" >/dev/null
+grep -Fxq "BACKEND_IMAGE_REF=$previous_image" "$work/deferred.env"
+grep -Fxq "$previous_image" "$work/deferred-root/state/last-known-good-image"
+[[ ! -e "$work/deferred-root/state/pending-backend-deployment" ]]
+grep -Fq "compose-image=$previous_image" "$work/calls"
+
+cp "$work/prod.env" "$work/finalize.env"
+chmod 600 "$work/finalize.env"
+mkdir -p "$work/finalize-root/state"
+DEPLOY_ROOT="$work/finalize-root" ENV_FILE="$work/finalize.env" \
+  bash "$repo_root/deploy/scripts/deploy-backend.sh" "$deferred_image" --defer-finalize >/dev/null
+DEPLOY_ROOT="$work/finalize-root" ENV_FILE="$work/finalize.env" \
+  bash "$repo_root/deploy/scripts/finalize-backend.sh" "$deferred_image" >/dev/null
+grep -Fxq "$deferred_image" "$work/finalize-root/state/last-known-good-image"
+[[ ! -e "$work/finalize-root/state/pending-backend-deployment" ]]
+
+cp "$work/prod.env" "$work/deferred-bootstrap.env"
+chmod 600 "$work/deferred-bootstrap.env"
+sed -i 's#^BACKEND_IMAGE_REF=.*#BACKEND_IMAGE_REF=ghcr.io/owner/cs2match-nakama@sha256:REPLACE_ME#' "$work/deferred-bootstrap.env"
+mkdir -p "$work/deferred-bootstrap-root/state"
+: > "$work/calls"
+MOCK_VOLUME_EXISTS=0 DEPLOY_ROOT="$work/deferred-bootstrap-root" ENV_FILE="$work/deferred-bootstrap.env" \
+  bash "$repo_root/deploy/scripts/deploy-backend.sh" "$deferred_image" --defer-finalize >/dev/null
+MOCK_VOLUME_EXISTS=0 DEPLOY_ROOT="$work/deferred-bootstrap-root" ENV_FILE="$work/deferred-bootstrap.env" \
+  bash "$repo_root/deploy/scripts/rollback-backend.sh" "$deferred_image" >/dev/null
+grep -Fxq 'BACKEND_IMAGE_REF=ghcr.io/owner/cs2match-nakama@sha256:REPLACE_ME' "$work/deferred-bootstrap.env"
+grep -q 'compose .* down --remove-orphans' "$work/calls"
+[[ ! -e "$work/deferred-bootstrap-root/state/pending-backend-deployment" ]]
+[[ ! -e "$work/deferred-bootstrap-root/state/last-known-good-image" ]]
 
 cp "$work/prod.env" "$work/failed-bootstrap.env"
 chmod 600 "$work/failed-bootstrap.env"

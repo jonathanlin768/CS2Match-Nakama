@@ -51,6 +51,8 @@
 - [x] 6.11 修复 GitHub Linux Runner 因部署子脚本缺少可执行位导致的验证失败；入口显式使用 Bash 调用预检/备份脚本并增加跨平台文件模式回归断言。
 - [x] 6.12 隔离首次部署、备份失败和恢复失败脚本测试的 marker/调用记录，并在本地 WSL2/Linux 容器中按 GitHub `validate` 顺序完成提交前验证。
 - [x] 6.13 修复生产就绪探针误用浏览器可见 server key 导致真实 Runtime RPC 返回 401 的问题；改用 runtime HTTP key、增加真实 RPC 镜像集成验证，并在首次部署无旧健康版本时关闭半部署栈且保留 PostgreSQL volume。
+- [x] 6.14 修复公网 smoke 传入自定义设备用户名而违反服务端 8 位玩家码契约的问题，并让认证、RPC 与 WebSocket 的非 2xx 响应输出可诊断且不包含请求凭据的状态和正文。
+- [x] 6.15 将后端发布改为本机健康后 pending、公开 smoke 后 finalize 的两阶段确认；公开 smoke 或确认失败时恢复旧 digest，首次部署则关闭半部署栈且保留 PostgreSQL volume。
 
 ## 7. 安全、运行时与性能验证
 
@@ -68,3 +70,4 @@
 - [x] 8.3 在文档中明确区分仓库自动化与 AWS/Cloudflare/Tailscale/GitHub 控制台人工步骤，删除无效 Console URL、重复 Tunnel ingress、`runtime.http_key`/CORS 混淆、不可用 `skip_build` 和不存在 `.backup` 等旧说明。
 - [ ] 8.4 从空白目录按文档执行所有无需真实云账号的命令和静态检查，并由真实外部环境验收人逐项记录 AWS、Cloudflare、Tailscale、Pages、R2 与 GitHub 配置结果。
 - [x] 8.5 汇总 Go、前端、Docker、备份恢复、workflow、安全端口、端到端和负载验证证据，确认所有 OpenSpec 场景有对应测试或明确人工验收项后准备实施交付。
+- [x] 8.6 将首次真实部署的外部服务账本、冷启动与日常发布边界、凭据边界和故障复盘精炼写入 `doc/aws-deployment-step-by-step.md`，并修正文档中误用 server key 的本机 Runtime RPC 验证命令。

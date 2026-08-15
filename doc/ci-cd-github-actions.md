@@ -58,14 +58,24 @@ GHCR package 可以保持 private。部署 job 用当次运行的短期 `GITHUB_
 
 本机 RPC 就绪检查使用 `.env.production` 中的 `RUNTIME_HTTP_KEY`，不会使用浏览器可见的 `NAKAMA_SERVER_KEY`。第一次部署若尚无旧健康 digest 且检查失败，脚本会执行不带 `-v` 的 Compose `down`，关闭 Tunnel 和半部署容器但保留 PostgreSQL named volume；Pages 步骤不会执行。下一次运行会把已存在的数据库卷视为需要先备份的数据，不要手工删除该 volume。
 
-后端部署脚本记录当前镜像并执行发布前备份。新版本健康失败会自动恢复旧镜像；如果回滚也失败，工作流停止，登录 Tailscale 后运行：
+后端部署脚本记录当前镜像并执行发布前备份。本机健康后，新 digest 先保持 pending；只有公网认证、RPC、WebSocket smoke 全部成功才写入 `last-known-good-image`。本机或公网检查失败都会恢复旧 digest；首次部署没有旧版本时则关闭半部署栈并保留数据库卷。
+
+若工作流被取消，或日志明确显示自动回滚失败，登录 Tailscale 后先检查 pending 状态：
 
 ```bash
 cd /opt/cs2match
 docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail=200 nakama
 cat deploy/state/last-known-good-image
-deploy/scripts/deploy-backend.sh 'ghcr.io/owner/cs2match-nakama@sha256:已确认的digest'
+cat deploy/state/pending-backend-deployment
 ```
+
+`pending-backend-deployment` 第一行是待确认/失败 digest。确认要撤销后运行：
+
+```bash
+bash deploy/scripts/rollback-backend.sh '第一行的完整digest'
+```
+
+若没有 pending 文件，需要手工重发已确认的旧版本时，再运行 `bash deploy/scripts/deploy-backend.sh 'ghcr.io/owner/cs2match-nakama@sha256:已确认的digest'`。
 
 不要把 `.env.production`、Tunnel token、restic 密码或日志全文粘贴到 issue。脚本日志只输出 tag/digest/状态，不打印秘密。
 

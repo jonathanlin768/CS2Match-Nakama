@@ -149,17 +149,28 @@ jobs:
           set -o pipefail
           tar --exclude=.git --exclude=.env.production --exclude=client/node_modules --exclude=client/dist -czf - . | tailscale ssh "ubuntu@$TARGET" "mkdir -p /opt/cs2match && tar -xzf - -C /opt/cs2match"
           printf '%s' "$GH_TOKEN" | tailscale ssh "ubuntu@$TARGET" "docker login ghcr.io -u '$GITHUB_ACTOR' --password-stdin"
-          tailscale ssh "ubuntu@$TARGET" "cd /opt/cs2match && chmod +x deploy/scripts/*.sh && deploy/scripts/deploy-backend.sh '$IMAGE_REF'"
+          tailscale ssh "ubuntu@$TARGET" "cd /opt/cs2match && chmod +x deploy/scripts/*.sh && bash deploy/scripts/deploy-backend.sh '$IMAGE_REF' --defer-finalize"
       - name: Public authentication, RPC and WebSocket smoke
         working-directory: client
         env:
+          TARGET: ${{ vars.PRODUCTION_TAILSCALE_HOST }}
+          IMAGE_REF: ${{ needs.publish.outputs.image-ref }}
           VITE_NAKAMA_HOST: ${{ vars.API_HOST }}
           VITE_NAKAMA_PORT: "443"
           VITE_NAKAMA_SERVER_KEY: ${{ secrets.NAKAMA_SERVER_KEY }}
           VITE_NAKAMA_USE_SSL: "true"
         run: |
-          npm ci
-          npm run smoke:production
+          rollback_pending() {
+            tailscale ssh "ubuntu@$TARGET" "cd /opt/cs2match && bash deploy/scripts/rollback-backend.sh '$IMAGE_REF'"
+          }
+          if ! npm ci || ! npm run smoke:production; then
+            rollback_pending || echo "::error::Public smoke failed and backend rollback also failed; use the documented manual recovery procedure"
+            exit 1
+          fi
+          if ! tailscale ssh "ubuntu@$TARGET" "cd /opt/cs2match && bash deploy/scripts/finalize-backend.sh '$IMAGE_REF'"; then
+            rollback_pending || echo "::error::Backend finalization and rollback both failed; use the documented manual recovery procedure"
+            exit 1
+          fi
       - name: Build and publish Pages after backend succeeds
         working-directory: client
         env:

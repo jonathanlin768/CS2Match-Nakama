@@ -9,7 +9,7 @@
 - Ubuntu 24.04 LTS x86_64，Docker Engine + Compose plugin，建议 Lightsail 2 GB RAM 套餐。
 - 管理账户为 `ubuntu`，已加入 `docker` 组；SSH 和 Nakama Console 仅经 Tailscale 使用。
 - 仓库检出到 `/opt/cs2match`，归 `ubuntu:ubuntu`；真实配置是 `/opt/cs2match/.env.production`，权限必须为 `0600`。
-- `deploy/state` 保存锁和上一健康镜像；PostgreSQL 数据在 `cs2match-postgres-data` named volume；二者不得提交。
+- `deploy/state` 保存锁、上一健康镜像和可能存在的 pending 发布；PostgreSQL 数据在 `cs2match-postgres-data` named volume；二者不得提交。
 - 后端、cloudflared 使用 digest；PostgreSQL、restic 使用明确版本，升级必须单独验证。
 
 ## 仓库与外部资源盘点
@@ -41,6 +41,8 @@ deploy/scripts/restore-verify.sh latest
 不要在第一次发布前直接运行 `docker compose up`，否则占位镜像无法拉取，也会绕过工作流的测试、健康检查和首次备份流程。
 
 本机部署探针使用服务器专属的 `RUNTIME_HTTP_KEY` 调用真实 `healthcheck` RPC；`NAKAMA_SERVER_KEY` 是浏览器可见值，不能代替该认证。首次发布尚无旧健康镜像时，如果探针失败，脚本会执行不带 `-v` 的 Compose `down`：公开 Tunnel 和所有半部署容器关闭，但 PostgreSQL named volume 保留，前端不会发布。
+
+GitHub 工作流使用两阶段后端确认：本机健康后先保存 `pending-backend-deployment`，公网认证/RPC/WebSocket smoke 成功后才 finalize；失败则调用 `rollback-backend.sh`。若工作流被取消导致 pending 遗留，下一次发布会拒绝覆盖现场；查看该文件第一行，并用 `bash deploy/scripts/rollback-backend.sh '完整pending digest'` 恢复。
 
 按 [Tailscale 官方 Linux 安装说明](https://tailscale.com/kb/1031/install-linux) 安装后，在控制台先应用 `deploy/tailscale/policy.hujson.example`，再运行 `sudo tailscale up --ssh --advertise-tags=tag:prod`。用 `tailscale ip -4` 的结果填写 `TAILSCALE_IP`；确认管理员可经 Tailnet SSH 且 Console 可通过 `http://TAILSCALE_IP:7351` 访问后，关闭 Lightsail 公网 22。CI trust 必须限定到本仓库和 `production` Environment。
 
