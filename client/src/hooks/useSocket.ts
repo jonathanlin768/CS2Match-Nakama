@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import type { ChannelMessage, Notification, Session, Socket } from "@heroiclabs/nakama-js"
-import client from "../nakama"
+import { createNakamaSocket } from "../nakama"
 
 let socket: Socket | null = null
 let sessionToken = ""
@@ -36,7 +36,7 @@ async function connect(session: Session): Promise<Socket> {
       socket.ondisconnect = () => undefined
       await socket.disconnect(false)
     }
-    const next = client.createSocket()
+    const next = createNakamaSocket()
     next.onchannelmessage = (message) => messageListeners.forEach((listener) => listener(message))
     next.onnotification = (notification) => notificationListeners.forEach((listener) => listener(notification))
     next.ondisconnect = () => {

@@ -53,6 +53,7 @@
 - [x] 6.13 修复生产就绪探针误用浏览器可见 server key 导致真实 Runtime RPC 返回 401 的问题；改用 runtime HTTP key、增加真实 RPC 镜像集成验证，并在首次部署无旧健康版本时关闭半部署栈且保留 PostgreSQL volume。
 - [x] 6.14 修复公网 smoke 传入自定义设备用户名而违反服务端 8 位玩家码契约的问题，并让认证、RPC 与 WebSocket 的非 2xx 响应输出可诊断且不包含请求凭据的状态和正文。
 - [x] 6.15 将后端发布改为本机健康后 pending、公开 smoke 后 finalize 的两阶段确认；公开 smoke 或确认失败时恢复旧 digest，首次部署则关闭半部署栈且保留 PostgreSQL volume。
+- [x] 6.16 修复 Nakama JS Socket 不继承 HTTP Client TLS 配置导致生产 smoke 与浏览器使用 `ws://` 的问题；生产 Socket 显式传入 SSL 配置，增加脱敏 `ErrorEvent` 诊断和回归测试。
 
 ## 7. 安全、运行时与性能验证
 

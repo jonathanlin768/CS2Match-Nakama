@@ -21,4 +21,13 @@ const client = new Client(
   NAKAMA_USE_SSL
 );
 
+/**
+ * Socket configuration is independent from Client's HTTP configuration in
+ * nakama-js. Always pass the same TLS choice explicitly so production uses
+ * wss:// while local development can continue to use ws://.
+ */
+export function createNakamaSocket() {
+  return client.createSocket(NAKAMA_USE_SSL);
+}
+
 export default client;

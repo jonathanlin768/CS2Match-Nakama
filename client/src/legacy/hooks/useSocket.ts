@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Session } from "@heroiclabs/nakama-js";
 import type { Socket } from "@heroiclabs/nakama-js";
-import client from "../nakama";
+import { createNakamaSocket } from "../../nakama";
 
 /**
  * WebSocket 连接状态：
@@ -84,7 +84,7 @@ function installAggregator(socket: Socket, event: SocketEvent) {
  * 创建新 socket、安装事件聚合器、连接并鉴权、注册断线回调。
  */
 async function createAndConnect(session: Session): Promise<Socket> {
-  const socket = client.createSocket();
+  const socket = createNakamaSocket();
 
   // 安装所有事件聚合器
   installAggregator(socket, "onnotification");

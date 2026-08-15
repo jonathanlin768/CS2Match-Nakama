@@ -14,6 +14,9 @@ const imageIntegration = readFileSync(new URL("./image-integration.sh", import.m
 const dockerBuildRetry = readFileSync(new URL("../scripts/docker-build-retry.sh", import.meta.url), "utf8")
 const backendDockerfile = readFileSync(new URL("../../server/Dockerfile.prod", import.meta.url), "utf8")
 const productionSmoke = readFileSync(new URL("../../client/scripts/production-smoke.mjs", import.meta.url), "utf8")
+const nakamaClient = readFileSync(new URL("../../client/src/nakama.ts", import.meta.url), "utf8")
+const socketHook = readFileSync(new URL("../../client/src/hooks/useSocket.ts", import.meta.url), "utf8")
+const legacySocketHook = readFileSync(new URL("../../client/src/legacy/hooks/useSocket.ts", import.meta.url), "utf8")
 const nginx = readFileSync(new URL("../../client/nginx.conf", import.meta.url), "utf8")
 const redirects = readFileSync(new URL("../../client/public/_redirects", import.meta.url), "utf8")
 
@@ -120,6 +123,17 @@ test("production smoke follows the server-generated username contract and report
   assert.match(productionSmoke, /stage\("device authentication"/)
   assert.match(productionSmoke, /HTTP \$\{error\.status\}/)
   assert.match(productionSmoke, /await error\.text\(\)/)
+  assert.match(productionSmoke, /client\.createSocket\(useSSL, false\)/)
+  assert.doesNotMatch(productionSmoke, /createSocket\(false/)
+  assert.match(productionSmoke, /Do not serialize the event target/)
+})
+
+test("browser WebSockets explicitly inherit the production TLS choice", () => {
+  assert.match(nakamaClient, /client\.createSocket\(NAKAMA_USE_SSL\)/)
+  assert.match(socketHook, /createNakamaSocket\(\)/)
+  assert.doesNotMatch(socketHook, /client\.createSocket/)
+  assert.match(legacySocketHook, /createNakamaSocket\(\)/)
+  assert.doesNotMatch(legacySocketHook, /client\.createSocket/)
 })
 
 test("backup is locked, encrypted offsite and retained", () => {
