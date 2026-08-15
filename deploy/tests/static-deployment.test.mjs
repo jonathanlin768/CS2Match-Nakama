@@ -96,10 +96,10 @@ test("backend builds bypass the rate-limited gateway and retry transient failure
 
 test("deployment backs up, locks, health checks and rolls back", () => {
   assert.match(deploy, /flock -n/)
-  assert.match(deploy, /preflight\.sh" --backend-image "\$new_image"/)
+  assert.match(deploy, /bash "\$SCRIPT_DIR\/preflight\.sh" --backend-image "\$new_image"/)
   assert.match(deploy, /docker volume inspect cs2match-postgres-data/)
-  assert.match(deploy, /backup-db\.sh.*pre-deploy/)
-  assert.match(deploy, /backup-db\.sh" initial/)
+  assert.match(deploy, /bash "\$SCRIPT_DIR\/backup-db\.sh" pre-deploy/)
+  assert.match(deploy, /bash "\$SCRIPT_DIR\/backup-db\.sh" initial/)
   assert.match(deploy, /previous=.*BACKEND_IMAGE_REF/)
   assert.match(deploy, /BACKEND_IMAGE_REF="\$value"\s+export BACKEND_IMAGE_REF/)
   assert.match(deploy, /rolling back/)

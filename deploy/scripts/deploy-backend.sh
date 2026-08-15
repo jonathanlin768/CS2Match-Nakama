@@ -7,7 +7,7 @@ source "$SCRIPT_DIR/common.sh"
 new_image="${1:?usage: deploy-backend.sh ghcr.io/owner/image@sha256:digest}"
 [[ "$new_image" =~ ^ghcr\.io/.+@sha256:[0-9a-f]{64}$ ]] || die "deployment requires an immutable GHCR digest"
 load_env
-"$SCRIPT_DIR/preflight.sh" --backend-image "$new_image"
+bash "$SCRIPT_DIR/preflight.sh" --backend-image "$new_image"
 mkdir -p "${DEPLOY_ROOT}/state"
 exec 8>"${DEPLOY_ROOT}/state/deploy.lock"
 flock -n 8 || die "another deployment is already running"
@@ -26,7 +26,7 @@ if docker volume inspect cs2match-postgres-data >/dev/null 2>&1; then
     compose logs --tail=100 db >&2 || true
     die "database TCP service did not become ready for pre-deploy backup"
   fi
-  "$SCRIPT_DIR/backup-db.sh" pre-deploy
+  bash "$SCRIPT_DIR/backup-db.sh" pre-deploy
 else
   bootstrap=true
   log "no database volume exists; treating this as the first bootstrap deployment"
@@ -51,7 +51,7 @@ healthy() {
 update_image "$new_image"
 if compose pull nakama && compose up -d --remove-orphans db nakama cloudflared && healthy; then
   if [[ "$bootstrap" == true ]]; then
-    "$SCRIPT_DIR/backup-db.sh" initial || die "application is healthy, but the required initial offsite backup failed"
+    bash "$SCRIPT_DIR/backup-db.sh" initial || die "application is healthy, but the required initial offsite backup failed"
   fi
   printf '%s\n' "$new_image" > "${DEPLOY_ROOT}/state/last-known-good-image"
   log "backend deployment healthy: $new_image"

@@ -97,6 +97,13 @@
 - **THEN** 工作流停止且不读取部署阶段专用凭据
 - **AND** 生产服务器、数据库和 Cloudflare Pages 当前版本保持不变
 
+#### Scenario: Linux Runner 验证部署脚本
+
+- **GIVEN** Git checkout 中的部署子脚本没有 Unix 可执行位
+- **WHEN** Linux Runner 执行首次部署和回滚脚本测试
+- **THEN** 部署入口通过显式 Bash 解释器调用预检和备份子脚本
+- **AND** 验证结果不依赖 Windows、WSL 与原生 Linux 的文件模式差异
+
 ### Requirement: 部署健康检查和自动回滚
 
 生产发布 SHALL 在切换前记录当前后端镜像版本，并在更新后验证容器健康、Nakama `/healthcheck`、关键认证/RPC 可达性和公开 Tunnel 路径。任何后端发布后检查失败时 SHALL 自动恢复上一已知健康镜像并再次验证；前端发布 SHALL 在后端健康后进行，并记录 Cloudflare Pages 可回滚版本。单实例 Go 插件更新 MUST 被描述为有短暂断连的重启更新，而非无中断热加载。
