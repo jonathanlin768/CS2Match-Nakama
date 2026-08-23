@@ -48,7 +48,7 @@ func InitModule(
 	if env, ok := ctx.Value(runtime.RUNTIME_CTX_ENV).(map[string]string); ok {
 		socialEnabled = !strings.EqualFold(strings.TrimSpace(env["SOCIAL_CONTACT_EXCHANGE_ENABLED"]), "false")
 	}
-	if err := social.Register(initializer, social.NewService(nk), socialEnabled); err != nil {
+	if err := social.Register(initializer, social.NewService(nk, logger), socialEnabled); err != nil {
 		logger.Error("Failed to register social subsystem: %v", err)
 		return err
 	}

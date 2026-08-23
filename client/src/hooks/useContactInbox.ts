@@ -3,6 +3,7 @@ import type { ChannelMessage, Session } from "@heroiclabs/nakama-js"
 import { joinDMChannel, leaveDMChannel, listChannelMessages } from "../api/chat"
 import { countUnreadCards, parseContactCard, type ContactCardMessage } from "../social/contact-card"
 import { subscribeChannelMessages, useSocket } from "./useSocket"
+import { useContactExchangeInbox } from "../context/ContactExchangeContext"
 
 export interface ContactInboxSummary {
   latest?: ContactCardMessage
@@ -19,12 +20,15 @@ function markRead(userId: string, friendId: string) {
 
 export function useContactInbox(session: Session | null, friendIds: string[], selectedFriendId?: string) {
   const socket = useSocket(session)
+  const { refresh: refreshAuthority } = useContactExchangeInbox()
   const idsKey = [...friendIds].sort().join(",")
   const normalizedIds = useMemo(() => idsKey ? idsKey.split(",") : [], [idsKey])
   const [cardsByFriend, setCardsByFriend] = useState<Record<string, ContactCardMessage[]>>({})
   const cardsRef = useRef<Record<string, ContactCardMessage[]>>({})
   const [summaries, setSummaries] = useState<Record<string, ContactInboxSummary>>({})
   const [revision, setRevision] = useState(0)
+  const [cardError, setCardError] = useState<string | null>(null)
+  const [retryRevision, setRetryRevision] = useState(0)
 
   useEffect(() => {
     const userId = session?.user_id
@@ -65,25 +69,29 @@ export function useContactInbox(session: Session | null, friendIds: string[], se
       if (!friendId || !card) return
       const current = cardsRef.current[friendId] ?? []
       storeCards(friendId, [...current.filter((item) => item.messageId !== card.messageId), card])
+      void refreshAuthority()
     }
     const unsubscribe = subscribeChannelMessages(receive)
     const joined: string[] = []
 
-    void Promise.all(normalizedIds.map(async (friendId) => {
+    void Promise.allSettled(normalizedIds.map(async (friendId) => {
       const channel = await joinDMChannel(socket, friendId)
       if (!active) { await leaveDMChannel(socket, channel.id); return }
       channels.set(channel.id, friendId)
       joined.push(channel.id)
       const history = await listChannelMessages(session, channel.id, 50)
       storeCards(friendId, (history.messages ?? []).map(parseContactCard).filter((item): item is ContactCardMessage => Boolean(item)))
-    })).catch(() => undefined)
+    })).then((results) => {
+      if (!active) return
+      setCardError(results.some((result) => result.status === "rejected") ? "部分交换事件历史加载失败，可重试；权威申请状态不受影响。" : null)
+    })
 
     return () => {
       active = false
       unsubscribe()
       joined.forEach((channelId) => { void leaveDMChannel(socket, channelId) })
     }
-  }, [socket, session, normalizedIds, selectedFriendId])
+  }, [socket, session, normalizedIds, selectedFriendId, retryRevision, refreshAuthority])
 
-  return { cardsByFriend, summaries, revision }
+  return { cardsByFriend, summaries, revision, cardError, retry: () => setRetryRevision((value) => value + 1) }
 }

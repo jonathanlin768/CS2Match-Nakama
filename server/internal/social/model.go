@@ -15,6 +15,7 @@ type ContactProfile struct {
 	QQ        string `json:"qq,omitempty"`
 	WeChat    string `json:"wechat,omitempty"`
 	UpdatedAt int64  `json:"updated_at"`
+	Revision  int64  `json:"revision"`
 }
 
 type SetContactProfileRequest struct {
@@ -29,16 +30,24 @@ type ContactProfileSummary struct {
 	WeChatMasked     string `json:"wechat_masked,omitempty"`
 }
 
+type ContactProfileView struct {
+	ContactProfile
+	Summary ContactProfileSummary `json:"summary"`
+}
+
 type ExchangeRequest struct {
-	RequestID   string   `json:"request_id"`
-	RequesterID string   `json:"requester_id"`
-	RecipientID string   `json:"recipient_id"`
-	Channels    []string `json:"channels"`
-	Status      string   `json:"status"`
-	Version     int64    `json:"version"`
-	RequestedAt int64    `json:"requested_at"`
-	RespondedAt int64    `json:"responded_at,omitempty"`
-	ExpiresAt   int64    `json:"expires_at"`
+	RequestID                        string   `json:"request_id"`
+	RequesterID                      string   `json:"requester_id"`
+	RecipientID                      string   `json:"recipient_id"`
+	Channels                         []string `json:"channels"`
+	Status                           string   `json:"status"`
+	Version                          int64    `json:"version"`
+	RequestedAt                      int64    `json:"requested_at"`
+	RespondedAt                      int64    `json:"responded_at,omitempty"`
+	ExpiresAt                        int64    `json:"expires_at"`
+	RequesterProfileRevision         int64    `json:"requester_profile_revision,omitempty"`
+	AcceptedRequesterProfileRevision int64    `json:"accepted_requester_profile_revision,omitempty"`
+	AcceptedRecipientProfileRevision int64    `json:"accepted_recipient_profile_revision,omitempty"`
 }
 
 type ExchangeView struct {
@@ -60,6 +69,32 @@ type RespondExchangeRequest struct {
 	FriendID  string `json:"friend_id"`
 	RequestID string `json:"request_id"`
 	Accept    bool   `json:"accept"`
+}
+
+type ListInboxRequest struct {
+	Limit  int    `json:"limit,omitempty"`
+	Cursor string `json:"cursor,omitempty"`
+}
+
+type InboxItem struct {
+	FriendID    string   `json:"friend_id"`
+	Username    string   `json:"username"`
+	RequestID   string   `json:"request_id,omitempty"`
+	RequesterID string   `json:"requester_id,omitempty"`
+	RecipientID string   `json:"recipient_id,omitempty"`
+	Channels    []string `json:"channels,omitempty"`
+	Status      string   `json:"status"`
+	Version     int64    `json:"version,omitempty"`
+	RequestedAt int64    `json:"requested_at,omitempty"`
+	ExpiresAt   int64    `json:"expires_at,omitempty"`
+}
+
+type ContactExchangeInbox struct {
+	Received             []InboxItem `json:"received"`
+	Sent                 []InboxItem `json:"sent"`
+	Reapproval           []InboxItem `json:"reapproval"`
+	IncomingPendingCount int         `json:"incoming_pending_count"`
+	Cursor               string      `json:"cursor,omitempty"`
 }
 
 type SocialError struct{ Code, Message string }

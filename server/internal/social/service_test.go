@@ -14,8 +14,14 @@ func TestContactValidationAndFiltering(t *testing.T) {
 	if err := validateProfile(p); err != nil {
 		t.Fatalf("valid profile rejected: %v", err)
 	}
-	if err := profileHasChannels(p, []string{"qq", "wechat"}); err != nil {
+	if err := requireAnyContact(p); err != nil {
 		t.Fatal(err)
+	}
+	if channels := profileChannels(p); !equalChannels(channels, []string{"qq", "wechat"}) {
+		t.Fatalf("unexpected profile channels %v", channels)
+	}
+	if channels := mergeChannels([]string{"qq"}, []string{"wechat"}); !equalChannels(channels, []string{"qq", "wechat"}) {
+		t.Fatalf("unexpected merged channels %v", channels)
 	}
 	filtered := filterProfile(p, []string{"qq"})
 	if filtered.QQ == "" || filtered.WeChat != "" {

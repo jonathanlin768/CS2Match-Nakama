@@ -6,12 +6,19 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/heroiclabs/nakama-common/api"
 	"github.com/heroiclabs/nakama-common/runtime"
 )
 
-type Repository struct{ nk runtime.NakamaModule }
+type repositoryNakama interface {
+	FriendsList(ctx context.Context, userID string, limit int, state *int, cursor string) ([]*api.Friend, string, error)
+	StorageRead(ctx context.Context, reads []*runtime.StorageRead) ([]*api.StorageObject, error)
+	StorageWrite(ctx context.Context, writes []*runtime.StorageWrite) ([]*api.StorageObjectAck, error)
+}
 
-func NewRepository(nk runtime.NakamaModule) *Repository { return &Repository{nk: nk} }
+type Repository struct{ nk repositoryNakama }
+
+func NewRepository(nk repositoryNakama) *Repository { return &Repository{nk: nk} }
 
 func pairKey(a, b string) string {
 	ids := []string{strings.TrimSpace(a), strings.TrimSpace(b)}
@@ -45,6 +52,7 @@ func (r *Repository) ReadProfile(ctx context.Context, userID string) (ContactPro
 	if err := json.Unmarshal([]byte(objects[0].Value), &profile); err != nil {
 		return ContactProfile{}, "", err
 	}
+	profile = normalizeLegacyProfile(profile)
 	return profile, objects[0].Version, nil
 }
 
@@ -85,4 +93,56 @@ func (r *Repository) WriteExchange(ctx context.Context, a, b string, exchange Ex
 	}
 	_, err = r.nk.StorageWrite(ctx, []*runtime.StorageWrite{{Collection: exchangeCollection, Key: pairKey(a, b), UserID: systemOwnerID, Value: string(value), Version: version, PermissionRead: runtime.STORAGE_PERMISSION_NO_READ, PermissionWrite: runtime.STORAGE_PERMISSION_NO_WRITE}})
 	return err
+}
+
+func (r *Repository) ListFriends(ctx context.Context, userID string, limit int, cursor string) ([]*api.Friend, string, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 100
+	}
+	state := 0
+	return r.nk.FriendsList(ctx, userID, limit, &state, cursor)
+}
+
+func (r *Repository) ReadExchanges(ctx context.Context, userID string, friendIDs []string) (map[string]ExchangeRequest, error) {
+	result := make(map[string]ExchangeRequest, len(friendIDs))
+	if len(friendIDs) == 0 {
+		return result, nil
+	}
+	reads := make([]*runtime.StorageRead, 0, len(friendIDs))
+	friendByKey := make(map[string]string, len(friendIDs))
+	for _, friendID := range friendIDs {
+		key := pairKey(userID, friendID)
+		reads = append(reads, &runtime.StorageRead{Collection: exchangeCollection, Key: key, UserID: systemOwnerID})
+		friendByKey[key] = friendID
+	}
+	objects, err := r.nk.StorageRead(ctx, reads)
+	if err != nil {
+		return nil, err
+	}
+	for _, object := range objects {
+		friendID, ok := friendByKey[object.Key]
+		if !ok {
+			continue
+		}
+		var exchange ExchangeRequest
+		if err := json.Unmarshal([]byte(object.Value), &exchange); err != nil {
+			return nil, err
+		}
+		result[friendID] = exchange
+	}
+	return result, nil
+}
+
+func (r *Repository) RevokeExchange(ctx context.Context, userID, friendID string, revokedAt int64) error {
+	exchange, version, err := r.ReadExchange(ctx, userID, friendID)
+	if err != nil || exchange.RequestID == "" {
+		return err
+	}
+	exchange.Status = "revoked"
+	exchange.Version++
+	exchange.RespondedAt = revokedAt
+	exchange.RequesterProfileRevision = 0
+	exchange.AcceptedRequesterProfileRevision = 0
+	exchange.AcceptedRecipientProfileRevision = 0
+	return r.WriteExchange(ctx, userID, friendID, exchange, version)
 }

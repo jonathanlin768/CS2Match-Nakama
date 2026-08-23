@@ -7,6 +7,10 @@
 
 两个开关应同时关闭。Storage 数据无需删除，恢复开关后仍可读取已授权状态。
 
+联系方式授权绑定双方整份资料的 revision。任一方实际修改、新增或清空 QQ/微信都会让整次授权变为 `stale`，客户端不得再显示任何渠道正文，双方重新申请并接受后才能恢复。删除好友会通过 `BeforeDeleteFriends` hook 把授权持久标记为 `revoked`；重新添加好友不会复活旧授权。
+
+当前本地与生产配置已经分别在 `nakama-config.yml` / `nakama-config.prod.yml` 和 `client/Dockerfile` 中启用对应开关，本次变更不需要新增环境变量。上线时必须同时更新 Nakama Go 插件和前端镜像。
+
 ## 回滚
 
 发布前为当前稳定前端镜像打标签：

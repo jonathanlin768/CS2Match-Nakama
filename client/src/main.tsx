@@ -4,6 +4,7 @@ import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom"
 import { Toaster } from "sonner"
 import "./index.css"
 import { AuthProvider } from "./context/AuthContext"
+import { ContactExchangeProvider } from "./context/ContactExchangeContext"
 import AppShell from "./components/AppShell"
 import HomePage from "./pages/HomePage"
 import MatchPage from "./pages/MatchPage"
@@ -24,5 +25,5 @@ const router = createBrowserRouter([{
 }])
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode><AuthProvider><RouterProvider router={router} /><Toaster theme="dark" position="top-center" /></AuthProvider></StrictMode>,
+  <StrictMode><AuthProvider><ContactExchangeProvider><RouterProvider router={router} /><Toaster theme="dark" position="top-center" /></ContactExchangeProvider></AuthProvider></StrictMode>,
 )

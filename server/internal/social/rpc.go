@@ -39,7 +39,7 @@ func respond(value interface{}, err error) (string, error) {
 	if err != nil {
 		if typed, ok := err.(*SocialError); ok {
 			b, _ := json.Marshal(map[string]string{"code": typed.Code, "message": typed.Message})
-			return string(b), runtime.NewError(typed.Message, 3)
+			return string(b), runtime.NewError(typed.Code+": "+typed.Message, 3)
 		}
 		return "", err
 	}
@@ -58,6 +58,20 @@ func RPCSetContactProfile(service *Service) rpcFunc {
 			return "", err
 		}
 		value, err := service.SetProfile(ctx, id, req)
+		return respond(value, err)
+	}
+}
+func RPCGetContactProfile(service *Service) rpcFunc {
+	return func(ctx context.Context, _ runtime.Logger, _ *sql.DB, _ runtime.NakamaModule, payload string) (string, error) {
+		var req struct{}
+		if err := decode(payload, &req); err != nil {
+			return respond(nil, &SocialError{Code: "INVALID_REQUEST", Message: err.Error()})
+		}
+		id, _, err := caller(ctx)
+		if err != nil {
+			return "", err
+		}
+		value, err := service.GetProfile(ctx, id)
 		return respond(value, err)
 	}
 }
@@ -100,6 +114,21 @@ func RPCRespondContactExchange(service *Service) rpcFunc {
 			return "", err
 		}
 		value, err := service.RespondExchange(ctx, id, name, req)
+		return respond(value, err)
+	}
+}
+
+func RPCListContactExchangeInbox(service *Service) rpcFunc {
+	return func(ctx context.Context, _ runtime.Logger, _ *sql.DB, _ runtime.NakamaModule, payload string) (string, error) {
+		var req ListInboxRequest
+		if err := decode(payload, &req); err != nil {
+			return respond(nil, &SocialError{Code: "INVALID_REQUEST", Message: err.Error()})
+		}
+		id, _, err := caller(ctx)
+		if err != nil {
+			return "", err
+		}
+		value, err := service.ListInbox(ctx, id, req)
 		return respond(value, err)
 	}
 }

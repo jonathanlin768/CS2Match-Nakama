@@ -2,12 +2,14 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom"
 import { LogIn, LogOut, UserRound, UsersRound } from "lucide-react"
 import { useState } from "react"
 import { useAuth } from "../context/AuthContext"
+import { useContactExchangeInbox } from "../context/ContactExchangeContext"
 import LoginModal from "./LoginModal"
 
 export default function AppShell() {
   const navigate = useNavigate()
   const location = useLocation()
   const { status, session, isGuest, logout } = useAuth()
+  const { inbox } = useContactExchangeInbox()
   const [loginOpen, setLoginOpen] = useState(false)
 
   if (status === "restoring" || !session) {
@@ -23,7 +25,7 @@ export default function AppShell() {
         </button>
         <nav className="header-actions" aria-label="账户与好友">
           <button className={location.pathname === "/friends" ? "icon-button active" : "icon-button"} onClick={() => navigate("/friends")} title="好友与联系方式">
-            <UsersRound size={20} /><span>好友</span>
+            <UsersRound size={20} /><span>好友</span>{!isGuest && inbox.incoming_pending_count > 0 && <span className="contact-nav-badge" aria-label={`${inbox.incoming_pending_count} 条待处理联系方式申请`}>{inbox.incoming_pending_count}</span>}
           </button>
           <div className="player-code"><UserRound size={18} /><span>玩家#{playerCode}</span><em>{isGuest ? "游客" : "已登录"}</em></div>
           {isGuest ? (
