@@ -92,6 +92,7 @@ cs2-simu-project/
 ├── nakama-config.yml        # Nakama 服务器配置
 ├── .env.example             # 环境变量模板
 ├── README.md
+├── .agents/skills/cs2match-local-update/ # AI 本地更新技能
 │
 ├── server/                  # Go 插件项目
 │   ├── go.mod               # 模块: windypath.com/cs2match/server
@@ -111,10 +112,13 @@ cs2-simu-project/
 │
 ├── scripts/                  # 工具脚本
 │   ├── gen-config.sh         # 导表脚本 (Linux/Mac/Git Bash)
-│   └── gen-config.ps1        # 导表脚本 (Windows PowerShell)
+│   ├── gen-config.ps1        # 导表脚本 (Windows PowerShell)
+│   └── update-local-config.ps1 # 导表并更新本地前后端
 │
 ├── tools/luban/              # Luban Docker 镜像
 │   └── Dockerfile
+├── tools/map-semantic-editor/ # CS2 配置可视化编辑器
+│   └── README.md              # 编辑器完整使用说明
 │
 ├── client/                  # React 前端项目
 │   ├── Dockerfile           # 前端 Docker 多阶段构建
@@ -157,11 +161,22 @@ docker compose down -v         # 停止并删除数据卷（清空数据库）
 
 ### Go 插件开发
 
+从项目根目录执行：
+
+```powershell
+# Windows PowerShell / CMD
+.\server\build.bat
+docker compose up -d db nakama
+docker compose restart nakama
+docker compose logs --tail 100 nakama
+```
+
 ```bash
-cd server
-bash build.sh                  # 编译插件
-docker compose restart nakama  # 重新加载
-docker compose logs nakama     # 查看加载日志
+# Linux / macOS / WSL2
+bash server/build.sh
+docker compose up -d db nakama
+docker compose restart nakama
+docker compose logs --tail 100 nakama
 ```
 
 ### 前端开发
@@ -172,6 +187,16 @@ npm run dev                    # 启动 Vite 开发服务器
 npm run build                  # 生产构建（Option B 使用）
 npx tsc --noEmit               # TypeScript 类型检查
 ```
+
+### 让 AI 更新本地服务
+
+项目内置 `.agents/skills/cs2match-local-update/SKILL.md`。支持直接对可发现项目技能的 AI 说：
+
+- `帮我更新前端`
+- `帮我更新后端`
+- `帮我更新前后端`
+
+这里的“更新”指重新构建、重新加载对应的本地 Docker 服务并验证状态，不代表让 AI 修改业务源码。前后端同时更新时会先更新后端，再更新前端；任一步失败都会停止并报告。
 
 ### API 验证
 
@@ -272,6 +297,37 @@ configs/Datas/*.xlsx  ──►  Luban (Docker)  ──►  server/config/ (Go �
 
 ---
 
+## CS2 配置可视化编辑器
+
+`tools/map-semantic-editor` 是本地配置工作台，可编辑地图语义、选手、战队、新手战斗和其他 Luban 表。它会同时启动 Web UI 和仅监听本机的写入服务，不依赖 Nakama 也能编辑。
+
+首次使用先安装依赖，然后从项目根目录启动：
+
+```powershell
+npm --prefix tools/map-semantic-editor ci
+npm run config-editor
+```
+
+旧命令 `npm run map-editor` 等价。启动后访问 `http://127.0.0.1:5177`；本地写入服务使用 `127.0.0.1:5178`。
+
+常用操作：
+
+- `保存当前表` / `保存全部`：写入 `configs/Datas/#*.xlsx`，覆盖前自动备份。
+- `运行导表`：运行 `scripts/gen-config.ps1`，生成 Go、TypeScript 和前后端 JSON 配置。
+- `更新本地前后端`：依次导表、编译 `server/build/backend.so`、重载 Nakama、无缓存重建并重新创建 Docker 前端容器。
+- 地图工程文件位于 `tools/map-semantic-editor/data/`；写入 Luban 后的工程快照位于 `configs/Datas/`。
+
+验证编辑器：
+
+```powershell
+npm run map-editor:test
+npm run config-editor:build
+```
+
+详细的数据规则、备份路径和地图编辑操作见 [`tools/map-semantic-editor/README.md`](tools/map-semantic-editor/README.md)。
+
+---
+
 ## FAQ
 
 ### Q: `docker compose up -d` 后前端显示"连接中…"？
@@ -289,11 +345,11 @@ A: 看你怎么跑：
 ```bash
 # 方式 1：完全重建（最可靠，确保所有层重新构建）
 docker compose build --no-cache frontend
-docker compose up -d frontend
+docker compose up -d --no-deps --force-recreate frontend
 
 # 方式 2：增量重建（Docker 自动检测文件变更）
 docker compose build frontend
-docker compose up -d frontend
+docker compose up -d --no-deps --force-recreate frontend
 ```
 
 > ⚠️ `docker compose up -d --build` 有时会用缓存层跳过重新编译（`COPY . .` 显示 CACHED）。如果改了前端代码但没生效，用 **方式 1** `--no-cache` 强制重建。
@@ -304,17 +360,29 @@ docker compose up -d frontend
 
 ### Q: 改了 Go 后端代码怎么重新部署？
 
-A:
-```bash
-# 1. 重新编译
-docker run --rm --entrypoint "" \
-  -v "$(pwd)/server:/app" -w /app \
-  heroiclabs/nakama-pluginbuilder:3.30.0 \
-  go build -buildmode=plugin -trimpath -o build/backend.so .
+A: 必须同时完成“生成新的 Linux `.so`”和“重启 Nakama 加载新插件”。请在**项目根目录**执行与当前终端匹配的命令。
 
-# 2. 重启 Nakama 加载新插件
+Windows PowerShell / CMD：
+
+```powershell
+.\server\build.bat
+docker compose up -d db nakama
 docker compose restart nakama
+docker compose logs --tail 100 nakama
 ```
+
+Linux / macOS / WSL2：
+
+```bash
+bash server/build.sh
+docker compose up -d db nakama
+docker compose restart nakama
+docker compose logs --tail 100 nakama
+```
+
+`server/build.bat` 和 `server/build.sh` 都使用 `heroiclabs/nakama-pluginbuilder:3.30.0`，并带上项目需要的 `-mod=mod -buildmode=plugin -trimpath`。原先 FAQ 中的多行命令是 Bash 语法，直接粘贴到 PowerShell 时，反斜杠 `\` 不会续行；而且只编译不重启 Nakama，也不会加载新插件。
+
+如果只想确认编译产物已刷新，可查看 `server/build/backend.so` 的修改时间；若日志显示插件加载失败，以 `docker compose logs --tail 100 nakama` 的错误为准。
 
 ### Q: `docker compose stop frontend` 为什么能停掉 `cs2match-frontend` 容器？
 

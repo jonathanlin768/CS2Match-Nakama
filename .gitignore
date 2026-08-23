@@ -65,6 +65,10 @@ nakama/data/
 coverage/
 *.coverprofile
 
+# Browser test artifacts
+playwright-report/
+test-results/
+
 # Misc
 .cache/
 tmp/

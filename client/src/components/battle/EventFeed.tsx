@@ -11,47 +11,13 @@ import { Button } from "../../legacy/components/ui/button"
 import type { GameEvent } from "../../types/match-report"
 import { formatBattleEvent, type BattleEventContext } from "../../pages/battle-playback"
 import type { BattleTeam } from "./data/battle"
+import BattleStatsTables from "./BattleStatsTables"
 
 interface EventFeedProps {
   events: GameEvent[]
   teamA: BattleTeam
   teamB: BattleTeam
   eventContext: BattleEventContext
-}
-
-function StatsTable({ team }: { team: BattleTeam }) {
-  return (
-    <div className="rounded-md bg-panel/60 ring-1 ring-white/10">
-      <div className="border-b border-white/10 px-3 py-2 text-sm font-semibold text-foreground">
-        {team.name}
-      </div>
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left text-xs text-muted-foreground">
-            <th className="px-3 py-1.5 font-medium">选手</th>
-            <th className="w-12 px-2 py-1.5 text-center font-medium">K</th>
-            <th className="w-12 px-2 py-1.5 text-center font-medium">D</th>
-            <th className="w-12 px-2 py-1.5 text-center font-medium">A</th>
-          </tr>
-        </thead>
-        <tbody>
-          {team.players.map((player) => {
-            return (
-            <tr
-              key={player.id}
-              className={`border-t border-white/5 ${player.alive ? "text-foreground" : "text-foreground/40"}`}
-            >
-              <td className="px-3 py-1.5">{player.id}</td>
-              <td className="px-2 py-1.5 text-center tabular-nums">{player.kills}</td>
-              <td className="px-2 py-1.5 text-center tabular-nums">{player.deaths}</td>
-              <td className="px-2 py-1.5 text-center tabular-nums">{player.assists}</td>
-            </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </div>
-  )
 }
 
 /**
@@ -88,10 +54,7 @@ export default function EventFeed({ events, teamA, teamB, eventContext }: EventF
             <DialogHeader className="px-5 pt-5 pb-2">
               <DialogTitle className="text-base">数据统计</DialogTitle>
             </DialogHeader>
-            <div className="max-h-[70vh] space-y-4 overflow-y-auto px-5 pb-5">
-              <StatsTable team={teamA} />
-              <StatsTable team={teamB} />
-            </div>
+            <div className="max-h-[70vh] overflow-y-auto px-5 pb-5"><BattleStatsTables teamA={teamA} teamB={teamB} /></div>
           </DialogContent>
         </Dialog>
       </div>

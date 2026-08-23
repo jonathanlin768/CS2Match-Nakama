@@ -1,5 +1,6 @@
 @echo off
 echo === CS2Match Go Plugin Build ===
+if not exist "%~dp0build" mkdir "%~dp0build"
 docker run --rm --entrypoint "" -v "%~dp0:/app" -w /app heroiclabs/nakama-pluginbuilder:3.30.0 go build -v -mod=mod -buildmode=plugin -trimpath -o build/backend.so .
 if %ERRORLEVEL% neq 0 (
     echo Build failed!

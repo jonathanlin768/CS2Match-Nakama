@@ -4,11 +4,19 @@ import {
   authoritativeScoreAtPlayback,
   cumulativePlayerStatsAtPlayback,
   formatBattleEvent,
+  formatCompactBattleEvent,
   latestBombAtPlayback,
   playerVitalsAtPlayback,
   previousTeamScore,
   selectedRoundInitialEventCount,
+  teamSideAtRound,
 } from "./battle-playback.ts"
+import {
+  normalizedToRadarPoint,
+  RADAR_HEIGHT,
+  RADAR_WIDTH,
+  visibleMapMarkerEvents,
+} from "../components/battle/map-projection.ts"
 
 const report = {
   rounds: [
@@ -147,4 +155,44 @@ test("structured events are rendered as localized battle commentary", () => {
 	}, context)
 	assert.match(sidedKill, /\[T\] PlayerA/)
 	assert.match(sidedKill, /\[CT\] PlayerB/)
+})
+
+test("compact battle commentary keeps side, actor, weapon and victim", () => {
+  const context = {
+    teamAID: "a", teamAName: "TeamA", teamBID: "b", teamBName: "TeamB",
+    teamTID: "a", teamCTID: "b", winnerTeamID: "b", winReason: "bomb_defused",
+    strategyTemplateID: "A_Long_Rush", ctSetupTemplateID: "CT_Default",
+  }
+  assert.equal(formatCompactBattleEvent({
+    timestamp: 14, event_type: "KILL", attacker_name: "apex", attacker_team_id: "b",
+    victim_name: "donk", victim_team_id: "a", weapon: "M4A1-S", message: "kill",
+  }, context), "[CT] apex  M4A1-S  [T] donk")
+  assert.equal(formatCompactBattleEvent({
+    timestamp: 115, event_type: "ROUND_END", message: "round end",
+  }, context), "CT 赢得回合：拆除炸弹")
+})
+
+test("team side mapping follows the selected round side assignment", () => {
+  const firstHalf = { team_t_id: "a", team_ct_id: "b" }
+  const secondHalf = { team_t_id: "b", team_ct_id: "a" }
+  assert.equal(teamSideAtRound(firstHalf, "a"), "t")
+  assert.equal(teamSideAtRound(secondHalf, "a"), "ct")
+})
+
+test("radar projection shares the 1024 by 984 coordinate space", () => {
+  assert.deepEqual(normalizedToRadarPoint(0, 0), { x: 0, y: 0 })
+  assert.deepEqual(normalizedToRadarPoint(0.5, 0.5), { x: RADAR_WIDTH / 2, y: RADAR_HEIGHT / 2 })
+  assert.deepEqual(normalizedToRadarPoint(1, 1), { x: RADAR_WIDTH, y: RADAR_HEIGHT })
+  assert.equal(normalizedToRadarPoint(-0.01, 0.5), null)
+  assert.equal(normalizedToRadarPoint(0.5, Number.NaN), null)
+})
+
+test("map marker filtering accepts visible kill and bomb events with valid coordinates", () => {
+  const events = [
+    { timestamp: 1, event_type: "DAMAGE", location: { name: "MID", x: 0.5, y: 0.5 }, message: "damage" },
+    { timestamp: 2, event_type: "KILL", location: { name: "MID", x: 0.5, y: 0.5 }, message: "kill" },
+    { timestamp: 3, event_type: "BOMB_PLANT", location: { name: "A", x: 0.75, y: 0.2 }, message: "plant" },
+    { timestamp: 4, event_type: "KILL", location: { name: "bad", x: 1.5, y: 0.5 }, message: "bad" },
+  ]
+  assert.deepEqual(visibleMapMarkerEvents(events).map((event) => event.event_type), ["KILL", "BOMB_PLANT"])
 })

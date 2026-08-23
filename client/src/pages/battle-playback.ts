@@ -29,6 +29,10 @@ export interface BattleEventContext {
   ctSetupTemplateID?: string
 }
 
+export function teamSideAtRound(round: RoundReport, teamID: string): "t" | "ct" {
+  return round.team_t_id === teamID ? "t" : "ct"
+}
+
 export function previousTeamScore(report: MatchReport, roundIndex: number): TeamScore {
   if (roundIndex <= 0) return { teamA: 0, teamB: 0 }
   const previous = report.rounds[roundIndex - 1]
@@ -173,6 +177,39 @@ export function formatBattleEvent(event: GameEvent, context: BattleEventContext)
   }
 }
 
+export function formatCompactBattleEvent(event: GameEvent, context: BattleEventContext): string {
+  const attackerName = event.attacker_name || event.attacker_id || "未知选手"
+  const victimName = event.victim_name || event.victim_id || "未知选手"
+  const attacker = playerLabel(attackerName, event.attacker_team_id, context)
+  const victim = playerLabel(victimName, event.victim_team_id, context)
+  const location = event.location?.name || event.bomb?.site || event.bomb?.node_id || "未知位置"
+
+  switch (event.event_type) {
+    case "KILL":
+      return `${attacker}  ${event.weapon || "武器"}  ${victim}${event.is_trade ? "（补枪）" : event.is_first_kill ? "（首杀）" : ""}`
+    case "DAMAGE":
+      return `${attacker} → ${victim}  -${numericExtra(event, "damage") ?? 0} HP`
+    case "BOMB_DROP":
+      return `炸弹在 ${location} 掉落`
+    case "BOMB_PICKUP":
+      return `${attacker} 拾取炸弹`
+    case "BOMB_PLANT_START":
+      return `${attacker} 开始在 ${location} 安包`
+    case "BOMB_PLANT":
+      return `炸弹已在 ${location} 安放`
+    case "BOMB_DEFUSE":
+      return `${attacker} 拆除了炸弹`
+    case "BOMB_EXPLODE":
+      return `炸弹在 ${location} 爆炸`
+    case "ROUND_END": {
+      const winnerSide = context.winnerTeamID === context.teamTID ? "T" : "CT"
+      return `${winnerSide} 赢得回合：${compactWinReasonLabel(context.winReason)}`
+    }
+    default:
+      return formatBattleEvent(event, context)
+  }
+}
+
 function eventAssistIDs(event: GameEvent): string[] {
   const values = event.extra?.assist_ids
   return Array.isArray(values) ? values.filter((value): value is string => typeof value === "string" && value.length > 0) : []
@@ -210,4 +247,16 @@ function winReasonLabel(reason: string): string {
     no_progress_timeout: "迫使对手无法推进的方式",
   }
   return labels[reason] ?? `${reason || "有效终局"}的方式`
+}
+
+function compactWinReasonLabel(reason: string): string {
+  const labels: Record<string, string> = {
+    elimination: "消灭对手",
+    timeout: "时间耗尽",
+    bomb_defused: "拆除炸弹",
+    bomb_exploded: "炸弹爆炸",
+    bomb_secured: "守住炸弹",
+    no_progress_timeout: "对手无法推进",
+  }
+  return labels[reason] ?? (reason || "回合结束")
 }

@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useLocation } from "react-router-dom"
-import { Pause, Play, SkipForward, Swords } from "lucide-react"
-import SubPageHeader from "../components/SubPageHeader"
-import Scoreboard from "../components/battle/Scoreboard"
-import TeamRoster from "../components/battle/TeamRoster"
-import MapView from "../components/battle/MapView"
-import EventFeed from "../components/battle/EventFeed"
+import { Swords } from "lucide-react"
+import CompactBattleLayout from "../components/battle/CompactBattleLayout"
+import DesktopBattleLayout from "../components/battle/DesktopBattleLayout"
+import type { BattleViewModel } from "../components/battle/battle-view-model"
 import type { BattlePlayer, BattleTeam } from "../components/battle/data/battle"
-import type { BombPublicState, MatchReport, PlayerState, RoundReport } from "../types/match-report"
+import { useMediaQuery } from "../hooks/useMediaQuery"
+import type { MatchReport, PlayerState, RoundReport } from "../types/match-report"
 import {
   authoritativeScoreAtPlayback,
   cumulativePlayerStatsAtPlayback,
   latestBombAtPlayback,
   playerVitalsAtPlayback,
   selectedRoundInitialEventCount,
+  teamSideAtRound,
   type CumulativePlayerStats,
   type PlaybackPlayerVitals,
 } from "./battle-playback"
@@ -91,14 +91,6 @@ function portraitUrl(portrait?: string) {
   return `/${portrait.replace(/^\.\//, "")}`
 }
 
-function sideToUi(side: "T" | "CT") {
-  return side.toLowerCase() as "t" | "ct"
-}
-
-function teamSide(round: RoundReport, teamID: string): "T" | "CT" {
-  return round.team_t_id === teamID ? "T" : "CT"
-}
-
 function phaseLabel(round: RoundReport) {
   if (round.phase === "overtime") {
     return `OT${round.overtime_block ?? 1} · ${round.overtime_round_in_block ?? 1}/6`
@@ -143,26 +135,6 @@ function winnerName(report: MatchReport) {
   return ""
 }
 
-function BombWidget({ bomb }: { bomb?: BombPublicState }) {
-  const labelMap: Record<string, string> = {
-    Carried: "携带中",
-    Dropped: "已掉落",
-    Planted: "已下包",
-    Defused: "已拆除",
-    Exploded: "已爆炸",
-  }
-  const status = bomb?.status ?? "Carried"
-  return (
-    <div className="flex h-12 items-center justify-between rounded-md bg-panel/70 px-4 text-sm ring-1 ring-white/10">
-      <span className="font-semibold text-foreground/80">炸弹</span>
-      <span className="rounded-md bg-amber-400/15 px-3 py-1 font-bold text-amber-200 ring-1 ring-amber-300/40">
-        {labelMap[status] ?? status}
-      </span>
-      <span className="w-32 truncate text-right text-muted">{bomb?.site ? `${bomb.site} 区` : bomb?.node_id ?? "未下包"}</span>
-    </div>
-  )
-}
-
 export default function BattlePage() {
   const location = useLocation()
   const { report } = (location.state as BattleLocationState) ?? {}
@@ -172,6 +144,7 @@ export default function BattlePage() {
   const [playing, setPlaying] = useState(Boolean(report))
   const [fullMatchRevealed, setFullMatchRevealed] = useState(false)
   const loggedPlaybackEvents = useRef(new Set<string>())
+  const isCompact = useMediaQuery("(max-width: 1023px)")
 
   const currentRound = report?.rounds[roundIndex]
 
@@ -226,8 +199,8 @@ export default function BattlePage() {
     const teamBPlayers = currentRound.player_states
       .filter((p) => p.team_id === report.match_info.team_b_id)
       .map((p) => buildBattlePlayer(p, vitals(p.player_id), playerStats(p.player_id)))
-    const sideA = sideToUi(teamSide(currentRound, report.match_info.team_a_id))
-    const sideB = sideToUi(teamSide(currentRound, report.match_info.team_b_id))
+    const sideA = teamSideAtRound(currentRound, report.match_info.team_a_id)
+    const sideB = teamSideAtRound(currentRound, report.match_info.team_b_id)
     return {
       teamA: buildTeam(report.match_info.team_a_name, sideA.toUpperCase(), sideA, score.teamA, teamAPlayers),
       teamB: buildTeam(report.match_info.team_b_name, sideB.toUpperCase(), sideB, score.teamB, teamBPlayers),
@@ -247,107 +220,61 @@ export default function BattlePage() {
 
   const { teamA, teamB, bomb } = playback
   const visibleRounds = fullMatchRevealed ? report.rounds : report.rounds.slice(0, furthestRoundIndex + 1)
+  const eventContext = {
+    teamAID: report.match_info.team_a_id,
+    teamAName: report.match_info.team_a_name,
+    teamBID: report.match_info.team_b_id,
+    teamBName: report.match_info.team_b_name,
+    teamTID: currentRound.team_t_id,
+    teamCTID: currentRound.team_ct_id,
+    winnerTeamID: currentRound.winner_team_id,
+    winReason: currentRound.win_reason,
+    strategyTemplateID: currentRound.strategy_template_id,
+    ctSetupTemplateID: currentRound.ct_setup_template_id,
+  }
+
+  const handleSkipMatch = () => {
+    const finalRoundIndex = report.rounds.length - 1
+    if (report.debug_enabled) {
+      console.log(`[SimuMatch] 玩家跳过比赛，直接显示最终结果 ${report.final_score_team_a}:${report.final_score_team_b}`)
+    }
+    setFullMatchRevealed(true)
+    setPlaying(false)
+    setRoundIndex(finalRoundIndex)
+    setFurthestRoundIndex(finalRoundIndex)
+    setVisibleEventCount(report.rounds[finalRoundIndex].events.length)
+  }
+
+  const handleSelectRound = (index: number) => {
+    const round = report.rounds[index]
+    if (!round || index > furthestRoundIndex && !fullMatchRevealed) return
+    setRoundIndex(index)
+    setVisibleEventCount(selectedRoundInitialEventCount(round))
+    setPlaying(false)
+  }
+
+  const model: BattleViewModel = {
+    report,
+    currentRound,
+    visibleRounds,
+    visibleEvents,
+    teamA,
+    teamB,
+    bomb,
+    eventContext,
+    roundIndex,
+    playing,
+    fullMatchRevealed,
+    phaseLabel: phaseLabel(currentRound),
+    winnerName: fullMatchRevealed ? winnerName(report) : undefined,
+    onTogglePlaying: () => setPlaying((value) => !value),
+    onSkipMatch: handleSkipMatch,
+    onSelectRound: handleSelectRound,
+  }
 
   return (
-    <div className="battle-shell">
-      <main className="battle-stage flex h-full w-full min-w-0 flex-col overflow-hidden bg-background">
-        <SubPageHeader title={fullMatchRevealed ? "比赛结束" : "比赛进行中"} hideBack />
-
-        <Scoreboard
-          teamA={teamA}
-          teamB={teamB}
-          round={currentRound.round_number}
-          maxRounds={fullMatchRevealed ? report.total_rounds : undefined}
-          phaseLabel={phaseLabel(currentRound)}
-          winnerName={fullMatchRevealed ? winnerName(report) : undefined}
-        />
-
-        <div className="flex h-16 shrink-0 items-center gap-3 px-[40px]">
-          <button
-            type="button"
-            onClick={() => setPlaying((value) => !value)}
-            className="grid h-10 w-10 place-items-center rounded-md bg-panel/80 text-foreground ring-1 ring-white/10 transition hover:bg-panel"
-            title={playing ? "暂停" : "继续"}
-          >
-            {playing ? <Pause size={18} /> : <Play size={18} />}
-          </button>
-          {!fullMatchRevealed && (
-            <button
-              type="button"
-              onClick={() => {
-                const finalRoundIndex = report.rounds.length - 1
-                if (report.debug_enabled) {
-                  console.log(`[SimuMatch] 玩家跳过比赛，直接显示最终结果 ${report.final_score_team_a}:${report.final_score_team_b}`)
-                }
-                setFullMatchRevealed(true)
-                setPlaying(false)
-                setRoundIndex(finalRoundIndex)
-                setFurthestRoundIndex(finalRoundIndex)
-                setVisibleEventCount(report.rounds[finalRoundIndex].events.length)
-              }}
-              className="flex h-10 items-center gap-2 rounded-md bg-gold px-4 text-sm font-bold text-background transition hover:bg-gold/90"
-            >
-              <SkipForward size={17} />
-              跳过比赛
-            </button>
-          )}
-          <div className="min-w-0 flex-1 overflow-x-auto">
-            <div className="flex gap-1">
-              {visibleRounds.map((round, idx) => (
-                <button
-                  key={round.round_number}
-                  type="button"
-                  onClick={() => {
-                    setRoundIndex(idx)
-                    setVisibleEventCount(selectedRoundInitialEventCount(round))
-                    setPlaying(false)
-                  }}
-                  className={`h-9 min-w-11 rounded-md px-2 text-xs font-bold tabular-nums ring-1 transition ${
-                    idx === roundIndex
-                      ? "bg-primary text-primary-foreground ring-primary"
-                      : round.phase === "overtime"
-                        ? "bg-amber-400/10 text-amber-200 ring-amber-400/30"
-                        : "bg-panel/70 text-muted ring-white/10 hover:text-foreground"
-                  }`}
-                >
-                  {round.round_number}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="w-56 text-right text-xs text-muted">
-            Seed {report.match_info.seed} · {report.match_info.rule_set_id}
-          </div>
-        </div>
-
-        <div className="flex min-h-0 flex-1 gap-4 px-[40px] pb-[24px] pt-2">
-          <TeamRoster team={teamA} align="left" />
-
-          <div className="flex min-h-0 flex-1 flex-col gap-3">
-            <BombWidget bomb={bomb} />
-            <MapView events={visibleEvents} />
-            <EventFeed
-              events={visibleEvents}
-              teamA={teamA}
-              teamB={teamB}
-              eventContext={{
-                teamAID: report.match_info.team_a_id,
-                teamAName: report.match_info.team_a_name,
-                teamBID: report.match_info.team_b_id,
-                teamBName: report.match_info.team_b_name,
-                teamTID: currentRound.team_t_id,
-                teamCTID: currentRound.team_ct_id,
-                winnerTeamID: currentRound.winner_team_id,
-                winReason: currentRound.win_reason,
-                strategyTemplateID: currentRound.strategy_template_id,
-                ctSetupTemplateID: currentRound.ct_setup_template_id,
-              }}
-            />
-          </div>
-
-          <TeamRoster team={teamB} align="right" />
-        </div>
-      </main>
+    <div className={`battle-shell ${isCompact ? "is-compact" : ""}`}>
+      {isCompact ? <CompactBattleLayout model={model} /> : <DesktopBattleLayout model={model} />}
     </div>
   )
 }

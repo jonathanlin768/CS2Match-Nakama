@@ -1,0 +1,4 @@
+interface:
+  display_name: "更新 CS2Match 本地服务"
+  short_description: "Rebuild and verify the local frontend, backend, or both"
+  default_prompt: "Use $cs2match-local-update to update and verify the requested local CS2Match services."
