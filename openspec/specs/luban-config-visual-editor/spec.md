@@ -310,8 +310,11 @@ TBD - created by archiving change add-luban-config-visual-editor. Update Purpose
 
 - **GIVEN** 用户正在编辑一条 Player 记录
 - **WHEN** 用户选择电脑上的 PNG、JPEG 或 WebP 卡面图片
-- **THEN** 本地服务将图片复制到 `client/public/player-cards/`
-- **AND** 系统将 `player-cards/<文件名>` 项目相对路径写入 `cardImage`
+- **THEN** 本地服务将超过 `640x960` 边界的图片等比缩小到该边界内、不放大小图，并使用无损 WebP 编码写入 `client/public/player-cards/`
+- **AND** 未超过尺寸边界的 PNG 按像素无损转换为 WebP，未超过边界的 JPEG 与 WebP 保持原编码写入
+- **AND** 系统将实际落盘的 `player-cards/<文件名>` 项目相对路径写入 `cardImage`
+- **AND** 未缩放 PNG 转换前后解码得到的尺寸、颜色通道和每个像素值完全一致
+- **AND** 等比缩放不改变现有归一化头像裁切参数的语义
 - **AND** 页面同时显示完整 `2:3` 卡面和 `5:7` 头像预览
 
 #### Scenario: 使用固定比例裁切头像

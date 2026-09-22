@@ -2,6 +2,7 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import ExcelJS from 'exceljs'
+import sharp from 'sharp'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { readLubanWorkbook } from '../server/importTables'
 import { findReferences, readLubanTable, saveConfigImage, saveLubanTable, saveLubanTables, syncRecordId } from '../server/configTables'
@@ -89,18 +90,34 @@ describe('通用 Luban workbook 服务', () => {
     await expect(saveConfigImage('team', '../logo.png', png, false, { portrait: portraits, team: teams })).rejects.toThrow('不合法')
   })
 
-  it('完整卡面只能写入 player-cards 目录并支持显式覆盖', async () => {
+  it('完整 PNG 卡面无损压缩为 WebP 并支持显式覆盖', async () => {
     const portraits = path.join(root, 'portraits')
     const teams = path.join(root, 'teams')
     const playerCard = path.join(root, 'player-cards')
-    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB', 'base64').toString('base64')
+    const source = await sharp({ create: { width: 3, height: 2, channels: 4, background: { r: 23, g: 91, b: 177, alpha: 0.75 } } }).png().toBuffer()
+    const png = source.toString('base64')
     const roots = { portrait: portraits, team: teams, playerCard }
     const result = await saveConfigImage('player-card', 'player-one.png', png, false, roots)
-    expect(result.path).toBe('player-cards/player-one.png')
-    await expect(fs.access(path.join(playerCard, 'player-one.png'))).resolves.toBeUndefined()
+    const target = path.join(playerCard, 'player-one.webp')
+    expect(result.path).toBe('player-cards/player-one.webp')
+    await expect(fs.access(target)).resolves.toBeUndefined()
+    expect(await sharp(await fs.readFile(target)).raw().toBuffer()).toEqual(await sharp(source).raw().toBuffer())
     await expect(saveConfigImage('player-card', 'player-one.png', png, false, roots)).rejects.toThrow('已存在')
-    await expect(saveConfigImage('player-card', 'player-one.png', png, true, roots)).resolves.toMatchObject({ path: 'player-cards/player-one.png' })
+    await expect(saveConfigImage('player-card', 'player-one.png', png, true, roots)).resolves.toMatchObject({ path: 'player-cards/player-one.webp' })
     await expect(saveConfigImage('player-card', 'player-one.gif', png, false, roots)).rejects.toThrow('只支持')
+  })
+
+  it('超大卡面等比缩小到 640x960 上限且不放大小图', async () => {
+    const roots = { portrait: path.join(root, 'portraits'), team: path.join(root, 'teams'), playerCard: path.join(root, 'player-cards') }
+    const large = await sharp({ create: { width: 1024, height: 1536, channels: 3, background: { r: 23, g: 91, b: 177 } } }).jpeg().toBuffer()
+    const largeResult = await saveConfigImage('player-card', 'large-card.jpg', large.toString('base64'), false, roots)
+    expect(largeResult.path).toBe('player-cards/large-card.webp')
+    await expect(sharp(await fs.readFile(path.join(roots.playerCard, 'large-card.webp'))).metadata()).resolves.toMatchObject({ width: 640, height: 960 })
+
+    const small = await sharp({ create: { width: 320, height: 480, channels: 3, background: { r: 177, g: 91, b: 23 } } }).jpeg().toBuffer()
+    const smallResult = await saveConfigImage('player-card', 'small-card.jpg', small.toString('base64'), false, roots)
+    expect(smallResult.path).toBe('player-cards/small-card.jpg')
+    await expect(sharp(await fs.readFile(path.join(roots.playerCard, 'small-card.jpg'))).metadata()).resolves.toMatchObject({ width: 320, height: 480 })
   })
 })
 

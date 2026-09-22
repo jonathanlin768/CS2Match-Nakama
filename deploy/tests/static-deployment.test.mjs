@@ -69,6 +69,11 @@ test("both Nginx and Pages preserve SPA route fallback", () => {
   assert.match(redirects, /^\/\* \/index\.html 200\s*$/)
 })
 
+test("Nginx caches lossless WebP player cards as immutable static assets", () => {
+  assert.match(nginx, /webp/)
+  assert.match(nginx, /Cache-Control "public, immutable"/)
+})
+
 test("workflow actions are immutable and deployment uses Tailscale OIDC", () => {
   for (const use of workflow.matchAll(/uses:\s*([^\s#]+)/g)) assert.match(use[1], /@[0-9a-f]{40}$/)
   assert.match(workflow, /default: master/)

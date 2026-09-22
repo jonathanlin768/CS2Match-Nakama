@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import ExcelJS from 'exceljs'
+import sharp from 'sharp'
 import {
   mapOwnedFiles,
   ownerForFile,
@@ -23,6 +24,8 @@ import { readLubanWorkbook } from './importTables'
 import { validateDocuments } from '../src/lib/lubanValidation'
 
 const maxImageBytes = 8 * 1024 * 1024
+const playerCardMaxWidth = 640
+const playerCardMaxHeight = 960
 const imageExtensions = new Set(['.png', '.jpg', '.jpeg', '.webp'])
 
 export interface SaveDocumentResult {
@@ -226,19 +229,66 @@ export async function saveConfigImage(
   roots: { portrait: string; team: string; playerCard?: string } = { portrait: portraitRoot, team: teamLogoRoot, playerCard: playerCardRoot },
 ): Promise<{ path: string; url: string }> {
   if (path.basename(fileName) !== fileName || !/^[A-Za-z0-9_.-]+$/.test(fileName)) throw new Error('图片文件名不合法')
-  const extension = path.extname(fileName).toLowerCase()
+  const sourceExtension = path.extname(fileName)
+  const extension = sourceExtension.toLowerCase()
   if (!imageExtensions.has(extension)) throw new Error('只支持 PNG、JPG、JPEG 和 WEBP 图片')
   const data = Buffer.from(dataBase64, 'base64')
   if (data.length === 0 || data.length > maxImageBytes) throw new Error('图片为空或超过 8MB')
   if (!matchesImageSignature(data, extension)) throw new Error('文件内容与图片扩展名不匹配')
 
+  let resizePlayerCard = false
+  if (kind === 'player-card') {
+    try {
+      const metadata = await sharp(data).metadata()
+      const width = metadata.autoOrient.width
+      const height = metadata.autoOrient.height
+      if (!width || !height) throw new Error('无法读取图片尺寸')
+      resizePlayerCard = width > playerCardMaxWidth || height > playerCardMaxHeight
+    } catch (error) {
+      throw new Error('无法读取选手卡面，请确认图片文件完整', { cause: error })
+    }
+  }
+
+  const optimizePlayerCard = kind === 'player-card' && (extension === '.png' || resizePlayerCard)
+  const storedFileName = optimizePlayerCard ? `${path.basename(fileName, sourceExtension)}.webp` : fileName
+  let storedData = data
+  if (optimizePlayerCard) {
+    try {
+      const sourcePixels = resizePlayerCard ? null : await sharp(data).raw().toBuffer({ resolveWithObject: true })
+      let pipeline = sharp(data)
+      if (resizePlayerCard) {
+        pipeline = pipeline.autoOrient().resize({
+          width: playerCardMaxWidth,
+          height: playerCardMaxHeight,
+          fit: 'inside',
+          withoutEnlargement: true,
+          kernel: sharp.kernel.lanczos3,
+        })
+      }
+      const optimized = await pipeline.webp({ lossless: true, effort: 6 }).toBuffer({ resolveWithObject: true })
+      storedData = optimized.data
+      if (optimized.info.width > playerCardMaxWidth || optimized.info.height > playerCardMaxHeight) throw new Error('卡面尺寸仍超过上限')
+      if (sourcePixels) {
+        const storedPixels = await sharp(storedData).raw().toBuffer({ resolveWithObject: true })
+        if (
+          sourcePixels.info.width !== storedPixels.info.width
+          || sourcePixels.info.height !== storedPixels.info.height
+          || sourcePixels.info.channels !== storedPixels.info.channels
+          || !sourcePixels.data.equals(storedPixels.data)
+        ) throw new Error('压缩前后像素不一致')
+      }
+    } catch (error) {
+      throw new Error('选手卡面尺寸优化或无损 WebP 编码失败', { cause: error })
+    }
+  }
+
   const root = kind === 'portrait' ? roots.portrait : kind === 'team' ? roots.team : roots.playerCard ?? playerCardRoot
   await fs.mkdir(root, { recursive: true })
-  const target = resolveInside(root, fileName)
+  const target = resolveInside(root, storedFileName)
   if (!overwrite && await exists(target)) throw new Error('目标图片已存在，请确认覆盖或重新命名')
-  await fs.writeFile(target, data, { flag: overwrite ? 'w' : 'wx' })
+  await fs.writeFile(target, storedData, { flag: overwrite ? 'w' : 'wx' })
   const directory = kind === 'portrait' ? 'portraits' : kind === 'team' ? 'teams' : 'player-cards'
-  const relative = `${directory}/${fileName}`
+  const relative = `${directory}/${storedFileName}`
   return { path: relative, url: `/${relative}` }
 }
 

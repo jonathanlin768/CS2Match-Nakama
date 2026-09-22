@@ -245,7 +245,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   },
 
   uploadImage: async (kind, file) => {
-    set({ busy: true, serviceMessage: `正在复制 ${file.name}` })
+    set({ busy: true, serviceMessage: `正在处理 ${file.name}` })
     try {
       let result
       try {
@@ -254,8 +254,8 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         if (!errorMessage(error).includes('已存在') || !window.confirm(`${file.name} 已存在，是否覆盖？`)) throw error
         result = await uploadConfigImage(kind, file, true)
       }
-      set({ busy: false, serviceMessage: `图片已复制到 ${result.path}` })
-      appendLog(set, 'info', `图片已复制到 ${result.path}`)
+      set({ busy: false, serviceMessage: `图片已保存到 ${result.path}` })
+      appendLog(set, 'info', `图片已保存到 ${result.path}`)
       return result.path
     } catch (error) {
       set({ busy: false, serviceMessage: errorMessage(error) })

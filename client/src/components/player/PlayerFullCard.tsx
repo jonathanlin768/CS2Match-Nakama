@@ -7,6 +7,8 @@ export default function PlayerFullCard({ cardImage, portrait, alt, className = "
     <img
       src={assetUrl(primary)}
       alt={alt}
+      loading="lazy"
+      decoding="async"
       data-stage={cardImage ? "card" : portrait ? "portrait" : "default"}
       onError={(event) => {
         const image = event.currentTarget

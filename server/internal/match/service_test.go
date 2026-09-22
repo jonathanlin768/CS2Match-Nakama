@@ -86,7 +86,7 @@ func TestDebugSimuMatchUsesPlayersFromLubanTableAndSeed(t *testing.T) {
 			t.Fatalf("portrait not copied from TbPlayer: %q", state.Portrait)
 		}
 		if state.ConfigPlayerID == "player_niko" {
-			if state.CardImage != "player-cards/niko2.png" || state.AvatarCrop == nil || !state.AvatarCrop.Valid() {
+			if state.CardImage != "player-cards/niko2.webp" || state.AvatarCrop == nil || !state.AvatarCrop.Valid() {
 				t.Fatalf("card crop not copied from TbPlayer: card=%q crop=%+v", state.CardImage, state.AvatarCrop)
 			}
 		}
