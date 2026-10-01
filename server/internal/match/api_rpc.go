@@ -79,6 +79,7 @@ func decodeDebugSimuMatchRequest(payload string, target *DebugSimuMatchRequest) 
 
 func decodeStrictRequest(payload string, target interface{}) error {
 	decoder := json.NewDecoder(strings.NewReader(payload))
+	//这里标记不允许未知字段，仅是打开一个开关。后续decode函数调用时会校验。
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(target); err != nil {
 		return err

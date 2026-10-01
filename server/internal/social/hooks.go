@@ -7,6 +7,7 @@ import (
 	"github.com/heroiclabs/nakama-common/api"
 	"github.com/heroiclabs/nakama-common/rtapi"
 	"github.com/heroiclabs/nakama-common/runtime"
+	"windypath.com/cs2match/server/internal/framework/rpcregistry"
 )
 
 func rejectClientChat(_ context.Context, _ runtime.Logger, _ *sql.DB, _ runtime.NakamaModule, _ *rtapi.Envelope) (*rtapi.Envelope, error) {
@@ -34,17 +35,15 @@ func beforeDeleteFriends(service *Service) func(context.Context, runtime.Logger,
 
 func Register(initializer runtime.Initializer, service *Service, exchangeEnabled bool) error {
 	if exchangeEnabled {
-		for name, handler := range map[string]rpcFunc{
-			"SocialSetContactProfile":        RPCSetContactProfile(service),
-			"SocialGetContactProfile":        RPCGetContactProfile(service),
-			"SocialGetContactExchange":       RPCGetContactExchange(service),
-			"SocialRequestContactExchange":   RPCRequestContactExchange(service),
-			"SocialRespondContactExchange":   RPCRespondContactExchange(service),
-			"SocialListContactExchangeInbox": RPCListContactExchangeInbox(service),
-		} {
-			if err := initializer.RegisterRpc(name, handler); err != nil {
-				return err
-			}
+		if err := rpcregistry.Register(initializer, service.logger, []rpcregistry.Entry{
+			{Name: "SocialSetContactProfile", Handler: RPCSetContactProfile(service)},
+			{Name: "SocialGetContactProfile", Handler: RPCGetContactProfile(service)},
+			{Name: "SocialGetContactExchange", Handler: RPCGetContactExchange(service)},
+			{Name: "SocialRequestContactExchange", Handler: RPCRequestContactExchange(service)},
+			{Name: "SocialRespondContactExchange", Handler: RPCRespondContactExchange(service)},
+			{Name: "SocialListContactExchangeInbox", Handler: RPCListContactExchangeInbox(service)},
+		}); err != nil {
+			return err
 		}
 	}
 	if err := initializer.RegisterBeforeDeleteFriends(beforeDeleteFriends(service)); err != nil {

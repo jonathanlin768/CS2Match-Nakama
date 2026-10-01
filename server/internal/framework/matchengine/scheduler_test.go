@@ -7,18 +7,18 @@ import (
 )
 
 func TestSchedulerHeapIsDeterministicAcrossInsertionOrder(t *testing.T) {
-	actions := []ScheduledAction{
-		{ID: "e", Type: ActionMoveStart, StartAt: 0, ResolveAt: 8, Priority: 20, ActorIDs: []string{"p2"}},
-		{ID: "d", Type: ActionCombatPulse, StartAt: 0, ResolveAt: 8, Priority: 100, ActorIDs: []string{"p3"}},
-		{ID: "c", Type: ActionCombatPulse, StartAt: 0, ResolveAt: 8, Priority: 100, ActorIDs: []string{"p1"}},
-		{ID: "b", Type: ActionCombatPulse, StartAt: 0, ResolveAt: 8, Priority: 100, ActorIDs: []string{"p1"}},
-		{ID: "a", Type: ActionRoundExpire, StartAt: 0, ResolveAt: 7, Priority: 0},
+	actions := []scheduledAction{
+		{ID: "e", Type: actionMoveStart, StartAt: 0, ResolveAt: 8, Priority: 20, ActorIDs: []string{"p2"}},
+		{ID: "d", Type: actionCombatPulse, StartAt: 0, ResolveAt: 8, Priority: 100, ActorIDs: []string{"p3"}},
+		{ID: "c", Type: actionCombatPulse, StartAt: 0, ResolveAt: 8, Priority: 100, ActorIDs: []string{"p1"}},
+		{ID: "b", Type: actionCombatPulse, StartAt: 0, ResolveAt: 8, Priority: 100, ActorIDs: []string{"p1"}},
+		{ID: "a", Type: actionRoundExpire, StartAt: 0, ResolveAt: 7, Priority: 0},
 	}
 	orders := [][]int{{0, 1, 2, 3, 4}, {4, 3, 2, 1, 0}, {2, 0, 4, 1, 3}}
 	var want []string
 	for orderIndex, order := range orders {
 		constants := makeTestMapConfig().CombatConstants
-		scheduler := NewActionScheduler(constants)
+		scheduler := newActionScheduler(constants)
 		for _, index := range order {
 			if err := scheduler.Schedule(actions[index]); err != nil {
 				t.Fatalf("Schedule() error = %v", err)
@@ -42,20 +42,20 @@ func TestSchedulerHeapIsDeterministicAcrossInsertionOrder(t *testing.T) {
 
 func TestEventProjectionSortAndStableIDs(t *testing.T) {
 	actors := []string{"p2", "p1"}
-	actionID := NewActionID(77, ActionCombatPulse, "intent", 3, 9, actors, 0)
-	if actionID != NewActionID(77, ActionCombatPulse, "intent", 3, 9, []string{"p1", "p2"}, 0) {
+	actionID := newActionID(77, actionCombatPulse, "intent", 3, 9, actors, 0)
+	if actionID != newActionID(77, actionCombatPulse, "intent", 3, 9, []string{"p1", "p2"}, 0) {
 		t.Fatal("actor input order changed ActionID")
 	}
-	if actionID == NewActionID(77, ActionCombatPulse, "intent", 3, 9, actors, 1) {
+	if actionID == newActionID(77, actionCombatPulse, "intent", 3, 9, actors, 1) {
 		t.Fatal("ordinal did not distinguish ActionID")
 	}
-	effectID := NewEffectID(77, actionID, EffectDamage, 0)
-	eventID := NewEventID(77, actionID, effectID, EventDamage, 0)
-	if effectID == "" || eventID == "" || eventID != NewEventID(77, actionID, effectID, EventDamage, 0) {
+	effectID := newEffectID(77, actionID, effectDamage, 0)
+	eventID := newEventID(77, actionID, effectID, EventDamage, 0)
+	if effectID == "" || eventID == "" || eventID != newEventID(77, actionID, effectID, EventDamage, 0) {
 		t.Fatal("effect/event IDs are not stable")
 	}
 	state := makeTestRoundState(t, 77)
-	lifecycle, err := newActionLifecycleEvent(state, ScheduledAction{ID: actionID, Type: ActionMoveStart, Priority: 20, ActorIDs: actors}, "MOVE_START", "movement started", 0)
+	lifecycle, err := newActionLifecycleEvent(state, scheduledAction{ID: actionID, Type: actionMoveStart, Priority: 20, ActorIDs: actors}, "MOVE_START", "movement started", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,8 +87,8 @@ func TestEventProjectionSortAndStableIDs(t *testing.T) {
 func TestSchedulerActorVersionsAndFrozenGroupMinimum(t *testing.T) {
 	state := makeTestRoundState(t, 201)
 	actorID := "team_a_p1"
-	action := ScheduledAction{ID: "stale", Type: ActionMovementArrive, ActorIDs: []string{actorID}, From: state.Players[actorID].Location, StartAt: 0, ResolveAt: 5, Priority: 20}
-	if err := BeginExclusiveAction(state, &action, ActionMoving); err != nil {
+	action := scheduledAction{ID: "stale", Type: actionMovementArrive, ActorIDs: []string{actorID}, From: state.Players[actorID].Location, StartAt: 0, ResolveAt: 5, Priority: 20}
+	if err := beginExclusiveAction(state, &action, actionMoving); err != nil {
 		t.Fatal(err)
 	}
 	if err := state.Scheduler.Schedule(action); err != nil {
@@ -100,8 +100,8 @@ func TestSchedulerActorVersionsAndFrozenGroupMinimum(t *testing.T) {
 	}
 
 	state = makeTestRoundState(t, 202)
-	group := ScheduledAction{ID: "group-continue", Type: ActionMovementArrive, ActorIDs: []string{"team_a_p1", "team_a_p2", "team_a_p3"}, From: PlayerLocation{NodeID: "T_SPAWN"}, StartAt: 0, ResolveAt: 5, Priority: 20, MinRequiredActors: 2}
-	if err := BeginExclusiveAction(state, &group, ActionMoving); err != nil {
+	group := scheduledAction{ID: "group-continue", Type: actionMovementArrive, ActorIDs: []string{"team_a_p1", "team_a_p2", "team_a_p3"}, From: playerLocation{NodeID: "T_SPAWN"}, StartAt: 0, ResolveAt: 5, Priority: 20, MinRequiredActors: 2}
+	if err := beginExclusiveAction(state, &group, actionMoving); err != nil {
 		t.Fatal(err)
 	}
 	if err := state.Scheduler.Schedule(group); err != nil {
@@ -117,7 +117,7 @@ func TestSchedulerActorVersionsAndFrozenGroupMinimum(t *testing.T) {
 	state = makeTestRoundState(t, 203)
 	group.ID = "group-cancel"
 	group.MinRequiredActors = 3
-	if err := BeginExclusiveAction(state, &group, ActionMoving); err != nil {
+	if err := beginExclusiveAction(state, &group, actionMoving); err != nil {
 		t.Fatal(err)
 	}
 	if err := state.Scheduler.Schedule(group); err != nil {
@@ -137,33 +137,33 @@ func TestSchedulerActorVersionsAndFrozenGroupMinimum(t *testing.T) {
 
 func TestNextTimeIncludesActionsDeadlinesAndTTL(t *testing.T) {
 	state := makeTestRoundState(t, 204)
-	state.Intel[SideT].Records = []IntelRecord{{ExpiresAt: 8}}
-	state.Nodes["A_SITE"].KnownControl[SideT] = KnownControlState{Status: ControlCT, ExpiresAt: 6}
-	if err := state.Scheduler.Schedule(ScheduledAction{ID: "later", Type: ActionMoveStart, StartAt: 0, ResolveAt: 10, Priority: 20}); err != nil {
+	state.Intel[SideT].Records = []intelRecord{{ExpiresAt: 8}}
+	state.Nodes["A_SITE"].KnownControl[SideT] = knownControlState{Status: controlCT, ExpiresAt: 6}
+	if err := state.Scheduler.Schedule(scheduledAction{ID: "later", Type: actionMoveStart, StartAt: 0, ResolveAt: 10, Priority: 20}); err != nil {
 		t.Fatal(err)
 	}
-	if at, kind := state.NextTime(); at != 6 || kind != NextTimeControl {
-		t.Fatalf("NextTime() = %d/%s, want 6/%s", at, kind, NextTimeControl)
+	if at, kind := state.NextTime(); at != 6 || kind != nextTimeControl {
+		t.Fatalf("NextTime() = %d/%s, want 6/%s", at, kind, nextTimeControl)
 	}
 	state.Timeline = 6
-	if at, kind := state.NextTime(); at != 8 || kind != NextTimeIntel {
-		t.Fatalf("NextTime() = %d/%s, want 8/%s", at, kind, NextTimeIntel)
+	if at, kind := state.NextTime(); at != 8 || kind != nextTimeIntel {
+		t.Fatalf("NextTime() = %d/%s, want 8/%s", at, kind, nextTimeIntel)
 	}
-	state.Bomb.Status, state.BombDeadline = BombPlanted, 7
-	if at, kind := state.NextTime(); at != 7 || kind != NextTimeBomb {
+	state.Bomb.Status, state.BombDeadline = bombPlanted, 7
+	if at, kind := state.NextTime(); at != 7 || kind != nextTimeBomb {
 		t.Fatalf("bomb deadline did not supersede later work: %d/%s", at, kind)
 	}
-	state.Bomb.Status = BombCarried
-	state.Scheduler = NewActionScheduler(state.constants)
+	state.Bomb.Status = bombCarried
+	state.Scheduler = newActionScheduler(state.constants)
 	state.Intel[SideT].Records = nil
-	state.Nodes["A_SITE"].KnownControl = map[string]KnownControlState{}
+	state.Nodes["A_SITE"].KnownControl = map[string]knownControlState{}
 	state.Timeline, state.RoundDeadline = 0, 115
 	decisionAt := state.RoundDeadline - state.constants.Int("ForceExecuteThreshold", 0)
-	if at, kind := state.NextTime(); at != decisionAt || kind != NextTimeDecision {
+	if at, kind := state.NextTime(); at != decisionAt || kind != nextTimeDecision {
 		t.Fatalf("empty queue skipped force-execute decision deadline: %d/%s", at, kind)
 	}
 	state.Timeline = decisionAt
-	if at, kind := state.NextTime(); at != 115 || kind != NextTimeRound {
+	if at, kind := state.NextTime(); at != 115 || kind != nextTimeRound {
 		t.Fatalf("post-decision empty queue did not advance to round deadline: %d/%s", at, kind)
 	}
 }
@@ -185,7 +185,7 @@ func TestSchedulerAndRoundGuardsReturnStableCodes(t *testing.T) {
 	if err := state.RecordNoOp(); err != nil {
 		t.Fatal(err)
 	}
-	if state.NoOpCount != 1 || state.RecoveryAttempt.CycleID == "" || state.RecoveryAttempt.Status != RecoveryNotAttempted {
+	if state.NoOpCount != 1 || state.RecoveryAttempt.CycleID == "" || state.RecoveryAttempt.Status != recoveryNotAttempted {
 		t.Fatalf("NoOp threshold did not freeze and create recovery cycle: count=%d recovery=%+v", state.NoOpCount, state.RecoveryAttempt)
 	}
 	if err := state.RecordRotation(SideT); err != nil {
@@ -197,11 +197,11 @@ func TestSchedulerAndRoundGuardsReturnStableCodes(t *testing.T) {
 
 	constants := makeTestMapConfig().CombatConstants
 	setConstInt(&constants, "MaxScheduledActions", 1)
-	scheduler := NewActionScheduler(constants)
-	if err := scheduler.Schedule(ScheduledAction{ID: "one", Type: ActionMoveStart, ResolveAt: 1}); err != nil {
+	scheduler := newActionScheduler(constants)
+	if err := scheduler.Schedule(scheduledAction{ID: "one", Type: actionMoveStart, ResolveAt: 1}); err != nil {
 		t.Fatal(err)
 	}
-	assertEngineErrorCode(t, scheduler.Schedule(ScheduledAction{ID: "two", Type: ActionMoveStart, ResolveAt: 2}), "SCHEDULER_LIMIT_EXCEEDED")
+	assertEngineErrorCode(t, scheduler.Schedule(scheduledAction{ID: "two", Type: actionMoveStart, ResolveAt: 2}), "SCHEDULER_LIMIT_EXCEEDED")
 }
 
 func setConstInt(constants *CombatConstants, key string, value int) {

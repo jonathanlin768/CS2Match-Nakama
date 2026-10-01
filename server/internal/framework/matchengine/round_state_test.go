@@ -11,10 +11,10 @@ func makeTestRoundInput(seed int64) *RoundInput {
 	}
 }
 
-func makeTestRoundState(t *testing.T, seed int64) *RoundState {
+func makeTestRoundState(t *testing.T, seed int64) *roundState {
 	t.Helper()
 	input := makeTestRoundInput(seed)
-	state, err := NewRoundState(input, RoundPlan{TStrategyTemplateID: "TPL_A", CTSetupTemplateID: "TPL_CT", BombCarrierID: input.TeamT.Players[0].PlayerID})
+	state, err := newRoundState(input, roundPlan{TStrategyTemplateID: "TPL_A", CTSetupTemplateID: "TPL_CT", BombCarrierID: input.TeamT.Players[0].PlayerID})
 	if err != nil {
 		t.Fatalf("NewRoundState() error = %v", err)
 	}
@@ -41,7 +41,7 @@ func TestNewRoundStateBuildsAuthoritativePlayersAndUniqueBombCarrier(t *testing.
 			carrierCount++
 		}
 	}
-	if carrierCount != 1 || state.Bomb.Status != BombCarried || state.Bomb.CarrierID != state.Plan.BombCarrierID {
+	if carrierCount != 1 || state.Bomb.Status != bombCarried || state.Bomb.CarrierID != state.Plan.BombCarrierID {
 		t.Fatalf("bomb carrier invariant failed: count=%d bomb=%+v", carrierCount, state.Bomb)
 	}
 }
@@ -49,30 +49,30 @@ func TestNewRoundStateBuildsAuthoritativePlayersAndUniqueBombCarrier(t *testing.
 func TestNodeControlContestResolutionAndTTLDecay(t *testing.T) {
 	state := makeTestRoundState(t, 102)
 	node := state.Nodes["A_SITE"]
-	node.ActualControl = ControlContested
-	if err := node.ResolveContest(ControlT, 12, 8, map[string][]string{SideT: {"team_a_p2", "team_a_p1"}}); err != nil {
+	node.ActualControl = controlContested
+	if err := node.ResolveContest(controlT, 12, 8, map[string][]string{SideT: {"team_a_p2", "team_a_p1"}}); err != nil {
 		t.Fatalf("ResolveContest() error = %v", err)
 	}
 	known := node.KnownControl[SideT]
-	if node.ActualControl != ControlT || known.ExpiresAt != 20 || known.ObservedBy[0] != "team_a_p1" {
+	if node.ActualControl != controlT || known.ExpiresAt != 20 || known.ObservedBy[0] != "team_a_p1" {
 		t.Fatalf("unexpected resolved control: node=%+v known=%+v", node, known)
 	}
 	node.DecayKnownControl(SideT, 19)
-	if node.KnownControl[SideT].Status != ControlT {
+	if node.KnownControl[SideT].Status != controlT {
 		t.Fatal("known control decayed before TTL")
 	}
 	node.DecayKnownControl(SideT, 20)
-	if node.KnownControl[SideT].Status != ControlUnknown {
+	if node.KnownControl[SideT].Status != controlUnknown {
 		t.Fatal("known control did not decay at TTL")
 	}
-	if err := node.ResolveContest(ControlContested, 21, 8, nil); err == nil {
+	if err := node.ResolveContest(controlContested, 21, 8, nil); err == nil {
 		t.Fatal("contest resolved to Contested without error")
 	}
 }
 
 func TestBombStateLegalLifecycleAndAbsoluteTimes(t *testing.T) {
-	location := PlayerLocation{NodeID: "A_SITE"}
-	bomb := BombState{Status: BombCarried, CarrierID: "t1", Location: location}
+	location := playerLocation{NodeID: "A_SITE"}
+	bomb := bombState{Status: bombCarried, CarrierID: "t1", Location: location}
 	if err := bomb.StartPlant("t1", "plant-1", "A", 20, 24); err != nil {
 		t.Fatalf("StartPlant() error = %v", err)
 	}
@@ -82,18 +82,18 @@ func TestBombStateLegalLifecycleAndAbsoluteTimes(t *testing.T) {
 	if err := bomb.StartDefuse("ct1", "defuse-1", 54, 64); err != nil {
 		t.Fatalf("StartDefuse() equality error = %v", err)
 	}
-	if err := bomb.CompleteDefuse(64); err != nil || bomb.Status != BombDefused {
+	if err := bomb.CompleteDefuse(64); err != nil || bomb.Status != bombDefused {
 		t.Fatalf("CompleteDefuse() = %v, status=%s", err, bomb.Status)
 	}
 	if err := bomb.Explode(64); err == nil {
 		t.Fatal("defused bomb exploded")
 	}
 
-	dropped := BombState{Status: BombPlanting, CarrierID: "t1", PlantActionID: "plant-2", PlantActorID: "t1"}
-	if err := dropped.Drop(PlayerLocation{Edge: &OnEdgeLocation{EdgeID: "E3", FromNode: "A_LONG", ToNode: "A_SITE", Progress: 0.4}}, 31); err != nil {
+	dropped := bombState{Status: bombPlanting, CarrierID: "t1", PlantActionID: "plant-2", PlantActorID: "t1"}
+	if err := dropped.Drop(playerLocation{Edge: &onEdgeLocation{EdgeID: "E3", FromNode: "A_LONG", ToNode: "A_SITE", Progress: 0.4}}, 31); err != nil {
 		t.Fatalf("Drop() error = %v", err)
 	}
-	if dropped.Status != BombDropped || dropped.CarrierID != "" || dropped.DroppedAt != 31 || dropped.PlantActionID != "" {
+	if dropped.Status != bombDropped || dropped.CarrierID != "" || dropped.DroppedAt != 31 || dropped.PlantActionID != "" {
 		t.Fatalf("drop transition left stale state: %+v", dropped)
 	}
 }
@@ -113,9 +113,9 @@ func TestRoundStateCentralClampAndInvariants(t *testing.T) {
 		t.Fatal("probability clamp mismatch")
 	}
 
-	player.Location = PlayerLocation{}
+	player.Location = playerLocation{}
 	assertEngineErrorCode(t, state.ClampAndValidate(), "SIMULATION_INVARIANT_ERROR")
-	player.Location = PlayerLocation{NodeID: "T_SPAWN"}
+	player.Location = playerLocation{NodeID: "T_SPAWN"}
 	player.HP, player.Alive = 50, false
 	assertEngineErrorCode(t, state.ClampAndValidate(), "SIMULATION_INVARIANT_ERROR")
 }
@@ -123,7 +123,7 @@ func TestRoundStateCentralClampAndInvariants(t *testing.T) {
 func TestRoundProjectionIsStableAndCannotDriveInternalState(t *testing.T) {
 	state := makeTestRoundState(t, 104)
 	state.Events = []*GameEvent{{EventID: "evt", SourceActionID: "act", EventType: EventDamage, Extra: map[string]interface{}{"damage": 10}}}
-	projection, err := ProjectRoundState(state)
+	projection, err := projectRoundState(state)
 	if err != nil {
 		t.Fatalf("ProjectRoundState() error = %v", err)
 	}
@@ -143,7 +143,7 @@ func TestRoundProjectionIsStableAndCannotDriveInternalState(t *testing.T) {
 		t.Fatal("public DTO mutation flowed back into authoritative state")
 	}
 
-	result, err := ProjectRoundResult(state, makeTestRoundInput(104))
+	result, err := projectRoundResult(state, makeTestRoundInput(104))
 	if err != nil {
 		t.Fatalf("ProjectRoundResult() error = %v", err)
 	}

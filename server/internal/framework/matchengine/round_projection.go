@@ -2,20 +2,20 @@ package matchengine
 
 import "sort"
 
-type RoundPublicProjection struct {
+type roundPublicProjection struct {
 	Players  []*PlayerState
 	Bomb     *BombPublicState
 	Controls []*NodeControlState
 }
 
-func ProjectRoundState(state *RoundState) (*RoundPublicProjection, error) {
+func projectRoundState(state *roundState) (*roundPublicProjection, error) {
 	if state == nil {
 		return nil, newError("SIMULATION_INVARIANT_ERROR", "cannot project nil round state")
 	}
 	if err := state.ClampAndValidate(); err != nil {
 		return nil, err
 	}
-	projection := &RoundPublicProjection{}
+	projection := &roundPublicProjection{}
 	playerIDs := make([]string, 0, len(state.Players))
 	for playerID := range state.Players {
 		playerIDs = append(playerIDs, playerID)
@@ -55,11 +55,11 @@ func cloneImageCrop(crop *ImageCrop) *ImageCrop {
 	return &copy
 }
 
-func ProjectRoundResult(state *RoundState, input *RoundInput) (*RoundResult, error) {
+func projectRoundResult(state *roundState, input *RoundInput) (*RoundResult, error) {
 	if input == nil {
 		return nil, newError("INVALID_ROUND_INPUT", "cannot project round result without input metadata")
 	}
-	projection, err := ProjectRoundState(state)
+	projection, err := projectRoundState(state)
 	if err != nil {
 		return nil, err
 	}
@@ -79,14 +79,14 @@ func ProjectRoundResult(state *RoundState, input *RoundInput) (*RoundResult, err
 	return result, nil
 }
 
-func projectBombState(bomb BombState) *BombPublicState {
+func projectBombState(bomb bombState) *BombPublicState {
 	status := string(bomb.Status)
 	switch bomb.Status {
-	case BombPlanting:
+	case bombPlanting:
 		status = BombStatusCarried
-	case BombDefusing:
+	case bombDefusing:
 		status = BombStatusPlanted
-	case BombExploded:
+	case bombExploded:
 		status = BombStatusExplode
 	}
 	return &BombPublicState{
@@ -95,7 +95,7 @@ func projectBombState(bomb BombState) *BombPublicState {
 	}
 }
 
-func projectedNodeID(location PlayerLocation) string {
+func projectedNodeID(location playerLocation) string {
 	if location.NodeID != "" {
 		return location.NodeID
 	}
@@ -108,8 +108,8 @@ func projectedNodeID(location PlayerLocation) string {
 	return ""
 }
 
-func controlKnownAt(known KnownControlState, timeline int) bool {
-	return known.Status != "" && known.Status != ControlUnknown && (known.ExpiresAt == 0 || timeline < known.ExpiresAt)
+func controlKnownAt(known knownControlState, timeline int) bool {
+	return known.Status != "" && known.Status != controlUnknown && (known.ExpiresAt == 0 || timeline < known.ExpiresAt)
 }
 
 func cloneLoadout(loadout WeaponLoadout) WeaponLoadout {

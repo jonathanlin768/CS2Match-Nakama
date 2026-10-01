@@ -1,0 +1,1113 @@
+{
+  "match_id": "test_match",
+  "map_id": "de_dust2",
+  "map_name": "Dust II",
+  "map_version": "test-map-v1",
+  "seed": 42,
+  "rule_set": {
+    "rule_set_id": "cs2_mr12_ot_mr3_v1",
+    "regulation_half_rounds": 12,
+    "regulation_win_rounds": 13,
+    "regulation_max_rounds": 24,
+    "overtime_enabled": true,
+    "overtime_half_rounds": 3,
+    "overtime_block_rounds": 6
+  },
+  "team_a": {
+    "team_id": "team_a",
+    "name": "Team A",
+    "players": [
+      {
+        "player_id": "team_a_p1",
+        "config_player_id": "config_p1",
+        "display_name": "Team A P1",
+        "role_tags": [
+          "Rifler"
+        ],
+        "attributes": {
+          "entry": 82,
+          "aim": 82,
+          "trade": 82,
+          "clutch": 82,
+          "firepower": 82,
+          "gamesense": 82,
+          "reaction": 82,
+          "positioning": 82,
+          "awareness": 82,
+          "teamplay": 82,
+          "utility": 82,
+          "composure": 82,
+          "mobility": 82,
+          "endurance": 82,
+          "discipline": 82
+        }
+      },
+      {
+        "player_id": "team_a_p2",
+        "config_player_id": "config_p2",
+        "display_name": "Team A P2",
+        "role_tags": [
+          "Rifler"
+        ],
+        "attributes": {
+          "entry": 81,
+          "aim": 81,
+          "trade": 81,
+          "clutch": 81,
+          "firepower": 81,
+          "gamesense": 81,
+          "reaction": 81,
+          "positioning": 81,
+          "awareness": 81,
+          "teamplay": 81,
+          "utility": 81,
+          "composure": 81,
+          "mobility": 81,
+          "endurance": 81,
+          "discipline": 81
+        }
+      },
+      {
+        "player_id": "team_a_p3",
+        "config_player_id": "config_p3",
+        "display_name": "Team A P3",
+        "role_tags": [
+          "Rifler"
+        ],
+        "attributes": {
+          "entry": 80,
+          "aim": 80,
+          "trade": 80,
+          "clutch": 80,
+          "firepower": 80,
+          "gamesense": 80,
+          "reaction": 80,
+          "positioning": 80,
+          "awareness": 80,
+          "teamplay": 80,
+          "utility": 80,
+          "composure": 80,
+          "mobility": 80,
+          "endurance": 80,
+          "discipline": 80
+        }
+      },
+      {
+        "player_id": "team_a_p4",
+        "config_player_id": "config_p4",
+        "display_name": "Team A P4",
+        "role_tags": [
+          "Rifler"
+        ],
+        "attributes": {
+          "entry": 79,
+          "aim": 79,
+          "trade": 79,
+          "clutch": 79,
+          "firepower": 79,
+          "gamesense": 79,
+          "reaction": 79,
+          "positioning": 79,
+          "awareness": 79,
+          "teamplay": 79,
+          "utility": 79,
+          "composure": 79,
+          "mobility": 79,
+          "endurance": 79,
+          "discipline": 79
+        }
+      },
+      {
+        "player_id": "team_a_p5",
+        "config_player_id": "config_p5",
+        "display_name": "Team A P5",
+        "role_tags": [
+          "Rifler"
+        ],
+        "attributes": {
+          "entry": 78,
+          "aim": 78,
+          "trade": 78,
+          "clutch": 78,
+          "firepower": 78,
+          "gamesense": 78,
+          "reaction": 78,
+          "positioning": 78,
+          "awareness": 78,
+          "teamplay": 78,
+          "utility": 78,
+          "composure": 78,
+          "mobility": 78,
+          "endurance": 78,
+          "discipline": 78
+        }
+      }
+    ]
+  },
+  "team_b": {
+    "team_id": "team_b",
+    "name": "Team B",
+    "players": [
+      {
+        "player_id": "team_b_p1",
+        "config_player_id": "config_p1",
+        "display_name": "Team B P1",
+        "role_tags": [
+          "Rifler"
+        ],
+        "attributes": {
+          "entry": 80,
+          "aim": 80,
+          "trade": 80,
+          "clutch": 80,
+          "firepower": 80,
+          "gamesense": 80,
+          "reaction": 80,
+          "positioning": 80,
+          "awareness": 80,
+          "teamplay": 80,
+          "utility": 80,
+          "composure": 80,
+          "mobility": 80,
+          "endurance": 80,
+          "discipline": 80
+        }
+      },
+      {
+        "player_id": "team_b_p2",
+        "config_player_id": "config_p2",
+        "display_name": "Team B P2",
+        "role_tags": [
+          "Rifler"
+        ],
+        "attributes": {
+          "entry": 79,
+          "aim": 79,
+          "trade": 79,
+          "clutch": 79,
+          "firepower": 79,
+          "gamesense": 79,
+          "reaction": 79,
+          "positioning": 79,
+          "awareness": 79,
+          "teamplay": 79,
+          "utility": 79,
+          "composure": 79,
+          "mobility": 79,
+          "endurance": 79,
+          "discipline": 79
+        }
+      },
+      {
+        "player_id": "team_b_p3",
+        "config_player_id": "config_p3",
+        "display_name": "Team B P3",
+        "role_tags": [
+          "Rifler"
+        ],
+        "attributes": {
+          "entry": 78,
+          "aim": 78,
+          "trade": 78,
+          "clutch": 78,
+          "firepower": 78,
+          "gamesense": 78,
+          "reaction": 78,
+          "positioning": 78,
+          "awareness": 78,
+          "teamplay": 78,
+          "utility": 78,
+          "composure": 78,
+          "mobility": 78,
+          "endurance": 78,
+          "discipline": 78
+        }
+      },
+      {
+        "player_id": "team_b_p4",
+        "config_player_id": "config_p4",
+        "display_name": "Team B P4",
+        "role_tags": [
+          "Rifler"
+        ],
+        "attributes": {
+          "entry": 77,
+          "aim": 77,
+          "trade": 77,
+          "clutch": 77,
+          "firepower": 77,
+          "gamesense": 77,
+          "reaction": 77,
+          "positioning": 77,
+          "awareness": 77,
+          "teamplay": 77,
+          "utility": 77,
+          "composure": 77,
+          "mobility": 77,
+          "endurance": 77,
+          "discipline": 77
+        }
+      },
+      {
+        "player_id": "team_b_p5",
+        "config_player_id": "config_p5",
+        "display_name": "Team B P5",
+        "role_tags": [
+          "Rifler"
+        ],
+        "attributes": {
+          "entry": 76,
+          "aim": 76,
+          "trade": 76,
+          "clutch": 76,
+          "firepower": 76,
+          "gamesense": 76,
+          "reaction": 76,
+          "positioning": 76,
+          "awareness": 76,
+          "teamplay": 76,
+          "utility": 76,
+          "composure": 76,
+          "mobility": 76,
+          "endurance": 76,
+          "discipline": 76
+        }
+      }
+    ]
+  },
+  "initial_side_by_team": {
+    "team_a": "T",
+    "team_b": "CT"
+  },
+  "map_config": {
+    "map_id": "de_dust2",
+    "map_name": "Dust II",
+    "version": "test-map-v1",
+    "route_templates": {
+      "TPL_A": {
+        "id": "TPL_A",
+        "map_id": "de_dust2",
+        "side": "T",
+        "target_site": "A",
+        "tempo": "Default",
+        "recommended_min": 2,
+        "recommended_max": 5,
+        "route_ids": [
+          "D2_A_LONG"
+        ],
+        "route_allocations": {
+          "D2_A_LONG": 5
+        },
+        "scenario_ids": [
+          "SCN_A"
+        ],
+        "map_tag_ids": [
+          "TAG_A"
+        ],
+        "success_next_phase": "SiteEntry"
+      },
+      "TPL_CT": {
+        "id": "TPL_CT",
+        "map_id": "de_dust2",
+        "side": "CT",
+        "target_site": "None",
+        "tempo": "Default",
+        "recommended_min": 1,
+        "recommended_max": 5,
+        "route_ids": [
+          "D2_CT_A"
+        ],
+        "route_allocations": {
+          "D2_CT_A": 5
+        },
+        "scenario_ids": [
+          "SCN_A"
+        ],
+        "map_tag_ids": [
+          "TAG_A"
+        ],
+        "success_next_phase": "Advance"
+      }
+    },
+    "scenarios": {
+      "SCN_A": {
+        "id": "SCN_A",
+        "route": "A_Long",
+        "phase": "SiteEntry",
+        "range": "Long",
+        "site": "A",
+        "tempo": "SlowDefault",
+        "posture": "T_Executing",
+        "utility_context": "Even",
+        "map_tag_ids": [
+          "TAG_A"
+        ],
+        "base_time_cost": 12,
+        "base_weight": 10
+      }
+    },
+    "map_tags": {
+      "TAG_A": {
+        "id": "TAG_A",
+        "map_id": "de_dust2",
+        "category": "Range",
+        "value": "LongRange",
+        "side": "Both",
+        "weight": 10,
+        "reason_code": "long_range_duel"
+      }
+    },
+    "encounter_modifiers": {
+      "MOD_A": {
+        "id": "MOD_A",
+        "scenario_id": "SCN_A",
+        "factor": "LongRange",
+        "side": "Both",
+        "attribute": "aim",
+        "weight": 8,
+        "reason_code": "aim_long_range"
+      },
+      "WEIGHT_AIM": {
+        "id": "WEIGHT_AIM",
+        "scenario_id": "SCN_A",
+        "factor": "ScenarioWeight",
+        "side": "Both",
+        "attribute": "aim",
+        "weight": 10,
+        "reason_code": "WEIGHT_AIM"
+      },
+      "WEIGHT_AWARENESS": {
+        "id": "WEIGHT_AWARENESS",
+        "scenario_id": "SCN_A",
+        "factor": "ScenarioWeight",
+        "side": "Both",
+        "attribute": "awareness",
+        "weight": 10,
+        "reason_code": "WEIGHT_AWARENESS"
+      },
+      "WEIGHT_COMPOSURE": {
+        "id": "WEIGHT_COMPOSURE",
+        "scenario_id": "SCN_A",
+        "factor": "ScenarioWeight",
+        "side": "Both",
+        "attribute": "composure",
+        "weight": 10,
+        "reason_code": "WEIGHT_COMPOSURE"
+      },
+      "WEIGHT_DISCIPLINE": {
+        "id": "WEIGHT_DISCIPLINE",
+        "scenario_id": "SCN_A",
+        "factor": "ScenarioWeight",
+        "side": "Both",
+        "attribute": "discipline",
+        "weight": 10,
+        "reason_code": "WEIGHT_DISCIPLINE"
+      },
+      "WEIGHT_ENDURANCE": {
+        "id": "WEIGHT_ENDURANCE",
+        "scenario_id": "SCN_A",
+        "factor": "ScenarioWeight",
+        "side": "Both",
+        "attribute": "endurance",
+        "weight": 10,
+        "reason_code": "WEIGHT_ENDURANCE"
+      },
+      "WEIGHT_MOBILITY": {
+        "id": "WEIGHT_MOBILITY",
+        "scenario_id": "SCN_A",
+        "factor": "ScenarioWeight",
+        "side": "Both",
+        "attribute": "mobility",
+        "weight": 10,
+        "reason_code": "WEIGHT_MOBILITY"
+      },
+      "WEIGHT_POSITIONING": {
+        "id": "WEIGHT_POSITIONING",
+        "scenario_id": "SCN_A",
+        "factor": "ScenarioWeight",
+        "side": "Both",
+        "attribute": "positioning",
+        "weight": 10,
+        "reason_code": "WEIGHT_POSITIONING"
+      },
+      "WEIGHT_REACTION": {
+        "id": "WEIGHT_REACTION",
+        "scenario_id": "SCN_A",
+        "factor": "ScenarioWeight",
+        "side": "Both",
+        "attribute": "reaction",
+        "weight": 10,
+        "reason_code": "WEIGHT_REACTION"
+      },
+      "WEIGHT_TEAMPLAY": {
+        "id": "WEIGHT_TEAMPLAY",
+        "scenario_id": "SCN_A",
+        "factor": "ScenarioWeight",
+        "side": "Both",
+        "attribute": "teamplay",
+        "weight": 10,
+        "reason_code": "WEIGHT_TEAMPLAY"
+      },
+      "WEIGHT_UTILITY": {
+        "id": "WEIGHT_UTILITY",
+        "scenario_id": "SCN_A",
+        "factor": "ScenarioWeight",
+        "side": "Both",
+        "attribute": "utility",
+        "weight": 10,
+        "reason_code": "WEIGHT_UTILITY"
+      }
+    },
+    "nodes": {
+      "A_LONG": {
+        "id": "A_LONG",
+        "map_id": "de_dust2",
+        "name": "A Long",
+        "zone": "",
+        "site": "A",
+        "node_type": "Lane",
+        "default_side": "Both",
+        "x": 0.85,
+        "y": 0.55,
+        "floor": "Ground",
+        "area_usages": [
+          "KillSample"
+        ],
+        "shape": "Circle",
+        "radius": 0.03
+      },
+      "A_SITE": {
+        "id": "A_SITE",
+        "map_id": "de_dust2",
+        "name": "A Site",
+        "zone": "",
+        "site": "A",
+        "node_type": "Site",
+        "default_side": "CT",
+        "x": 0.75,
+        "y": 0.25,
+        "floor": "Ground",
+        "area_usages": [
+          "Plant",
+          "KillSample"
+        ],
+        "shape": "Circle",
+        "radius": 0.05
+      },
+      "B_SITE": {
+        "id": "B_SITE",
+        "map_id": "de_dust2",
+        "name": "B Site",
+        "zone": "",
+        "site": "B",
+        "node_type": "Site",
+        "default_side": "CT",
+        "x": 0.2,
+        "y": 0.2,
+        "floor": "Ground",
+        "area_usages": [
+          "Plant",
+          "KillSample"
+        ],
+        "shape": "Circle",
+        "radius": 0.05
+      },
+      "CT_SPAWN": {
+        "id": "CT_SPAWN",
+        "map_id": "de_dust2",
+        "name": "CT Spawn",
+        "zone": "",
+        "site": "None",
+        "node_type": "Spawn",
+        "default_side": "CT",
+        "x": 0.5,
+        "y": 0.1,
+        "floor": "Ground",
+        "shape": "None"
+      },
+      "LONG_DOOR": {
+        "id": "LONG_DOOR",
+        "map_id": "de_dust2",
+        "name": "Long Door",
+        "zone": "",
+        "site": "A",
+        "node_type": "Connector",
+        "default_side": "Both",
+        "x": 0.65,
+        "y": 0.65,
+        "floor": "Ground",
+        "shape": "None"
+      },
+      "T_SPAWN": {
+        "id": "T_SPAWN",
+        "map_id": "de_dust2",
+        "name": "T Spawn",
+        "zone": "",
+        "site": "None",
+        "node_type": "Spawn",
+        "default_side": "T",
+        "x": 0.5,
+        "y": 0.9,
+        "floor": "Ground",
+        "shape": "None"
+      }
+    },
+    "edges": {
+      "E1": {
+        "id": "E1",
+        "from_node": "T_SPAWN",
+        "to_node": "LONG_DOOR",
+        "base_time": 8,
+        "stamina_cost": 0,
+        "risk": 0,
+        "noise": 0,
+        "bidirectional": true
+      },
+      "E2": {
+        "id": "E2",
+        "from_node": "LONG_DOOR",
+        "to_node": "A_LONG",
+        "base_time": 8,
+        "stamina_cost": 0,
+        "risk": 0,
+        "noise": 0,
+        "bidirectional": true
+      },
+      "E3": {
+        "id": "E3",
+        "from_node": "A_LONG",
+        "to_node": "A_SITE",
+        "base_time": 8,
+        "stamina_cost": 0,
+        "risk": 0,
+        "noise": 0,
+        "bidirectional": true
+      },
+      "E4": {
+        "id": "E4",
+        "from_node": "CT_SPAWN",
+        "to_node": "A_SITE",
+        "base_time": 6,
+        "stamina_cost": 0,
+        "risk": 0,
+        "noise": 0,
+        "bidirectional": true
+      }
+    },
+    "visibility": {},
+    "routes": {
+      "D2_A_LONG": {
+        "id": "D2_A_LONG",
+        "name": "A Long Execute",
+        "side": "T",
+        "target_site": "A",
+        "nodes": [
+          "T_SPAWN",
+          "LONG_DOOR",
+          "A_LONG",
+          "A_SITE"
+        ],
+        "min_players": 2,
+        "max_players": 5
+      },
+      "D2_CT_A": {
+        "id": "D2_CT_A",
+        "name": "CT A Hold",
+        "side": "CT",
+        "target_site": "A",
+        "nodes": [
+          "CT_SPAWN",
+          "A_SITE"
+        ],
+        "min_players": 1,
+        "max_players": 5
+      }
+    },
+    "combat_constants": {
+      "values": {
+        "BaseDefuseTime": {
+          "key": "BaseDefuseTime",
+          "category": "",
+          "value_type": "Int",
+          "value": "10",
+          "unit": ""
+        },
+        "BaseNoise": {
+          "key": "BaseNoise",
+          "category": "",
+          "value_type": "Float",
+          "value": "10",
+          "unit": ""
+        },
+        "BasePickupTime": {
+          "key": "BasePickupTime",
+          "category": "",
+          "value_type": "Int",
+          "value": "2",
+          "unit": ""
+        },
+        "BasePlantTime": {
+          "key": "BasePlantTime",
+          "category": "",
+          "value_type": "Int",
+          "value": "4",
+          "unit": ""
+        },
+        "BombExplodeTime": {
+          "key": "BombExplodeTime",
+          "category": "",
+          "value_type": "Int",
+          "value": "40",
+          "unit": ""
+        },
+        "CloseScoreGap": {
+          "key": "CloseScoreGap",
+          "category": "",
+          "value_type": "Float",
+          "value": "6",
+          "unit": ""
+        },
+        "CombatScale": {
+          "key": "CombatScale",
+          "category": "",
+          "value_type": "Float",
+          "value": "10",
+          "unit": ""
+        },
+        "CommunicationDelay": {
+          "key": "CommunicationDelay",
+          "category": "",
+          "value_type": "Int",
+          "value": "0",
+          "unit": ""
+        },
+        "ControlIntelTTL": {
+          "key": "ControlIntelTTL",
+          "category": "",
+          "value_type": "Int",
+          "value": "12",
+          "unit": ""
+        },
+        "CounterMemoryBonus": {
+          "key": "CounterMemoryBonus",
+          "category": "",
+          "value_type": "Float",
+          "value": "3",
+          "unit": ""
+        },
+        "DeathIntelMaxConfidence": {
+          "key": "DeathIntelMaxConfidence",
+          "category": "",
+          "value_type": "Int",
+          "value": "70",
+          "unit": ""
+        },
+        "DecisionDelay": {
+          "key": "DecisionDelay",
+          "category": "",
+          "value_type": "Int",
+          "value": "2",
+          "unit": ""
+        },
+        "DecisiveScoreGap": {
+          "key": "DecisiveScoreGap",
+          "category": "",
+          "value_type": "Float",
+          "value": "18",
+          "unit": ""
+        },
+        "DefaultCTSetupTemplateID": {
+          "key": "DefaultCTSetupTemplateID",
+          "category": "",
+          "value_type": "String",
+          "value": "TPL_CT",
+          "unit": ""
+        },
+        "DefaultStrategyTemplateID": {
+          "key": "DefaultStrategyTemplateID",
+          "category": "",
+          "value_type": "String",
+          "value": "TPL_A",
+          "unit": ""
+        },
+        "ForceExecuteThreshold": {
+          "key": "ForceExecuteThreshold",
+          "category": "",
+          "value_type": "Int",
+          "value": "20",
+          "unit": ""
+        },
+        "MaxAttribute": {
+          "key": "MaxAttribute",
+          "category": "",
+          "value_type": "Int",
+          "value": "100",
+          "unit": ""
+        },
+        "MaxCombatDuration": {
+          "key": "MaxCombatDuration",
+          "category": "",
+          "value_type": "Int",
+          "value": "12",
+          "unit": ""
+        },
+        "MaxDamagePotential": {
+          "key": "MaxDamagePotential",
+          "category": "",
+          "value_type": "Float",
+          "value": "1.2",
+          "unit": ""
+        },
+        "MaxDecisionCount": {
+          "key": "MaxDecisionCount",
+          "category": "",
+          "value_type": "Int",
+          "value": "3",
+          "unit": ""
+        },
+        "MaxDefuseTime": {
+          "key": "MaxDefuseTime",
+          "category": "",
+          "value_type": "Int",
+          "value": "12",
+          "unit": ""
+        },
+        "MaxEffectsPerTimestamp": {
+          "key": "MaxEffectsPerTimestamp",
+          "category": "",
+          "value_type": "Int",
+          "value": "100",
+          "unit": ""
+        },
+        "MaxEncounterPulses": {
+          "key": "MaxEncounterPulses",
+          "category": "",
+          "value_type": "Int",
+          "value": "3",
+          "unit": ""
+        },
+        "MaxExposureModifier": {
+          "key": "MaxExposureModifier",
+          "category": "",
+          "value_type": "Float",
+          "value": "1.5",
+          "unit": ""
+        },
+        "MaxFocus": {
+          "key": "MaxFocus",
+          "category": "",
+          "value_type": "Int",
+          "value": "100",
+          "unit": ""
+        },
+        "MaxHP": {
+          "key": "MaxHP",
+          "category": "",
+          "value_type": "Int",
+          "value": "100",
+          "unit": ""
+        },
+        "MaxHitChance": {
+          "key": "MaxHitChance",
+          "category": "",
+          "value_type": "Float",
+          "value": "0.95",
+          "unit": ""
+        },
+        "MaxIntelTTL": {
+          "key": "MaxIntelTTL",
+          "category": "",
+          "value_type": "Int",
+          "value": "20",
+          "unit": ""
+        },
+        "MaxKillChance": {
+          "key": "MaxKillChance",
+          "category": "",
+          "value_type": "Float",
+          "value": "0.85",
+          "unit": ""
+        },
+        "MaxMoveTime": {
+          "key": "MaxMoveTime",
+          "category": "",
+          "value_type": "Int",
+          "value": "30",
+          "unit": ""
+        },
+        "MaxNoOpTransitions": {
+          "key": "MaxNoOpTransitions",
+          "category": "",
+          "value_type": "Int",
+          "value": "4",
+          "unit": ""
+        },
+        "MaxPickupTime": {
+          "key": "MaxPickupTime",
+          "category": "",
+          "value_type": "Int",
+          "value": "4",
+          "unit": ""
+        },
+        "MaxPlantTime": {
+          "key": "MaxPlantTime",
+          "category": "",
+          "value_type": "Int",
+          "value": "8",
+          "unit": ""
+        },
+        "MaxPreviousSuccessBonus": {
+          "key": "MaxPreviousSuccessBonus",
+          "category": "",
+          "value_type": "Float",
+          "value": "6",
+          "unit": ""
+        },
+        "MaxRandomNoise": {
+          "key": "MaxRandomNoise",
+          "category": "",
+          "value_type": "Float",
+          "value": "8",
+          "unit": ""
+        },
+        "MaxRotationsPerTeam": {
+          "key": "MaxRotationsPerTeam",
+          "category": "",
+          "value_type": "Int",
+          "value": "3",
+          "unit": ""
+        },
+        "MaxRoundTimeline": {
+          "key": "MaxRoundTimeline",
+          "category": "",
+          "value_type": "Int",
+          "value": "180",
+          "unit": ""
+        },
+        "MaxScheduledActions": {
+          "key": "MaxScheduledActions",
+          "category": "",
+          "value_type": "Int",
+          "value": "1000",
+          "unit": ""
+        },
+        "MaxStamina": {
+          "key": "MaxStamina",
+          "category": "",
+          "value_type": "Int",
+          "value": "100",
+          "unit": ""
+        },
+        "MaxStateTransitions": {
+          "key": "MaxStateTransitions",
+          "category": "",
+          "value_type": "Int",
+          "value": "1000",
+          "unit": ""
+        },
+        "MaxStrategyWeight": {
+          "key": "MaxStrategyWeight",
+          "category": "",
+          "value_type": "Float",
+          "value": "100",
+          "unit": ""
+        },
+        "MinAttribute": {
+          "key": "MinAttribute",
+          "category": "",
+          "value_type": "Int",
+          "value": "0",
+          "unit": ""
+        },
+        "MinCombatDuration": {
+          "key": "MinCombatDuration",
+          "category": "",
+          "value_type": "Int",
+          "value": "2",
+          "unit": ""
+        },
+        "MinDamagePotential": {
+          "key": "MinDamagePotential",
+          "category": "",
+          "value_type": "Float",
+          "value": "0.2",
+          "unit": ""
+        },
+        "MinDefuseTime": {
+          "key": "MinDefuseTime",
+          "category": "",
+          "value_type": "Int",
+          "value": "5",
+          "unit": ""
+        },
+        "MinExposureModifier": {
+          "key": "MinExposureModifier",
+          "category": "",
+          "value_type": "Float",
+          "value": "0.5",
+          "unit": ""
+        },
+        "MinFocus": {
+          "key": "MinFocus",
+          "category": "",
+          "value_type": "Int",
+          "value": "0",
+          "unit": ""
+        },
+        "MinHP": {
+          "key": "MinHP",
+          "category": "",
+          "value_type": "Int",
+          "value": "0",
+          "unit": ""
+        },
+        "MinHitChance": {
+          "key": "MinHitChance",
+          "category": "",
+          "value_type": "Float",
+          "value": "0.05",
+          "unit": ""
+        },
+        "MinIntelTTL": {
+          "key": "MinIntelTTL",
+          "category": "",
+          "value_type": "Int",
+          "value": "3",
+          "unit": ""
+        },
+        "MinMoveTime": {
+          "key": "MinMoveTime",
+          "category": "",
+          "value_type": "Int",
+          "value": "1",
+          "unit": ""
+        },
+        "MinPickupTime": {
+          "key": "MinPickupTime",
+          "category": "",
+          "value_type": "Int",
+          "value": "1",
+          "unit": ""
+        },
+        "MinPlantTime": {
+          "key": "MinPlantTime",
+          "category": "",
+          "value_type": "Int",
+          "value": "3",
+          "unit": ""
+        },
+        "MinStamina": {
+          "key": "MinStamina",
+          "category": "",
+          "value_type": "Int",
+          "value": "0",
+          "unit": ""
+        },
+        "MinStrategyWeight": {
+          "key": "MinStrategyWeight",
+          "category": "",
+          "value_type": "Float",
+          "value": "1",
+          "unit": ""
+        },
+        "PulseFireWindow": {
+          "key": "PulseFireWindow",
+          "category": "",
+          "value_type": "Int",
+          "value": "10",
+          "unit": ""
+        },
+        "RepeatFreeCount": {
+          "key": "RepeatFreeCount",
+          "category": "",
+          "value_type": "Int",
+          "value": "10",
+          "unit": ""
+        },
+        "RoundTimeLimit": {
+          "key": "RoundTimeLimit",
+          "category": "",
+          "value_type": "Int",
+          "value": "115",
+          "unit": ""
+        },
+        "SoundIntelMaxConfidence": {
+          "key": "SoundIntelMaxConfidence",
+          "category": "",
+          "value_type": "Int",
+          "value": "70",
+          "unit": ""
+        },
+        "SoundIntelMinConfidence": {
+          "key": "SoundIntelMinConfidence",
+          "category": "",
+          "value_type": "Int",
+          "value": "30",
+          "unit": ""
+        },
+        "StrategyRepeatPenalty": {
+          "key": "StrategyRepeatPenalty",
+          "category": "",
+          "value_type": "Float",
+          "value": "3",
+          "unit": ""
+        },
+        "StrategyRepeatWindow": {
+          "key": "StrategyRepeatWindow",
+          "category": "",
+          "value_type": "Int",
+          "value": "10",
+          "unit": ""
+        },
+        "SuccessBonusPerRound": {
+          "key": "SuccessBonusPerRound",
+          "category": "",
+          "value_type": "Float",
+          "value": "1.5",
+          "unit": ""
+        },
+        "UtilityBudget": {
+          "key": "UtilityBudget",
+          "category": "",
+          "value_type": "Int",
+          "value": "100",
+          "unit": ""
+        }
+      }
+    }
+  },
+  "weapon_specs": {
+    "AK47": {
+      "id": "AK47",
+      "display_name": "AK-47",
+      "damage": 36,
+      "rounds_per_minute": 600,
+      "magazine_size": 30,
+      "armor_penetration": 0.775,
+      "range_modifier": 0.98
+    },
+    "M4A1S": {
+      "id": "M4A1S",
+      "display_name": "M4A1-S",
+      "damage": 38,
+      "rounds_per_minute": 600,
+      "magazine_size": 20,
+      "armor_penetration": 0.7,
+      "range_modifier": 0.99
+    }
+  },
+  "side_loadouts": {
+    "CT": {
+      "primary": "M4A1S",
+      "armor": true,
+      "helmet": true,
+      "has_kit": true
+    },
+    "T": {
+      "primary": "AK47",
+      "armor": true,
+      "helmet": true
+    }
+  },
+  "start_time": 1700000000000
+}

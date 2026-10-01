@@ -11,18 +11,18 @@ func TestResolveMoveDurationUsesSemanticInputsAndClamp(t *testing.T) {
 	actor := state.Players["team_a_p2"]
 	actor.Profile.Attributes.Mobility = 80
 	edge := MapEdge{BaseTime: 10}
-	if got := ResolveMoveDuration(edge, []*RoundPlayerState{actor}, MoveProfile{Tempo: "Default"}, state.constants); got != 9 {
+	if got := resolveMoveDuration(edge, []*roundPlayerState{actor}, moveProfile{Tempo: "Default"}, state.constants); got != 9 {
 		t.Fatalf("default move duration = %d, want 9", got)
 	}
-	if got := ResolveMoveDuration(edge, []*RoundPlayerState{actor}, MoveProfile{Tempo: "Fast"}, state.constants); got != 7 {
+	if got := resolveMoveDuration(edge, []*roundPlayerState{actor}, moveProfile{Tempo: "Fast"}, state.constants); got != 7 {
 		t.Fatalf("fast move duration = %d, want 7", got)
 	}
 	actor.Stamina = 0
-	if got := ResolveMoveDuration(edge, []*RoundPlayerState{actor}, MoveProfile{Tempo: "Slow", FormationPenalty: 2}, state.constants); got != 17 {
+	if got := resolveMoveDuration(edge, []*roundPlayerState{actor}, moveProfile{Tempo: "Slow", FormationPenalty: 2}, state.constants); got != 17 {
 		t.Fatalf("slow exhausted formation duration = %d, want 17", got)
 	}
 	setConstInt(&state.constants, "MaxMoveTime", 12)
-	if got := ResolveMoveDuration(edge, []*RoundPlayerState{actor}, MoveProfile{Tempo: "Slow", FormationPenalty: 20}, state.constants); got != 12 {
+	if got := resolveMoveDuration(edge, []*roundPlayerState{actor}, moveProfile{Tempo: "Slow", FormationPenalty: 20}, state.constants); got != 12 {
 		t.Fatalf("duration did not clamp to max: %d", got)
 	}
 }
@@ -30,12 +30,12 @@ func TestResolveMoveDurationUsesSemanticInputsAndClamp(t *testing.T) {
 func TestOnEdgeLocationProgressAndDisplayAreReproducible(t *testing.T) {
 	state := makeTestRoundState(t, 402)
 	actor := "team_a_p2"
-	action, err := StartMovement(state, []string{actor}, "E1", MoveProfile{Tempo: "Default"}, "move-long", 0)
+	action, err := startMovement(state, []string{actor}, "E1", moveProfile{Tempo: "Default"}, "move-long", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	midpoint := action.StartAt + (action.ResolveAt-action.StartAt)/2
-	if err := UpdateMovementProgress(state, action, midpoint, []string{actor}); err != nil {
+	if err := updateMovementProgress(state, action, midpoint, []string{actor}); err != nil {
 		t.Fatal(err)
 	}
 	location := *state.Players[actor].Location.Edge
@@ -43,11 +43,11 @@ func TestOnEdgeLocationProgressAndDisplayAreReproducible(t *testing.T) {
 		t.Fatalf("invalid OnEdgeLocation: %+v", location)
 	}
 	state2 := makeTestRoundState(t, 402)
-	action2, err := StartMovement(state2, []string{actor}, "E1", MoveProfile{Tempo: "Default"}, "move-long", 0)
+	action2, err := startMovement(state2, []string{actor}, "E1", moveProfile{Tempo: "Default"}, "move-long", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := UpdateMovementProgress(state2, action2, midpoint, []string{actor}); err != nil {
+	if err := updateMovementProgress(state2, action2, midpoint, []string{actor}); err != nil {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(location, *state2.Players[actor].Location.Edge) {
@@ -57,7 +57,7 @@ func TestOnEdgeLocationProgressAndDisplayAreReproducible(t *testing.T) {
 
 func TestBoundedSemanticPathIsStableAndUnreachableReturnsFeedback(t *testing.T) {
 	config := makeTestMapConfig()
-	path, feedback, err := FindBoundedPath(config, "T_SPAWN", "A_SITE", 100)
+	path, feedback, err := findBoundedPath(config, "T_SPAWN", "A_SITE", 100)
 	if err != nil || feedback != nil {
 		t.Fatalf("FindBoundedPath() = %+v/%v", feedback, err)
 	}
@@ -69,12 +69,12 @@ func TestBoundedSemanticPathIsStableAndUnreachableReturnsFeedback(t *testing.T) 
 	for _, id := range []string{"E4", "E3", "E2", "E1"} {
 		reordered.Edges[id] = config.Edges[id]
 	}
-	path2, _, err := FindBoundedPath(&reordered, "T_SPAWN", "A_SITE", 100)
+	path2, _, err := findBoundedPath(&reordered, "T_SPAWN", "A_SITE", 100)
 	if err != nil || !reflect.DeepEqual(path, path2) {
 		t.Fatalf("map insertion order changed path: %+v vs %+v (%v)", path, path2, err)
 	}
 	config.Nodes["ISLAND"] = MapNode{ID: "ISLAND", Name: "Island"}
-	_, feedback, err = FindBoundedPath(config, "T_SPAWN", "ISLAND", 100)
+	_, feedback, err = findBoundedPath(config, "T_SPAWN", "ISLAND", 100)
 	if err != nil || feedback == nil || feedback.Code != "UNREACHABLE" {
 		t.Fatalf("unreachable path did not return decision feedback: %+v/%v", feedback, err)
 	}
@@ -85,20 +85,20 @@ func TestInterceptCheckIsSingleDeterministicCandidateNotAKill(t *testing.T) {
 	edge := state.mapEdges["E1"]
 	edge.Risk, edge.Noise = 100, 100
 	state.mapEdges["E1"] = edge
-	movement, err := StartMovement(state, []string{"team_a_p2"}, "E1", MoveProfile{}, "intercepted-move", 0)
+	movement, err := startMovement(state, []string{"team_a_p2"}, "E1", moveProfile{}, "intercepted-move", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	context := InterceptContext{EnemyActorIDs: []string{"team_b_p1"}, Visible: true, ObserverPosture: PostureHolding, KnownEnemyConfidence: 100}
-	result, err := ScheduleInterceptCheck(state, movement, context)
+	context := interceptContext{EnemyActorIDs: []string{"team_b_p1"}, Visible: true, ObserverPosture: postureHolding, KnownEnemyConfidence: 100}
+	result, err := scheduleInterceptCheck(state, movement, context)
 	if err != nil || !result.Scheduled || math.Abs(result.Probability-1) > 0.000001 {
 		t.Fatalf("ScheduleInterceptCheck() = %+v/%v", result, err)
 	}
-	second, err := ScheduleInterceptCheck(state, movement, context)
+	second, err := scheduleInterceptCheck(state, movement, context)
 	if err != nil || second.Scheduled || second.ReasonCode != "ALREADY_EVALUATED" {
 		t.Fatalf("second intercept check was not suppressed: %+v/%v", second, err)
 	}
-	var intercept ScheduledAction
+	var intercept scheduledAction
 	for state.Scheduler.Len() > 0 {
 		action, _ := state.Scheduler.Pop()
 		if action.ID == result.ActionID {
@@ -107,7 +107,7 @@ func TestInterceptCheckIsSingleDeterministicCandidateNotAKill(t *testing.T) {
 		}
 	}
 	state.Timeline = intercept.ResolveAt
-	candidate, err := ResolveInterceptCheck(state, intercept)
+	candidate, err := resolveInterceptCheck(state, intercept)
 	if err != nil || candidate == nil || !reflect.DeepEqual(candidate.ActorIDs, []string{"team_a_p2", "team_b_p1"}) {
 		t.Fatalf("ResolveInterceptCheck() = %+v/%v", candidate, err)
 	}
@@ -118,23 +118,23 @@ func TestInterceptCheckIsSingleDeterministicCandidateNotAKill(t *testing.T) {
 
 func TestIndependentMovementContinuesDuringAnotherEncounter(t *testing.T) {
 	state := makeTestRoundState(t, 404)
-	first, err := StartMovement(state, []string{"team_a_p2"}, "E1", MoveProfile{}, "move-one", 0)
+	first, err := startMovement(state, []string{"team_a_p2"}, "E1", moveProfile{}, "move-one", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := StartMovement(state, []string{"team_a_p3"}, "E1", MoveProfile{}, "move-two", 0)
+	second, err := startMovement(state, []string{"team_a_p3"}, "E1", moveProfile{}, "move-two", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	interruptAt := first.StartAt + 2
-	if err := InterruptMovementForEncounter(state, first, []string{"team_a_p2"}, interruptAt); err != nil {
+	if err := interruptMovementForEncounter(state, first, []string{"team_a_p2"}, interruptAt); err != nil {
 		t.Fatal(err)
 	}
 	state.Timeline = second.ResolveAt
-	if err := UpdateMovementProgress(state, second, second.ResolveAt, []string{"team_a_p3"}); err != nil {
+	if err := updateMovementProgress(state, second, second.ResolveAt, []string{"team_a_p3"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := CompleteMovement(state, second, []string{"team_a_p3"}); err != nil {
+	if err := completeMovement(state, second, []string{"team_a_p3"}); err != nil {
 		t.Fatal(err)
 	}
 	if state.Players["team_a_p2"].Location.Edge == nil || state.Players["team_a_p3"].Location.NodeID != "LONG_DOOR" {
@@ -145,21 +145,21 @@ func TestIndependentMovementContinuesDuringAnotherEncounter(t *testing.T) {
 func TestEdgeDeathAndBombDropUseRuntimeLocation(t *testing.T) {
 	state := makeTestRoundState(t, 405)
 	carrier := state.Bomb.CarrierID
-	movement, err := StartMovement(state, []string{carrier}, "E1", MoveProfile{}, "carrier-move", 0)
+	movement, err := startMovement(state, []string{carrier}, "E1", moveProfile{}, "carrier-move", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	state.Timeline = movement.StartAt + 2
-	if err := UpdateMovementProgress(state, movement, state.Timeline, []string{carrier}); err != nil {
+	if err := updateMovementProgress(state, movement, state.Timeline, []string{carrier}); err != nil {
 		t.Fatal(err)
 	}
 	location := *state.Players[carrier].Location.Edge
 	combat := combatAction(state, "edge-kill", "team_b_p1")
-	batch, err := ApplyCombatPulseCommit(state, combat, []Effect{damageEffect(state, combat, "team_b_p1", carrier, 100, 0)})
+	batch, err := applyCombatPulseCommit(state, combat, []effect{damageEffect(state, combat, "team_b_p1", carrier, 100, 0)})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if state.Bomb.Status != BombDropped || state.Bomb.Location.Edge == nil || state.Bomb.Location.Edge.EdgeID != "E1" {
+	if state.Bomb.Status != bombDropped || state.Bomb.Location.Edge == nil || state.Bomb.Location.Edge.EdgeID != "E1" {
 		t.Fatalf("edge death did not leave bomb on edge: %+v", state.Bomb)
 	}
 	var kill *GameEvent

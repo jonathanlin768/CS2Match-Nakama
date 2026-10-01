@@ -1,7 +1,6 @@
 package matchengine
 
 import (
-	"fmt"
 	"math"
 	"strconv"
 )
@@ -116,10 +115,6 @@ var expectedCombatConstTypes = func() map[string]string {
 	types["DefaultCTSetupTemplateID"] = "String"
 	return types
 }()
-
-func newError(code, format string, args ...interface{}) *EngineError {
-	return &EngineError{Code: code, Message: fmt.Sprintf(format, args...)}
-}
 
 func ValidateRuleSet(rule RuleSet) error {
 	if rule.RuleSetID == "" {

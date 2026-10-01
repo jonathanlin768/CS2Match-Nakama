@@ -8,7 +8,7 @@ import (
 func TestEncounterCandidateFiltersBusyActorsAndThreatOrderIsStable(t *testing.T) {
 	state := makeTestRoundState(t, 701)
 	state.Players["team_a_p5"].EngagementID = "other"
-	candidate, err := BuildEncounterCandidate(state, "contact", "SCN_A", "A_SITE", []string{"team_b_p2", "team_a_p5", "team_a_p2", "team_b_p1"})
+	candidate, err := buildEncounterCandidate(state, "contact", "SCN_A", "A_SITE", []string{"team_b_p2", "team_a_p5", "team_a_p2", "team_b_p1"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -21,7 +21,7 @@ func TestEncounterCandidateFiltersBusyActorsAndThreatOrderIsStable(t *testing.T)
 			t.Fatalf("threat ordering is unstable: %+v", candidate.Actors)
 		}
 	}
-	reordered, err := BuildEncounterCandidate(state, "contact", "SCN_A", "A_SITE", []string{"team_a_p2", "team_b_p1", "team_b_p2", "team_a_p5"})
+	reordered, err := buildEncounterCandidate(state, "contact", "SCN_A", "A_SITE", []string{"team_a_p2", "team_b_p1", "team_b_p2", "team_a_p5"})
 	if err != nil || !reflect.DeepEqual(candidate, reordered) {
 		t.Fatalf("actor input order changed candidate: equal=%v err=%v", reflect.DeepEqual(candidate, reordered), err)
 	}
@@ -29,11 +29,11 @@ func TestEncounterCandidateFiltersBusyActorsAndThreatOrderIsStable(t *testing.T)
 
 func TestEncounterArbitrationLocksSharedActorsAndAllowsDisjointConcurrency(t *testing.T) {
 	state := makeTestRoundState(t, 702)
-	a, _ := BuildEncounterCandidate(state, "a", "SCN_A", "A_SITE", []string{"team_a_p2", "team_b_p1"})
-	shared, _ := BuildEncounterCandidate(state, "shared", "SCN_A", "A_LONG", []string{"team_a_p2", "team_b_p2"})
-	b, _ := BuildEncounterCandidate(state, "b", "SCN_A", "B_SITE", []string{"team_a_p3", "team_b_p3"})
-	overlap, _ := BuildEncounterCandidate(state, "b-overlap", "SCN_A", "B_SITE", []string{"team_a_p4", "team_b_p4"})
-	accepted := ArbitrateEncounterCandidates([]EncounterCandidatePlan{shared, b, overlap, a})
+	a, _ := buildEncounterCandidate(state, "a", "SCN_A", "A_SITE", []string{"team_a_p2", "team_b_p1"})
+	shared, _ := buildEncounterCandidate(state, "shared", "SCN_A", "A_LONG", []string{"team_a_p2", "team_b_p2"})
+	b, _ := buildEncounterCandidate(state, "b", "SCN_A", "B_SITE", []string{"team_a_p3", "team_b_p3"})
+	overlap, _ := buildEncounterCandidate(state, "b-overlap", "SCN_A", "B_SITE", []string{"team_a_p4", "team_b_p4"})
+	accepted := arbitrateEncounterCandidates([]encounterCandidatePlan{shared, b, overlap, a})
 	if len(accepted) != 2 {
 		t.Fatalf("arbitration accepted shared actor twice or blocked disjoint area: %+v", accepted)
 	}
@@ -47,7 +47,7 @@ func TestEncounterArbitrationLocksSharedActorsAndAllowsDisjointConcurrency(t *te
 		}
 	}
 	for _, candidate := range accepted {
-		if _, err := StartEncounter(state, candidate); err != nil {
+		if _, err := startEncounter(state, candidate); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -58,12 +58,12 @@ func TestEncounterArbitrationLocksSharedActorsAndAllowsDisjointConcurrency(t *te
 
 func TestEncounterStartOnlySchedulesFuturePulsesAndDoesNotBlockOtherActions(t *testing.T) {
 	state := makeTestRoundState(t, 703)
-	candidate, err := BuildEncounterCandidate(state, "a-contact", "SCN_A", "A_SITE", []string{"team_a_p2", "team_a_p3", "team_b_p1", "team_b_p2"})
+	candidate, err := buildEncounterCandidate(state, "a-contact", "SCN_A", "A_SITE", []string{"team_a_p2", "team_a_p3", "team_b_p1", "team_b_p2"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	beforeEvents := len(state.Events)
-	schedule, err := StartEncounter(state, candidate)
+	schedule, err := startEncounter(state, candidate)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,10 +79,10 @@ func TestEncounterStartOnlySchedulesFuturePulsesAndDoesNotBlockOtherActions(t *t
 		}
 	}
 	carrier := state.Players[state.Bomb.CarrierID]
-	carrier.Location = PlayerLocation{NodeID: "B_SITE"}
+	carrier.Location = playerLocation{NodeID: "B_SITE"}
 	state.Bomb.Location = carrier.Location
-	plant := ScheduledAction{ID: "b-plant", Type: ActionPlantComplete, ActorIDs: []string{carrier.Profile.PlayerID}, From: carrier.Location, StartAt: 0, ResolveAt: 4, Priority: 70, MinRequiredActors: 1}
-	if err := BeginExclusiveAction(state, &plant, ActionPlanting); err != nil {
+	plant := scheduledAction{ID: "b-plant", Type: actionPlantComplete, ActorIDs: []string{carrier.Profile.PlayerID}, From: carrier.Location, StartAt: 0, ResolveAt: 4, Priority: 70, MinRequiredActors: 1}
+	if err := beginExclusiveAction(state, &plant, actionPlanting); err != nil {
 		t.Fatalf("A encounter globally blocked disjoint B Plant action start: %v", err)
 	}
 	if err := state.Scheduler.Schedule(plant); err != nil {
@@ -91,29 +91,29 @@ func TestEncounterStartOnlySchedulesFuturePulsesAndDoesNotBlockOtherActions(t *t
 	if err := state.Bomb.StartPlant(carrier.Profile.PlayerID, plant.ID, "B", 0, 4); err != nil {
 		t.Fatalf("A encounter globally blocked disjoint B plant: %v", err)
 	}
-	if state.Phase != PhaseOpeningDeploy {
+	if state.Phase != phaseOpeningDeploy {
 		t.Fatal("encounter mutated the global phase into an action lock")
 	}
 }
 
 func TestCombatEndIsLocalReleasesActorsAndNeverSetsRoundWinner(t *testing.T) {
 	state := makeTestRoundState(t, 704)
-	candidate, _ := BuildEncounterCandidate(state, "contact", "SCN_A", "A_SITE", []string{"team_a_p2", "team_b_p1"})
-	schedule, err := StartEncounter(state, candidate)
+	candidate, _ := buildEncounterCandidate(state, "contact", "SCN_A", "A_SITE", []string{"team_a_p2", "team_b_p1"})
+	schedule, err := startEncounter(state, candidate)
 	if err != nil {
 		t.Fatal(err)
 	}
 	state.Timeline = schedule.EndAction.ResolveAt
 	victim := state.Players["team_b_p1"]
 	victim.HP, victim.Alive = 0, false
-	result, err := EndEncounter(state, candidate.ID, "local_elimination")
+	result, err := endEncounter(state, candidate.ID, "local_elimination")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if result.LocalWinnerSide != SideT || !result.DecisionTriggered || state.Terminal != nil || len(state.ActiveEngagements) != 0 {
 		t.Fatalf("CombatEnd became a round terminal or failed cleanup: result=%+v terminal=%+v", result, state.Terminal)
 	}
-	if state.Players["team_a_p2"].EngagementID != "" || state.Players["team_a_p2"].Action.CurrentActionID != "" || state.Nodes["A_SITE"].ActualControl != ControlT {
+	if state.Players["team_a_p2"].EngagementID != "" || state.Players["team_a_p2"].Action.CurrentActionID != "" || state.Nodes["A_SITE"].ActualControl != controlT {
 		t.Fatalf("CombatEnd did not release/update local control: player=%+v node=%+v", state.Players["team_a_p2"], state.Nodes["A_SITE"])
 	}
 	if !state.Players["team_b_p3"].Alive {
@@ -123,24 +123,24 @@ func TestCombatEndIsLocalReleasesActorsAndNeverSetsRoundWinner(t *testing.T) {
 
 func TestEncounterExitChecksPulseDurationAndLocalElimination(t *testing.T) {
 	state := makeTestRoundState(t, 705)
-	candidate, _ := BuildEncounterCandidate(state, "contact", "SCN_A", "A_SITE", []string{"team_a_p2", "team_b_p1"})
-	_, err := StartEncounter(state, candidate)
+	candidate, _ := buildEncounterCandidate(state, "contact", "SCN_A", "A_SITE", []string{"team_a_p2", "team_b_p1"})
+	_, err := startEncounter(state, candidate)
 	if err != nil {
 		t.Fatal(err)
 	}
 	encounter := state.ActiveEngagements[candidate.ID]
 	encounter.PulsesResolved = encounter.MaxPulses
-	if end, reason := EncounterShouldEnd(state, encounter); !end || reason != "pulse_limit" {
+	if end, reason := encounterShouldEnd(state, encounter); !end || reason != "pulse_limit" {
 		t.Fatalf("pulse limit not enforced: %v/%s", end, reason)
 	}
 	encounter.PulsesResolved = 0
 	state.Timeline = encounter.EndsAt
-	if end, reason := EncounterShouldEnd(state, encounter); !end || reason != "duration_limit" {
+	if end, reason := encounterShouldEnd(state, encounter); !end || reason != "duration_limit" {
 		t.Fatalf("duration limit not enforced: %v/%s", end, reason)
 	}
 	state.Timeline = 0
 	state.Players["team_b_p1"].Alive, state.Players["team_b_p1"].HP = false, 0
-	if end, reason := EncounterShouldEnd(state, encounter); !end || reason != "local_elimination" {
+	if end, reason := encounterShouldEnd(state, encounter); !end || reason != "local_elimination" {
 		t.Fatalf("local elimination not enforced: %v/%s", end, reason)
 	}
 }

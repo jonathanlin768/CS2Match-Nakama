@@ -15,11 +15,19 @@ type DebugSimuMatchRequest struct {
 // SimuMatchRequest is the production battle entry. Client-provided attributes,
 // prices and outcomes are intentionally not part of this contract.
 type SimuMatchRequest struct {
-	Mode             string   `json:"mode"`
-	TutorialConfigID string   `json:"tutorial_config_id,omitempty"`
-	ConfigVersion    int32    `json:"config_version,omitempty"`
-	PlayerIDs        []string `json:"player_ids,omitempty"`
+	Mode             MatchMode `json:"mode"`
+	TutorialConfigID string    `json:"tutorial_config_id,omitempty"`
+	ConfigVersion    int32     `json:"config_version,omitempty"`
+	PlayerIDs        []string  `json:"player_ids,omitempty"`
 }
+
+// MatchMode identifies an offline battle mode. Requests still require validation.
+type MatchMode string
+
+const (
+	MatchModeComputer MatchMode = "computer"
+	MatchModeTutorial MatchMode = "tutorial"
+)
 
 type SimuMatchResponse struct {
 	*matchengine.MatchResult

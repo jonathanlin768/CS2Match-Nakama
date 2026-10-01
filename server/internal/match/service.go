@@ -27,17 +27,17 @@ const (
 
 // Service 是 match 子系统的业务入口。
 type Service struct {
-	engine    *matchengine.Service
-	logger    runtime.Logger
-	mapConfig map[string]mapConfigState
+	engineService *matchengine.Service
+	logger        runtime.Logger
+	mapConfig     map[string]mapConfigState
 }
 
 // NewService 创建 match 业务服务，并缓存地图配置校验结果。
-func NewService(engine *matchengine.Service, logger runtime.Logger) *Service {
+func NewService(engineService *matchengine.Service, logger runtime.Logger) *Service {
 	s := &Service{
-		engine:    engine,
-		logger:    logger,
-		mapConfig: map[string]mapConfigState{},
+		engineService: engineService,
+		logger:        logger,
+		mapConfig:     map[string]mapConfigState{},
 	}
 	s.cacheMapConfig(matchengine.DefaultMapID)
 	return s
@@ -89,50 +89,18 @@ func (s *Service) DebugSimuMatch(ctx context.Context, userID string, req DebugSi
 
 // SimuMatch runs a server-authoritative tutorial or computer battle.
 func (s *Service) SimuMatch(ctx context.Context, userID string, req SimuMatchRequest) (*SimuMatchResponse, error) {
-	var mapID string
-	var teamA, teamB matchengine.TeamInput
-	var err error
-	switch req.Mode {
-	case "computer":
-		mapID = matchengine.DefaultMapID
-		teamAIDs, teamBIDs, lineupErr := defaultTeamPlayerIDs()
-		if lineupErr != nil {
-			return nil, lineupErr
-		}
-		teamA, err = s.buildConfigTeam(defaultTeamAID, teamAIDs)
-		if err == nil {
-			teamB, err = s.buildConfigTeam(defaultTeamBID, teamBIDs)
-		}
-	case "tutorial":
-		tutorial := cfg.GetTutorialBattle(req.TutorialConfigID)
-		if tutorial == nil || !tutorial.Enabled {
-			return nil, &MatchError{Code: "INVALID_TUTORIAL_CONFIG", Message: "tutorial config is unavailable"}
-		}
-		if req.ConfigVersion != tutorial.Version {
-			return nil, &MatchError{Code: "CONFIG_VERSION_MISMATCH", Message: "tutorial config has changed; reload and try again"}
-		}
-		if err = validateTutorialLineup(tutorial, req.PlayerIDs); err != nil {
-			return nil, err
-		}
-		mapID = tutorial.MapId
-		teamA, err = s.buildNamedTeam("tutorial_players", "你的临时阵容", req.PlayerIDs)
-		if err == nil {
-			teamB, err = s.buildConfigTeam(tutorial.OpponentTeamId, tutorial.OpponentPlayerIds)
-		}
-	default:
-		return nil, &MatchError{Code: "INVALID_MODE", Message: "mode must be tutorial or computer"}
-	}
+	prepared, err := s.prepareMatch(req)
 	if err != nil {
 		return nil, err
 	}
-	result, err := s.simulate(ctx, fmt.Sprintf("simu_%s_%d", userID, time.Now().UnixMilli()), mapID, time.Now().UnixNano(), teamA, teamB)
+	result, err := s.simulate(ctx, fmt.Sprintf("simu_%s_%d", userID, time.Now().UnixMilli()), prepared.MapID, time.Now().UnixNano(), prepared.TeamA, prepared.TeamB)
 	if err != nil {
 		return nil, err
 	}
 	return &SimuMatchResponse{
 		MatchResult: result,
 		DebugEnabled: combatConstBool(
-			s.mapConfig[mapID].config.CombatConstants,
+			s.mapConfig[prepared.MapID].config.CombatConstants,
 			battleReportDebugLogKey,
 			false,
 		),
@@ -172,7 +140,7 @@ func (s *Service) simulate(ctx context.Context, matchID, mapID string, seed int6
 		SideLoadouts: defaultSideLoadouts(),
 	}
 
-	result, err := s.engine.Simulate(ctx, input)
+	result, err := s.engineService.Simulate(ctx, input)
 	if err != nil {
 		if me, ok := err.(*matchengine.EngineError); ok {
 			return nil, &MatchError{Code: me.Code, Message: me.Message}

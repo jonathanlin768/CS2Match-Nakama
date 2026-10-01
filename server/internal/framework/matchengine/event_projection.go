@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func ProjectReasonRecord(record ReasonRecord, actionID, effectID string) (*EventReason, error) {
+func projectReasonRecord(record reasonRecord, actionID, effectID string) (*EventReason, error) {
 	if record.Code == "" {
 		return nil, newError("INVALID_REASON", "reason code is required")
 	}
@@ -67,16 +67,16 @@ func hiddenStateField(field string) bool {
 	return strings.Contains(lower, "intent") || strings.Contains(lower, "actionqueue") || strings.Contains(lower, "actualcontrol") || strings.Contains(lower, "hidden")
 }
 
-func NumberReasonValue(value float64) ReasonValue { return ReasonValue{Kind: "Number", Number: &value} }
-func StringReasonValue(value string) ReasonValue  { return ReasonValue{Kind: "String", String: &value} }
-func BoolReasonValue(value bool) ReasonValue      { return ReasonValue{Kind: "Bool", Bool: &value} }
-func NullReasonValue() ReasonValue                { return ReasonValue{Kind: "Null"} }
+func numberReasonValue(value float64) ReasonValue { return ReasonValue{Kind: "Number", Number: &value} }
+func stringReasonValue(value string) ReasonValue  { return ReasonValue{Kind: "String", String: &value} }
+func boolReasonValue(value bool) ReasonValue      { return ReasonValue{Kind: "Bool", Bool: &value} }
+func nullReasonValue() ReasonValue                { return ReasonValue{Kind: "Null"} }
 
-func snapshotForEvent(state *RoundState) *EventStateSnapshot {
+func snapshotForEvent(state *roundState) *EventStateSnapshot {
 	if state == nil {
 		return nil
 	}
-	projection := &RoundPublicProjection{Bomb: projectBombState(state.Bomb)}
+	projection := &roundPublicProjection{Bomb: projectBombState(state.Bomb)}
 	for _, playerID := range sortedPlayerIDs(state) {
 		player := state.Players[playerID]
 		projection.Players = append(projection.Players, &PlayerState{
@@ -105,7 +105,7 @@ func snapshotForEvent(state *RoundState) *EventStateSnapshot {
 	}
 }
 
-func eventLocation(state *RoundState, location PlayerLocation, eventID, sourceObjectID string) *Location {
+func eventLocation(state *roundState, location playerLocation, eventID, sourceObjectID string) *Location {
 	seed := deriveSeed(state.Seed, "event_location", eventID, sourceObjectID)
 	if location.Edge != nil {
 		return &Location{
@@ -142,7 +142,7 @@ func eventLocation(state *RoundState, location PlayerLocation, eventID, sourceOb
 	return &Location{Name: node.Node.Name, X: clampProbability(x), Y: clampProbability(y), SourceType: sourceType, SourceID: node.Node.ID, Floor: node.Node.Floor, Seed: seed}
 }
 
-func BuildExplainableReport(round *RoundResult) *ExplainableReport {
+func buildExplainableReport(round *RoundResult) *ExplainableReport {
 	if round == nil {
 		return &ExplainableReport{}
 	}
@@ -187,7 +187,7 @@ func BuildExplainableReport(round *RoundResult) *ExplainableReport {
 	return report
 }
 
-func BuildMatchExplainableReport(rounds []*RoundResult) *ExplainableReport {
+func buildMatchExplainableReport(rounds []*RoundResult) *ExplainableReport {
 	report := &ExplainableReport{}
 	var summaries []string
 	for _, round := range rounds {

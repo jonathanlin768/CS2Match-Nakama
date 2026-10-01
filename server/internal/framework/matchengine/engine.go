@@ -8,9 +8,9 @@ import (
 	"time"
 )
 
-type MatchEngine struct {
+type matchEngine struct {
 	input          *MatchInput
-	state          *MatchScoreState
+	state          *matchScoreState
 	roundSimulator roundSimulator
 	stats          map[string]*playerStatAccumulator
 	roster         map[string]PlayerProfile
@@ -33,19 +33,19 @@ type playerStatAccumulator struct {
 	Defuses        int
 }
 
-func newProductionMatchEngine(input *MatchInput) *MatchEngine {
+func newProductionMatchEngine(input *MatchInput) *matchEngine {
 	return newMatchEngine(input, nil)
 }
 
-func newMatchEngine(input *MatchInput, simulator roundSimulator) *MatchEngine {
-	engine := &MatchEngine{input: input, roundSimulator: simulator}
+func newMatchEngine(input *MatchInput, simulator roundSimulator) *matchEngine {
+	engine := &matchEngine{input: input, roundSimulator: simulator}
 	if engine.roundSimulator == nil {
-		engine.roundSimulator = &causalRoundEngine{owner: engine}
+		engine.roundSimulator = &causalRoundEngine{}
 	}
 	return engine
 }
 
-func (e *MatchEngine) simulateMatch(ctx context.Context) (*MatchResult, error) {
+func (e *matchEngine) simulateMatch(ctx context.Context) (*MatchResult, error) {
 	if err := e.validateInput(); err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (e *MatchEngine) simulateMatch(ctx context.Context) (*MatchResult, error) {
 		startTime = time.Now().UnixMilli()
 	}
 	var err error
-	e.state, err = NewMatchScoreState(e.input.TeamA.TeamID, e.input.TeamB.TeamID, e.input.InitialSideByTeam)
+	e.state, err = newMatchScoreState(e.input.TeamA.TeamID, e.input.TeamB.TeamID, e.input.InitialSideByTeam)
 	if err != nil {
 		return nil, err
 	}
@@ -136,11 +136,11 @@ func (e *MatchEngine) simulateMatch(ctx context.Context) (*MatchResult, error) {
 	}
 	result.FinalStats.ScoreTeamA = result.FinalScoreTeamA
 	result.FinalStats.ScoreTeamB = result.FinalScoreTeamB
-	result.Report = BuildMatchExplainableReport(result.Rounds)
+	result.Report = buildMatchExplainableReport(result.Rounds)
 	return result, nil
 }
 
-func (e *MatchEngine) addMatchBoundaryEvents(result *MatchResult) {
+func (e *matchEngine) addMatchBoundaryEvents(result *MatchResult) {
 	if len(result.Rounds) == 0 {
 		return
 	}
@@ -168,7 +168,7 @@ func (e *MatchEngine) addMatchBoundaryEvents(result *MatchResult) {
 	sortEvents(last.Events)
 }
 
-func (e *MatchEngine) playOvertime(ctx context.Context, result *MatchResult) error {
+func (e *matchEngine) playOvertime(ctx context.Context, result *MatchResult) error {
 	roundNumber := len(result.Rounds) + 1
 	for block := 1; block <= 20; block++ {
 		for inBlock := 1; inBlock <= e.input.RuleSet.OvertimeBlockRounds; inBlock++ {
@@ -212,7 +212,7 @@ type roundContext struct {
 	isSideSwitch         bool
 }
 
-func (e *MatchEngine) buildRoundInput(ctx roundContext) *RoundInput {
+func (e *matchEngine) buildRoundInput(ctx roundContext) *RoundInput {
 	scoreSnapshot := map[string]int{
 		e.input.TeamA.TeamID: e.state.Score(e.input.TeamA.TeamID),
 		e.input.TeamB.TeamID: e.state.Score(e.input.TeamB.TeamID),
@@ -242,7 +242,7 @@ func (e *MatchEngine) buildRoundInput(ctx roundContext) *RoundInput {
 	}
 }
 
-func (e *MatchEngine) consumeRoundSimulation(simulation *RoundSimulationResult) (*RoundResult, error) {
+func (e *matchEngine) consumeRoundSimulation(simulation *roundSimulationResult) (*RoundResult, error) {
 	if simulation == nil || simulation.Round == nil || simulation.Terminal == nil {
 		return nil, newError("SIMULATION_INVARIANT_ERROR", "round simulator returned no round or terminal")
 	}
@@ -279,7 +279,7 @@ func (e *MatchEngine) consumeRoundSimulation(simulation *RoundSimulationResult) 
 	return round, nil
 }
 
-func (e *MatchEngine) validateInput() error {
+func (e *matchEngine) validateInput() error {
 	if e.input == nil {
 		return newError("INVALID_MATCH_INPUT", "input is nil")
 	}
@@ -349,7 +349,7 @@ func validateTeam(team TeamInput) error {
 	return nil
 }
 
-func (e *MatchEngine) buildFinalStats(totalRounds int, winnerTeamID string) *FinalStats {
+func (e *matchEngine) buildFinalStats(totalRounds int, winnerTeamID string) *FinalStats {
 	stats := make([]*PlayerMatchStats, 0, len(e.stats))
 	ids := make([]string, 0, len(e.stats))
 	for id := range e.stats {
@@ -382,7 +382,7 @@ func (e *MatchEngine) buildFinalStats(totalRounds int, winnerTeamID string) *Fin
 	return &FinalStats{WinnerTeamID: winnerTeamID, PlayerStats: stats}
 }
 
-func (e *MatchEngine) buildRoster() map[string]PlayerProfile {
+func (e *matchEngine) buildRoster() map[string]PlayerProfile {
 	roster := map[string]PlayerProfile{}
 	for _, p := range append(e.input.TeamA.Players, e.input.TeamB.Players...) {
 		roster[p.PlayerID] = p
@@ -390,7 +390,7 @@ func (e *MatchEngine) buildRoster() map[string]PlayerProfile {
 	return roster
 }
 
-func (e *MatchEngine) buildStats() map[string]*playerStatAccumulator {
+func (e *matchEngine) buildStats() map[string]*playerStatAccumulator {
 	stats := map[string]*playerStatAccumulator{}
 	for _, team := range []TeamInput{e.input.TeamA, e.input.TeamB} {
 		for _, p := range team.Players {
@@ -406,14 +406,14 @@ func (e *MatchEngine) buildStats() map[string]*playerStatAccumulator {
 	return stats
 }
 
-func (e *MatchEngine) swapSides() {
+func (e *matchEngine) swapSides() {
 	for teamID, memory := range e.strategyMemory {
-		e.strategyMemory[teamID] = DecayStrategyMemoryForSideSwitch(memory)
+		e.strategyMemory[teamID] = decayStrategyMemoryForSideSwitch(memory)
 	}
 	e.state.SwitchSides()
 }
 
-func (e *MatchEngine) winnerTeamID() string {
+func (e *matchEngine) winnerTeamID() string {
 	if e.state.Score(e.input.TeamA.TeamID) > e.state.Score(e.input.TeamB.TeamID) {
 		return e.input.TeamA.TeamID
 	}
@@ -423,14 +423,14 @@ func (e *MatchEngine) winnerTeamID() string {
 	return ""
 }
 
-func (e *MatchEngine) winnerSide(teamID string) string {
+func (e *matchEngine) winnerSide(teamID string) string {
 	if teamID == "" {
 		return ""
 	}
 	return e.state.SideByTeam[teamID]
 }
 
-func (e *MatchEngine) teamName(teamID string) string {
+func (e *matchEngine) teamName(teamID string) string {
 	if teamID == e.input.TeamA.TeamID {
 		return e.input.TeamA.Name
 	}
@@ -440,14 +440,14 @@ func (e *MatchEngine) teamName(teamID string) string {
 	return teamID
 }
 
-func (e *MatchEngine) team(teamID string) TeamInput {
+func (e *matchEngine) team(teamID string) TeamInput {
 	if teamID == e.input.TeamA.TeamID {
 		return e.input.TeamA
 	}
 	return e.input.TeamB
 }
 
-func (e *MatchEngine) roundEndTime(events []*GameEvent) int {
+func (e *matchEngine) roundEndTime(events []*GameEvent) int {
 	maxTimestamp := 1
 	for _, ev := range events {
 		if int(ev.Timestamp) > maxTimestamp {

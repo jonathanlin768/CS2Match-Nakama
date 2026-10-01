@@ -108,7 +108,7 @@ sendJobs:
 
 type calibrationRound struct {
 	input  *RoundInput
-	result *RoundSimulationResult
+	result *roundSimulationResult
 }
 
 func calibrationInput(template *RoundInput, index int) *RoundInput {
@@ -143,7 +143,7 @@ func aggregateCalibration(rounds []*calibrationRound) (*CalibrationSummary, erro
 		round := sample.result.Round
 		terminal := sample.result.Terminal
 		summary.TerminalCounts[terminal.WinReason]++
-		if terminal.WinReason == WinReasonTimeout {
+		if terminal.WinReason == winReasonTimeout {
 			nodeID := "unknown"
 			if round.Bomb != nil && round.Bomb.NodeID != "" {
 				nodeID = round.Bomb.NodeID
@@ -226,7 +226,7 @@ func aggregateCalibration(rounds []*calibrationRound) (*CalibrationSummary, erro
 	summary.ThreeVFiveComebackRate = ratio(threeVFiveComebacks, summary.ThreeVFiveOpportunities)
 	summary.StrongTeamWinRate = ratio(strongTeamWins, summary.StrongTeamOpportunities)
 	summary.AverageRoundDurationSeconds = float64(duration) / denominator
-	timeoutCount := summary.TerminalCounts[WinReasonTimeout]
+	timeoutCount := summary.TerminalCounts[winReasonTimeout]
 	summary.TimeoutAverageAliveT = ratio(timeoutAliveT, timeoutCount)
 	summary.TimeoutAverageAliveCT = ratio(timeoutAliveCT, timeoutCount)
 	return summary, nil

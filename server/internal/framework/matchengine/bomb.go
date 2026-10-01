@@ -6,80 +6,80 @@ import (
 )
 
 const (
-	PriorityPlantComplete  = 70
-	PriorityDefuseComplete = 60
-	PriorityBombExplode    = 50
+	priorityPlantComplete  = 70
+	priorityDefuseComplete = 60
+	priorityBombExplode    = 50
 )
 
-type SiteContestDecisionType string
+type siteContestDecisionType string
 
 const (
-	SiteContestEncounter SiteContestDecisionType = "Encounter"
-	SiteContestPlant     SiteContestDecisionType = "Plant"
-	SiteContestWithdraw  SiteContestDecisionType = "Withdraw"
+	siteContestEncounter siteContestDecisionType = "Encounter"
+	siteContestPlant     siteContestDecisionType = "Plant"
+	siteContestWithdraw  siteContestDecisionType = "Withdraw"
 )
 
-type SiteContestDecision struct {
-	Type       SiteContestDecisionType
+type siteContestDecision struct {
+	Type       siteContestDecisionType
 	Site       string
 	ActorIDs   []string
 	PlantScore float64
 	PlantRisk  float64
-	Reasons    []ReasonRecord
+	Reasons    []reasonRecord
 }
 
-type BombRecoverySchedule struct {
-	Action         ScheduledAction
-	Path           PathResult
+type bombRecoverySchedule struct {
+	Action         scheduledAction
+	Path           pathResult
 	MoveDuration   int
 	PickupDuration int
 }
 
-type BombActionResult struct {
+type bombActionResult struct {
 	Applied  bool
 	Event    *GameEvent
-	FollowUp *ScheduledAction
+	FollowUp *scheduledAction
 }
 
-func PlanSiteContest(state *RoundState, site string, actorIDs []string) (SiteContestDecision, error) {
+func planSiteContest(state *roundState, site string, actorIDs []string) (siteContestDecision, error) {
 	nodeID := plantNodeForSite(state, site)
 	if nodeID == "" {
-		return SiteContestDecision{}, newError("INVALID_PLANT", "site %s has no plant node", site)
+		return siteContestDecision{}, newError("INVALID_PLANT", "site %s has no plant node", site)
 	}
 	actors := liveActorsAtNode(state, actorIDs, nodeID)
 	carrier := state.Players[state.Bomb.CarrierID]
 	if carrier == nil || !carrier.Alive || carrier.Side != SideT || carrier.Location.NodeID != nodeID {
-		return SiteContestDecision{Type: SiteContestWithdraw, Site: site, ActorIDs: actors, Reasons: []ReasonRecord{{Code: "NO_CARRIER_AT_SITE", Source: site, Value: -1, Weight: 1}}}, nil
+		return siteContestDecision{Type: siteContestWithdraw, Site: site, ActorIDs: actors, Reasons: []reasonRecord{{Code: "NO_CARRIER_AT_SITE", Source: site, Value: -1, Weight: 1}}}, nil
 	}
 	node := state.Nodes[nodeID]
 	threats := visibleThreatsAtSite(state, nodeID, SideCT)
-	plantScore, plantRisk := CalculatePlantScore(state, carrier.Profile.PlayerID, site, threats)
-	if node.ActualControl == ControlCT || node.ActualControl == ControlContested || len(threats) > 0 {
-		return SiteContestDecision{Type: SiteContestEncounter, Site: site, ActorIDs: append(actors, threats...), PlantScore: plantScore, PlantRisk: plantRisk, Reasons: []ReasonRecord{{Code: "VISIBLE_SITE_THREAT", Source: nodeID, Value: -plantRisk, Weight: 1}}}, nil
+	plantScore, plantRisk := calculatePlantScore(state, carrier.Profile.PlayerID, site, threats)
+	if node.ActualControl == controlCT || node.ActualControl == controlContested || len(threats) > 0 {
+		return siteContestDecision{Type: siteContestEncounter, Site: site, ActorIDs: append(actors, threats...), PlantScore: plantScore, PlantRisk: plantRisk, Reasons: []reasonRecord{{Code: "VISIBLE_SITE_THREAT", Source: nodeID, Value: -plantRisk, Weight: 1}}}, nil
 	}
 	if plantScore >= plantRisk {
-		return SiteContestDecision{Type: SiteContestPlant, Site: site, ActorIDs: actors, PlantScore: plantScore, PlantRisk: plantRisk, Reasons: []ReasonRecord{{Code: "PLANT_WINDOW", Source: nodeID, Value: plantScore - plantRisk, Weight: 1}}}, nil
+		return siteContestDecision{Type: siteContestPlant, Site: site, ActorIDs: actors, PlantScore: plantScore, PlantRisk: plantRisk, Reasons: []reasonRecord{{Code: "PLANT_WINDOW", Source: nodeID, Value: plantScore - plantRisk, Weight: 1}}}, nil
 	}
-	return SiteContestDecision{Type: SiteContestWithdraw, Site: site, ActorIDs: actors, PlantScore: plantScore, PlantRisk: plantRisk, Reasons: []ReasonRecord{{Code: "PLANT_RISK", Source: nodeID, Value: plantScore - plantRisk, Weight: 1}}}, nil
+	return siteContestDecision{Type: siteContestWithdraw, Site: site, ActorIDs: actors, PlantScore: plantScore, PlantRisk: plantRisk, Reasons: []reasonRecord{{Code: "PLANT_RISK", Source: nodeID, Value: plantScore - plantRisk, Weight: 1}}}, nil
 }
 
-func CalculatePlantScore(state *RoundState, actorID, site string, visibleThreatIDs []string) (float64, float64) {
+func calculatePlantScore(state *roundState, actorID, site string, visibleThreatIDs []string) (float64, float64) {
 	actor := state.Players[actorID]
 	if actor == nil {
 		return 0, math.Inf(1)
 	}
-	cover := ScopedUtilityModifier(state, SideT, UtilityPlantCover, "", "site:"+site, state.Timeline)
+	cover := scopedUtilityModifier(state, SideT, utilityPlantCover, "", "site:"+site, state.Timeline)
 	score := float64(actor.Profile.Attributes.Composure+actor.Profile.Attributes.Discipline+actor.Focus)/3 + cover*20
 	risk := float64(len(visibleThreatIDs))*25 + playerExposure(actor)
-	if node := state.Nodes[actor.Location.NodeID]; node != nil && node.ActualControl == ControlCT {
+	if node := state.Nodes[actor.Location.NodeID]; node != nil && node.ActualControl == controlCT {
 		risk += 30
 	}
 	return score, risk
 }
 
-func CanAttemptPlant(state *RoundState, actorID, site string) error {
+func canAttemptPlant(state *roundState, actorID, site string) error {
 	actor := state.Players[actorID]
-	if actor == nil || !actor.Alive || actor.Side != SideT || !actor.HasBomb || state.Bomb.CarrierID != actorID || state.Bomb.Status != BombCarried {
+	if actor == nil || !actor.Alive || actor.Side != SideT || !actor.HasBomb || state.Bomb.CarrierID != actorID || state.Bomb.Status != bombCarried {
 		return newError("INVALID_PLANT", "actor is not the live unique bomb carrier")
 	}
 	if actor.EngagementID != "" || actor.Action.CurrentActionID != "" {
@@ -92,38 +92,38 @@ func CanAttemptPlant(state *RoundState, actorID, site string) error {
 	if node == nil || node.Node.Site != site || !hasString(node.Node.AreaUsages, "Plant") {
 		return newError("INVALID_PLANT", "bomb carrier is not inside the configured plant site")
 	}
-	if node.ActualControl == ControlCT || node.ActualControl == ControlContested {
+	if node.ActualControl == controlCT || node.ActualControl == controlContested {
 		return newError("SITE_CONTEST_REQUIRED", "plant site must be contested before planting")
 	}
 	return nil
 }
 
-func StartPlantAction(state *RoundState, actorID, site, intentID string, ordinal int) (ScheduledAction, error) {
-	if err := CanAttemptPlant(state, actorID, site); err != nil {
-		return ScheduledAction{}, err
+func startPlantAction(state *roundState, actorID, site, intentID string, ordinal int) (scheduledAction, error) {
+	if err := canAttemptPlant(state, actorID, site); err != nil {
+		return scheduledAction{}, err
 	}
 	actor := state.Players[actorID]
-	utilityResult, err := spendScopedUtility(state, SideT, UtilityPlantCover, []string{actorID}, "", "site:"+site, state.constants.Int("BasePlantTime", 1), 10)
+	utilityResult, err := spendScopedUtility(state, SideT, utilityPlantCover, []string{actorID}, "", "site:"+site, state.constants.Int("BasePlantTime", 1), 10)
 	if err != nil {
-		return ScheduledAction{}, err
+		return scheduledAction{}, err
 	}
-	cover := ScopedUtilityModifier(state, SideT, UtilityPlantCover, "", "site:"+site, state.Timeline)
+	cover := scopedUtilityModifier(state, SideT, utilityPlantCover, "", "site:"+site, state.Timeline)
 	duration := int(math.Round(float64(state.constants.Int("BasePlantTime", 1)) - cover - float64(actor.Profile.Attributes.Discipline-50)/100))
 	duration = clampInt(duration, state.constants.Int("MinPlantTime", 1), state.constants.Int("MaxPlantTime", 1))
-	action := ScheduledAction{IntentID: intentID, Type: ActionPlantComplete, ActorIDs: []string{actorID}, From: actor.Location, StartAt: state.Timeline, ResolveAt: state.Timeline + duration, Priority: PriorityPlantComplete, MinRequiredActors: 1, Payload: ActionPayload{Site: site}}
-	action.ID = NewActionID(state.Seed, action.Type, intentID, action.StartAt, action.ResolveAt, action.ActorIDs, ordinal)
-	if err := BeginExclusiveAction(state, &action, ActionPlanting); err != nil {
-		return ScheduledAction{}, err
+	action := scheduledAction{IntentID: intentID, Type: actionPlantComplete, ActorIDs: []string{actorID}, From: actor.Location, StartAt: state.Timeline, ResolveAt: state.Timeline + duration, Priority: priorityPlantComplete, MinRequiredActors: 1, Payload: actionPayload{Site: site}}
+	action.ID = newActionID(state.Seed, action.Type, intentID, action.StartAt, action.ResolveAt, action.ActorIDs, ordinal)
+	if err := beginExclusiveAction(state, &action, actionPlanting); err != nil {
+		return scheduledAction{}, err
 	}
-	actor.Intent = Intent{ID: intentID, Type: IntentPlant, TargetID: site, CreatedAt: state.Timeline}
+	actor.Intent = intent{ID: intentID, Type: intentPlant, TargetID: site, CreatedAt: state.Timeline}
 	if err := state.Bomb.StartPlant(actorID, action.ID, site, action.StartAt, action.ResolveAt); err != nil {
 		cancelActionForActors(state, action)
-		return ScheduledAction{}, err
+		return scheduledAction{}, err
 	}
 	if err := state.Scheduler.Schedule(action); err != nil {
 		state.Bomb.InterruptPlant(actorID, action.ID)
 		cancelActionForActors(state, action)
-		return ScheduledAction{}, err
+		return scheduledAction{}, err
 	}
 	event, _ := newActionLifecycleEvent(state, action, EventPlantStart, "bomb plant started", 0)
 	addUtilityReason(event, utilityResult)
@@ -133,97 +133,97 @@ func StartPlantAction(state *RoundState, actorID, site, intentID string, ordinal
 	return action, nil
 }
 
-func ResolvePlantComplete(state *RoundState, action ScheduledAction) (BombActionResult, error) {
+func resolvePlantComplete(state *roundState, action scheduledAction) (bombActionResult, error) {
 	valid := validActionActors(state, action)
 	if len(valid) != 1 || state.Timeline != action.ResolveAt || state.Timeline > state.RoundDeadline {
-		return BombActionResult{}, nil
+		return bombActionResult{}, nil
 	}
 	actor := state.Players[valid[0]]
-	if state.Bomb.Status != BombPlanting || state.Bomb.PlantActionID != action.ID || !sameLocation(actor.Location, action.From) {
-		return BombActionResult{}, nil
+	if state.Bomb.Status != bombPlanting || state.Bomb.PlantActionID != action.ID || !sameLocation(actor.Location, action.From) {
+		return bombActionResult{}, nil
 	}
 	explodeAt := state.Timeline + state.constants.Int("BombExplodeTime", 1)
 	if err := state.Bomb.CompletePlant(actor.Location, state.Timeline, explodeAt); err != nil {
-		return BombActionResult{}, err
+		return bombActionResult{}, err
 	}
 	actor.HasBomb = false
-	CompleteActionForActors(state, action, valid)
+	completeActionForActors(state, action, valid)
 	state.BombDeadline = explodeAt
-	state.Phase = PhasePostPlant
-	explode := ScheduledAction{ID: NewActionID(state.Seed, ActionBombExplode, action.ID, state.Timeline, explodeAt, nil, 0), IntentID: action.ID, Type: ActionBombExplode, StartAt: state.Timeline, ResolveAt: explodeAt, Priority: PriorityBombExplode, Payload: ActionPayload{Site: state.Bomb.PlantedSite}}
+	state.Phase = phasePostPlant
+	explode := scheduledAction{ID: newActionID(state.Seed, actionBombExplode, action.ID, state.Timeline, explodeAt, nil, 0), IntentID: action.ID, Type: actionBombExplode, StartAt: state.Timeline, ResolveAt: explodeAt, Priority: priorityBombExplode, Payload: actionPayload{Site: state.Bomb.PlantedSite}}
 	if err := state.Scheduler.Schedule(explode); err != nil {
-		return BombActionResult{}, err
+		return bombActionResult{}, err
 	}
 	event := bombLifecycleEffectEvent(state, action, EventBombPlant, "bomb planted", 0)
 	event.Bomb = projectBombState(state.Bomb)
 	event.State = snapshotForEvent(state)
 	state.Events = append(state.Events, event)
-	return BombActionResult{Applied: true, Event: event, FollowUp: &explode}, nil
+	return bombActionResult{Applied: true, Event: event, FollowUp: &explode}, nil
 }
 
-func ScheduleBombRecovery(state *RoundState, actorID, intentID string, ordinal int) (BombRecoverySchedule, *DecisionFeedback, error) {
+func scheduleBombRecovery(state *roundState, actorID, intentID string, ordinal int) (bombRecoverySchedule, *decisionFeedback, error) {
 	actor := state.Players[actorID]
-	if actor == nil || !actor.Alive || actor.Side != SideT || actor.Action.CurrentActionID != "" || state.Bomb.Status != BombDropped {
-		return BombRecoverySchedule{}, nil, newError("INVALID_PICKUP", "bomb recovery actor is unavailable")
+	if actor == nil || !actor.Alive || actor.Side != SideT || actor.Action.CurrentActionID != "" || state.Bomb.Status != bombDropped {
+		return bombRecoverySchedule{}, nil, newError("INVALID_PICKUP", "bomb recovery actor is unavailable")
 	}
 	targetNode := bombRecoveryNode(state.Bomb.Location)
 	if targetNode == "" {
-		return BombRecoverySchedule{}, nil, newError("INVALID_PICKUP", "dropped bomb has no semantic location")
+		return bombRecoverySchedule{}, nil, newError("INVALID_PICKUP", "dropped bomb has no semantic location")
 	}
-	if node := state.Nodes[targetNode]; node != nil && (node.ActualControl == ControlCT || node.ActualControl == ControlContested) {
-		return BombRecoverySchedule{}, &DecisionFeedback{Code: "SITE_CONTEST_REQUIRED", Message: "bomb location is enemy-controlled or contested"}, nil
+	if node := state.Nodes[targetNode]; node != nil && (node.ActualControl == controlCT || node.ActualControl == controlContested) {
+		return bombRecoverySchedule{}, &decisionFeedback{Code: "SITE_CONTEST_REQUIRED", Message: "bomb location is enemy-controlled or contested"}, nil
 	}
-	path, feedback, err := FindBoundedPath(&MapConfig{Nodes: runtimeNodes(state), Edges: state.mapEdges}, actor.Location.NodeID, targetNode, len(state.Nodes)*4)
+	path, feedback, err := findBoundedPath(&MapConfig{Nodes: runtimeNodes(state), Edges: state.mapEdges}, actor.Location.NodeID, targetNode, len(state.Nodes)*4)
 	if err != nil || feedback != nil {
-		return BombRecoverySchedule{}, feedback, err
+		return bombRecoverySchedule{}, feedback, err
 	}
 	pickupDuration := clampInt(state.constants.Int("BasePickupTime", 1), state.constants.Int("MinPickupTime", 1), state.constants.Int("MaxPickupTime", 1))
 	moveDuration := path.TotalBaseTime
 	resolveAt := state.Timeline + moveDuration + pickupDuration
-	action := ScheduledAction{IntentID: intentID, Type: ActionPickupComplete, ActorIDs: []string{actorID}, From: actor.Location, ToNodeID: targetNode, StartAt: state.Timeline, ResolveAt: resolveAt, Priority: PriorityPlantComplete, MinRequiredActors: 1, Payload: ActionPayload{TargetID: targetNode}}
-	action.ID = NewActionID(state.Seed, action.Type, intentID, action.StartAt, action.ResolveAt, action.ActorIDs, ordinal)
-	if err := BeginExclusiveAction(state, &action, ActionMoving); err != nil {
-		return BombRecoverySchedule{}, nil, err
+	action := scheduledAction{IntentID: intentID, Type: actionPickupComplete, ActorIDs: []string{actorID}, From: actor.Location, ToNodeID: targetNode, StartAt: state.Timeline, ResolveAt: resolveAt, Priority: priorityPlantComplete, MinRequiredActors: 1, Payload: actionPayload{TargetID: targetNode}}
+	action.ID = newActionID(state.Seed, action.Type, intentID, action.StartAt, action.ResolveAt, action.ActorIDs, ordinal)
+	if err := beginExclusiveAction(state, &action, actionMoving); err != nil {
+		return bombRecoverySchedule{}, nil, err
 	}
-	actor.Intent = Intent{ID: intentID, Type: IntentPickupBomb, TargetID: targetNode, CreatedAt: state.Timeline}
+	actor.Intent = intent{ID: intentID, Type: intentPickupBomb, TargetID: targetNode, CreatedAt: state.Timeline}
 	if err := state.Scheduler.Schedule(action); err != nil {
 		cancelActionForActors(state, action)
-		return BombRecoverySchedule{}, nil, err
+		return bombRecoverySchedule{}, nil, err
 	}
-	return BombRecoverySchedule{Action: action, Path: path, MoveDuration: moveDuration, PickupDuration: pickupDuration}, nil, nil
+	return bombRecoverySchedule{Action: action, Path: path, MoveDuration: moveDuration, PickupDuration: pickupDuration}, nil, nil
 }
 
-func ResolveBombPickup(state *RoundState, action ScheduledAction) (BombActionResult, error) {
+func resolveBombPickup(state *roundState, action scheduledAction) (bombActionResult, error) {
 	valid := validActionActors(state, action)
-	if len(valid) != 1 || state.Timeline != action.ResolveAt || state.Bomb.Status != BombDropped {
-		return BombActionResult{}, nil
+	if len(valid) != 1 || state.Timeline != action.ResolveAt || state.Bomb.Status != bombDropped {
+		return bombActionResult{}, nil
 	}
 	actor := state.Players[valid[0]]
 	actor.Location = clonePlayerLocation(state.Bomb.Location)
 	if err := state.Bomb.Pickup(actor.Profile.PlayerID, actor.Location, state.Timeline); err != nil {
-		return BombActionResult{}, err
+		return bombActionResult{}, err
 	}
 	actor.HasBomb = true
-	CompleteActionForActors(state, action, valid)
+	completeActionForActors(state, action, valid)
 	event := bombLifecycleEffectEvent(state, action, EventBombPickup, "bomb picked up", 0)
 	event.Bomb = projectBombState(state.Bomb)
 	event.State = snapshotForEvent(state)
 	state.Events = append(state.Events, event)
-	return BombActionResult{Applied: true, Event: event}, nil
+	return bombActionResult{Applied: true, Event: event}, nil
 }
 
-func CalculateDefuseTime(state *RoundState, actorID string) int {
+func calculateDefuseTime(state *roundState, actorID string) int {
 	actor := state.Players[actorID]
 	duration := float64(state.constants.Int("BaseDefuseTime", 1))
 	if actor != nil && actor.Weapon.HasKit {
 		duration *= 0.5
 	}
-	cover := ScopedUtilityModifier(state, SideCT, UtilityDefuseCover, "", "site:"+state.Bomb.PlantedSite, state.Timeline)
+	cover := scopedUtilityModifier(state, SideCT, utilityDefuseCover, "", "site:"+state.Bomb.PlantedSite, state.Timeline)
 	duration -= cover
 	return clampInt(int(math.Round(duration)), state.constants.Int("MinDefuseTime", 1), state.constants.Int("MaxDefuseTime", 1))
 }
 
-func CalculateDefuseScore(state *RoundState, actorID string) float64 {
+func calculateDefuseScore(state *roundState, actorID string) float64 {
 	actor := state.Players[actorID]
 	if actor == nil {
 		return math.Inf(-1)
@@ -232,53 +232,53 @@ func CalculateDefuseScore(state *RoundState, actorID string) float64 {
 	if actor.Weapon.HasKit {
 		score += 20
 	}
-	if CanDenyDefuse(state, actor.Location.NodeID, state.Timeline+CalculateDefuseTime(state, actorID)) {
+	if canDenyDefuse(state, actor.Location.NodeID, state.Timeline+calculateDefuseTime(state, actorID)) {
 		score -= 30
 	}
 	return score
 }
 
-func CanAttemptDefuse(state *RoundState, actorID string) error {
+func canAttemptDefuse(state *roundState, actorID string) error {
 	actor := state.Players[actorID]
 	if actor == nil || !actor.Alive || actor.Side != SideCT || actor.EngagementID != "" || actor.Action.CurrentActionID != "" {
 		return newError("INVALID_DEFUSE", "defuser is unavailable")
 	}
-	if state.Bomb.Status != BombPlanted || actor.Location.NodeID == "" || actor.Location.NodeID != state.Bomb.Location.NodeID {
+	if state.Bomb.Status != bombPlanted || actor.Location.NodeID == "" || actor.Location.NodeID != state.Bomb.Location.NodeID {
 		return newError("INVALID_DEFUSE", "defuser has not reached the planted bomb")
 	}
-	if state.Timeline+CalculateDefuseTime(state, actorID) > state.BombDeadline {
+	if state.Timeline+calculateDefuseTime(state, actorID) > state.BombDeadline {
 		return newError("INVALID_DEFUSE", "defuse cannot finish before bomb deadline")
 	}
-	if CanDenyDefuse(state, actor.Location.NodeID, state.Timeline+CalculateDefuseTime(state, actorID)) {
+	if canDenyDefuse(state, actor.Location.NodeID, state.Timeline+calculateDefuseTime(state, actorID)) {
 		return newError("DEFUSE_CONTEST_REQUIRED", "a live T can deny the defuse before completion")
 	}
 	return nil
 }
 
-func StartDefuseAction(state *RoundState, actorID, intentID string, ordinal int) (ScheduledAction, error) {
-	if err := CanAttemptDefuse(state, actorID); err != nil {
-		return ScheduledAction{}, err
+func startDefuseAction(state *roundState, actorID, intentID string, ordinal int) (scheduledAction, error) {
+	if err := canAttemptDefuse(state, actorID); err != nil {
+		return scheduledAction{}, err
 	}
 	actor := state.Players[actorID]
-	utilityResult, err := spendScopedUtility(state, SideCT, UtilityDefuseCover, []string{actorID}, "", "site:"+state.Bomb.PlantedSite, state.constants.Int("BaseDefuseTime", 1), 10)
+	utilityResult, err := spendScopedUtility(state, SideCT, utilityDefuseCover, []string{actorID}, "", "site:"+state.Bomb.PlantedSite, state.constants.Int("BaseDefuseTime", 1), 10)
 	if err != nil {
-		return ScheduledAction{}, err
+		return scheduledAction{}, err
 	}
-	duration := CalculateDefuseTime(state, actorID)
-	action := ScheduledAction{IntentID: intentID, Type: ActionDefuseComplete, ActorIDs: []string{actorID}, From: actor.Location, StartAt: state.Timeline, ResolveAt: state.Timeline + duration, Priority: PriorityDefuseComplete, MinRequiredActors: 1, Payload: ActionPayload{Site: state.Bomb.PlantedSite}}
-	action.ID = NewActionID(state.Seed, action.Type, intentID, action.StartAt, action.ResolveAt, action.ActorIDs, ordinal)
-	if err := BeginExclusiveAction(state, &action, ActionDefusing); err != nil {
-		return ScheduledAction{}, err
+	duration := calculateDefuseTime(state, actorID)
+	action := scheduledAction{IntentID: intentID, Type: actionDefuseComplete, ActorIDs: []string{actorID}, From: actor.Location, StartAt: state.Timeline, ResolveAt: state.Timeline + duration, Priority: priorityDefuseComplete, MinRequiredActors: 1, Payload: actionPayload{Site: state.Bomb.PlantedSite}}
+	action.ID = newActionID(state.Seed, action.Type, intentID, action.StartAt, action.ResolveAt, action.ActorIDs, ordinal)
+	if err := beginExclusiveAction(state, &action, actionDefusing); err != nil {
+		return scheduledAction{}, err
 	}
-	actor.Intent = Intent{ID: intentID, Type: IntentDefuse, TargetID: state.Bomb.PlantedSite, CreatedAt: state.Timeline}
+	actor.Intent = intent{ID: intentID, Type: intentDefuse, TargetID: state.Bomb.PlantedSite, CreatedAt: state.Timeline}
 	if err := state.Bomb.StartDefuse(actorID, action.ID, action.StartAt, action.ResolveAt); err != nil {
 		cancelActionForActors(state, action)
-		return ScheduledAction{}, err
+		return scheduledAction{}, err
 	}
 	if err := state.Scheduler.Schedule(action); err != nil {
 		state.Bomb.InterruptDefuse(actorID, action.ID)
 		cancelActionForActors(state, action)
-		return ScheduledAction{}, err
+		return scheduledAction{}, err
 	}
 	event, _ := newActionLifecycleEvent(state, action, EventDefuseStart, "bomb defuse started", 0)
 	addUtilityReason(event, utilityResult)
@@ -288,41 +288,41 @@ func StartDefuseAction(state *RoundState, actorID, intentID string, ordinal int)
 	return action, nil
 }
 
-func ResolveDefuseComplete(state *RoundState, action ScheduledAction) (BombActionResult, error) {
+func resolveDefuseComplete(state *roundState, action scheduledAction) (bombActionResult, error) {
 	valid := validActionActors(state, action)
 	if len(valid) != 1 || state.Timeline != action.ResolveAt || state.Timeline > state.BombDeadline {
-		return BombActionResult{}, nil
+		return bombActionResult{}, nil
 	}
 	actor := state.Players[valid[0]]
-	if !actor.Alive || state.Bomb.Status != BombDefusing || state.Bomb.DefuseActionID != action.ID || !sameLocation(actor.Location, action.From) {
-		return BombActionResult{}, nil
+	if !actor.Alive || state.Bomb.Status != bombDefusing || state.Bomb.DefuseActionID != action.ID || !sameLocation(actor.Location, action.From) {
+		return bombActionResult{}, nil
 	}
 	if err := state.Bomb.CompleteDefuse(state.Timeline); err != nil {
-		return BombActionResult{}, err
+		return bombActionResult{}, err
 	}
-	CompleteActionForActors(state, action, valid)
+	completeActionForActors(state, action, valid)
 	event := bombLifecycleEffectEvent(state, action, EventBombDefuse, "bomb defused", 0)
 	event.Bomb = projectBombState(state.Bomb)
 	event.State = snapshotForEvent(state)
 	state.Events = append(state.Events, event)
-	return BombActionResult{Applied: true, Event: event}, nil
+	return bombActionResult{Applied: true, Event: event}, nil
 }
 
-func ResolveBombExplode(state *RoundState, action ScheduledAction) (BombActionResult, error) {
-	if state.Timeline != action.ResolveAt || state.Bomb.Status == BombDefused || state.Bomb.ExplodeAt != action.ResolveAt {
-		return BombActionResult{}, nil
+func resolveBombExplode(state *roundState, action scheduledAction) (bombActionResult, error) {
+	if state.Timeline != action.ResolveAt || state.Bomb.Status == bombDefused || state.Bomb.ExplodeAt != action.ResolveAt {
+		return bombActionResult{}, nil
 	}
 	if err := state.Bomb.Explode(state.Timeline); err != nil {
-		return BombActionResult{}, err
+		return bombActionResult{}, err
 	}
 	event := bombLifecycleEffectEvent(state, action, EventBombExplode, "bomb exploded", 0)
 	event.Bomb = projectBombState(state.Bomb)
 	event.State = snapshotForEvent(state)
 	state.Events = append(state.Events, event)
-	return BombActionResult{Applied: true, Event: event}, nil
+	return bombActionResult{Applied: true, Event: event}, nil
 }
 
-func CanDenyDefuse(state *RoundState, bombNode string, finishAt int) bool {
+func canDenyDefuse(state *roundState, bombNode string, finishAt int) bool {
 	for _, player := range state.Players {
 		if !player.Alive || player.Side != SideT {
 			continue
@@ -331,7 +331,7 @@ func CanDenyDefuse(state *RoundState, bombNode string, finishAt int) bool {
 		if from == "" {
 			from = projectedNodeID(player.Location)
 		}
-		path, feedback, err := FindBoundedPath(&MapConfig{Nodes: runtimeNodes(state), Edges: state.mapEdges}, from, bombNode, len(state.Nodes)*4)
+		path, feedback, err := findBoundedPath(&MapConfig{Nodes: runtimeNodes(state), Edges: state.mapEdges}, from, bombNode, len(state.Nodes)*4)
 		if err == nil && feedback == nil && state.Timeline+path.TotalBaseTime <= finishAt {
 			return true
 		}
@@ -339,10 +339,10 @@ func CanDenyDefuse(state *RoundState, bombNode string, finishAt int) bool {
 	return false
 }
 
-func bombLifecycleEffectEvent(state *RoundState, action ScheduledAction, eventType, message string, ordinal int) *GameEvent {
-	effectID := NewEffectID(state.Seed, action.ID, EffectBombState, ordinal)
-	eventID := NewEventID(state.Seed, action.ID, effectID, eventType, ordinal)
-	reason, _ := ProjectReasonRecord(ReasonRecord{Code: eventType, Source: string(action.Type), Value: 1, Weight: 1}, action.ID, effectID)
+func bombLifecycleEffectEvent(state *roundState, action scheduledAction, eventType, message string, ordinal int) *GameEvent {
+	effectID := newEffectID(state.Seed, action.ID, effectBombState, ordinal)
+	eventID := newEventID(state.Seed, action.ID, effectID, eventType, ordinal)
+	reason, _ := projectReasonRecord(reasonRecord{Code: eventType, Source: string(action.Type), Value: 1, Weight: 1}, action.ID, effectID)
 	event := &GameEvent{EventID: eventID, SourceActionID: action.ID, SourceEffectID: effectID, Timestamp: int64(state.Timeline), EventType: eventType, Message: message, Reason: reason, sortPriority: action.Priority, sortActionType: string(action.Type), sortMinActorID: action.MinActorID()}
 	if len(action.ActorIDs) > 0 {
 		if actor := state.Players[action.ActorIDs[0]]; actor != nil {
@@ -355,7 +355,7 @@ func bombLifecycleEffectEvent(state *RoundState, action ScheduledAction, eventTy
 	return event
 }
 
-func plantNodeForSite(state *RoundState, site string) string {
+func plantNodeForSite(state *roundState, site string) string {
 	ids := make([]string, 0, len(state.Nodes))
 	for id := range state.Nodes {
 		ids = append(ids, id)
@@ -370,7 +370,7 @@ func plantNodeForSite(state *RoundState, site string) string {
 	return ""
 }
 
-func liveActorsAtNode(state *RoundState, actorIDs []string, nodeID string) []string {
+func liveActorsAtNode(state *roundState, actorIDs []string, nodeID string) []string {
 	var out []string
 	for _, actorID := range actorIDs {
 		player := state.Players[actorID]
@@ -382,7 +382,7 @@ func liveActorsAtNode(state *RoundState, actorIDs []string, nodeID string) []str
 	return uniqueStrings(out)
 }
 
-func visibleThreatsAtSite(state *RoundState, nodeID, side string) []string {
+func visibleThreatsAtSite(state *roundState, nodeID, side string) []string {
 	var out []string
 	for actorID, player := range state.Players {
 		if !player.Alive || player.Side != side {
@@ -396,7 +396,7 @@ func visibleThreatsAtSite(state *RoundState, nodeID, side string) []string {
 	return out
 }
 
-func configuredVisible(state *RoundState, from PlayerLocation, toNode string) bool {
+func configuredVisible(state *roundState, from playerLocation, toNode string) bool {
 	fromNode := projectedNodeID(from)
 	for _, visibility := range state.visibility {
 		if visibility.Visible && (visibility.FromNode == fromNode && visibility.ToNode == toNode || visibility.FromNode == toNode && visibility.ToNode == fromNode) {
@@ -406,7 +406,7 @@ func configuredVisible(state *RoundState, from PlayerLocation, toNode string) bo
 	return false
 }
 
-func bombRecoveryNode(location PlayerLocation) string {
+func bombRecoveryNode(location playerLocation) string {
 	if location.NodeID != "" {
 		return location.NodeID
 	}

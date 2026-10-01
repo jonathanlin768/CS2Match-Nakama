@@ -5,7 +5,7 @@ import (
 	"sort"
 )
 
-type scheduledActionHeap []ScheduledAction
+type scheduledActionHeap []scheduledAction
 
 func (h scheduledActionHeap) Len() int { return len(h) }
 func (h scheduledActionHeap) Less(i, j int) bool {
@@ -25,7 +25,7 @@ func (h scheduledActionHeap) Less(i, j int) bool {
 	return a.ID < b.ID
 }
 func (h scheduledActionHeap) Swap(i, j int)           { h[i], h[j] = h[j], h[i] }
-func (h *scheduledActionHeap) Push(value interface{}) { *h = append(*h, value.(ScheduledAction)) }
+func (h *scheduledActionHeap) Push(value interface{}) { *h = append(*h, value.(scheduledAction)) }
 func (h *scheduledActionHeap) Pop() interface{} {
 	old := *h
 	value := old[len(old)-1]
@@ -33,22 +33,58 @@ func (h *scheduledActionHeap) Pop() interface{} {
 	return value
 }
 
-type ActionScheduler struct {
+type actionScheduler struct {
 	actions              scheduledActionHeap
 	scheduledCount       int
 	maxScheduled         int
 	interceptByTraversal map[string]bool
 }
 
-func NewActionScheduler(constants CombatConstants) *ActionScheduler {
-	scheduler := &ActionScheduler{maxScheduled: constants.Int("MaxScheduledActions", 0), interceptByTraversal: map[string]bool{}}
+func newActionScheduler(constants CombatConstants) *actionScheduler {
+	scheduler := &actionScheduler{maxScheduled: constants.Int("MaxScheduledActions", 0), interceptByTraversal: map[string]bool{}}
 	heap.Init(&scheduler.actions)
 	return scheduler
 }
 
-func (s *ActionScheduler) Len() int { return len(s.actions) }
+func (s *actionScheduler) Len() int { return len(s.actions) }
 
-func (s *ActionScheduler) Schedule(action ScheduledAction) error {
+// snapshot copies the queue slice so callers can inspect or sort it without
+// changing heap order. Nested action payloads remain read-only.
+func (s *actionScheduler) snapshot() []scheduledAction {
+	return append([]scheduledAction(nil), s.actions...)
+}
+
+func (s *actionScheduler) hasType(kind actionType) bool {
+	for _, action := range s.actions {
+		if action.Type == kind {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *actionScheduler) resolveAt(actionID string) int {
+	for _, action := range s.actions {
+		if action.ID == actionID {
+			return action.ResolveAt
+		}
+	}
+	return 0
+}
+
+func (s *actionScheduler) clear() { s.actions = nil }
+
+// claimInterceptCheck reserves the one allowed check for a traversal before
+// its remaining configuration and eligibility checks run.
+func (s *actionScheduler) claimInterceptCheck(traversalID string) bool {
+	if s.interceptByTraversal[traversalID] {
+		return false
+	}
+	s.interceptByTraversal[traversalID] = true
+	return true
+}
+
+func (s *actionScheduler) Schedule(action scheduledAction) error {
 	if action.ID == "" || action.ResolveAt < action.StartAt || action.ResolveAt < 0 {
 		return newError("INVALID_ACTION", "action has invalid identity or timing")
 	}
@@ -65,25 +101,25 @@ func (s *ActionScheduler) Schedule(action ScheduledAction) error {
 	return nil
 }
 
-func (s *ActionScheduler) Peek() (ScheduledAction, bool) {
+func (s *actionScheduler) Peek() (scheduledAction, bool) {
 	if len(s.actions) == 0 {
-		return ScheduledAction{}, false
+		return scheduledAction{}, false
 	}
 	return s.actions[0], true
 }
 
-func (s *ActionScheduler) Pop() (ScheduledAction, bool) {
+func (s *actionScheduler) Pop() (scheduledAction, bool) {
 	if len(s.actions) == 0 {
-		return ScheduledAction{}, false
+		return scheduledAction{}, false
 	}
-	return heap.Pop(&s.actions).(ScheduledAction), true
+	return heap.Pop(&s.actions).(scheduledAction), true
 }
 
-func (s *ActionScheduler) PopNextValid(state *RoundState) (ScheduledAction, []string, bool) {
+func (s *actionScheduler) PopNextValid(state *roundState) (scheduledAction, []string, bool) {
 	for {
 		action, ok := s.Pop()
 		if !ok {
-			return ScheduledAction{}, nil, false
+			return scheduledAction{}, nil, false
 		}
 		validActors := validActionActors(state, action)
 		if len(action.ActorIDs) == 0 || len(validActors) >= maxInt(1, action.MinRequiredActors) {
@@ -93,7 +129,7 @@ func (s *ActionScheduler) PopNextValid(state *RoundState) (ScheduledAction, []st
 	}
 }
 
-func BeginExclusiveAction(state *RoundState, action *ScheduledAction, status ActionStatus) error {
+func beginExclusiveAction(state *roundState, action *scheduledAction, status actionStatus) error {
 	if state == nil || action == nil || action.ID == "" || len(action.ActorIDs) == 0 {
 		return newError("INVALID_ACTION", "exclusive action requires actors")
 	}
@@ -112,7 +148,7 @@ func BeginExclusiveAction(state *RoundState, action *ScheduledAction, status Act
 		player.Action.CurrentActionID = action.ID
 		player.Action.Status = status
 		player.Action.BusyUntil = action.ResolveAt
-		player.Action.Busy = BusyInterval{ActionID: action.ID, StartAt: action.StartAt, EndAt: action.ResolveAt}
+		player.Action.Busy = busyInterval{ActionID: action.ID, StartAt: action.StartAt, EndAt: action.ResolveAt}
 		action.VersionByActor[actorID] = player.Action.Version
 	}
 	if action.MinRequiredActors <= 0 {
@@ -121,20 +157,20 @@ func BeginExclusiveAction(state *RoundState, action *ScheduledAction, status Act
 	return nil
 }
 
-func CompleteActionForActors(state *RoundState, action ScheduledAction, actorIDs []string) {
+func completeActionForActors(state *roundState, action scheduledAction, actorIDs []string) {
 	for _, actorID := range actorIDs {
 		player := state.Players[actorID]
 		if player == nil || player.Action.CurrentActionID != action.ID {
 			continue
 		}
 		player.Action.CurrentActionID = ""
-		player.Action.Status = ActionIdle
+		player.Action.Status = actionIdle
 		player.Action.BusyUntil = state.Timeline
-		player.Action.Busy = BusyInterval{}
+		player.Action.Busy = busyInterval{}
 	}
 }
 
-func validActionActors(state *RoundState, action ScheduledAction) []string {
+func validActionActors(state *roundState, action scheduledAction) []string {
 	valid := make([]string, 0, len(action.ActorIDs))
 	expectedActionID := action.ID
 	if action.ParentActionID != "" {
@@ -154,102 +190,24 @@ func validActionActors(state *RoundState, action ScheduledAction) []string {
 	return valid
 }
 
-func locationMatchesAction(current, expected PlayerLocation, actionType ActionType) bool {
-	if expected.Edge != nil && (actionType == ActionMovementArrive || actionType == ActionInterceptCheck) {
+func locationMatchesAction(current, expected playerLocation, actionType actionType) bool {
+	if expected.Edge != nil && (actionType == actionMovementArrive || actionType == actionInterceptCheck) {
 		return current.Edge != nil && current.Edge.EdgeID == expected.Edge.EdgeID && current.Edge.FromNode == expected.Edge.FromNode && current.Edge.ToNode == expected.Edge.ToNode
 	}
 	return sameLocation(current, expected)
 }
 
-func cancelActionForActors(state *RoundState, action ScheduledAction) {
+func cancelActionForActors(state *roundState, action scheduledAction) {
 	for _, actorID := range action.ActorIDs {
 		player := state.Players[actorID]
 		if player != nil && player.Action.CurrentActionID == action.ID {
 			player.Action.Version++
 			player.Action.CurrentActionID = ""
-			player.Action.Status = ActionIdle
+			player.Action.Status = actionIdle
 			player.Action.BusyUntil = state.Timeline
-			player.Action.Busy = BusyInterval{}
+			player.Action.Busy = busyInterval{}
 		}
 	}
-}
-
-type NextTimeKind string
-
-const (
-	NextTimeNone     NextTimeKind = "None"
-	NextTimeAction   NextTimeKind = "Action"
-	NextTimeRound    NextTimeKind = "RoundDeadline"
-	NextTimeBomb     NextTimeKind = "BombDeadline"
-	NextTimeIntel    NextTimeKind = "IntelDecay"
-	NextTimeControl  NextTimeKind = "ControlDecay"
-	NextTimeDecision NextTimeKind = "DecisionDeadline"
-)
-
-func (s *RoundState) NextTime() (int, NextTimeKind) {
-	next, kind := int(^uint(0)>>1), NextTimeNone
-	consider := func(at int, candidate NextTimeKind) {
-		if at > s.Timeline && (at < next || (at == next && candidate < kind)) {
-			next, kind = at, candidate
-		}
-	}
-	if action, ok := s.Scheduler.Peek(); ok {
-		consider(action.ResolveAt, NextTimeAction)
-	}
-	if s.Bomb.Status == BombPlanted || s.Bomb.Status == BombDefusing {
-		consider(s.BombDeadline, NextTimeBomb)
-	} else {
-		consider(s.RoundDeadline-s.constants.Int("ForceExecuteThreshold", 0), NextTimeDecision)
-		consider(s.RoundDeadline, NextTimeRound)
-	}
-	for _, intel := range s.Intel {
-		for _, record := range intel.Records {
-			consider(record.ExpiresAt, NextTimeIntel)
-		}
-	}
-	for _, node := range s.Nodes {
-		for _, known := range node.KnownControl {
-			consider(known.ExpiresAt, NextTimeControl)
-		}
-	}
-	if kind == NextTimeNone {
-		return s.Timeline, kind
-	}
-	return next, kind
-}
-
-func (s *RoundState) RecordTransition() error {
-	s.TransitionCount++
-	if s.TransitionCount > s.constants.Int("MaxStateTransitions", 0) {
-		return newError("STATE_TRANSITION_LIMIT_EXCEEDED", "MaxStateTransitions exceeded")
-	}
-	return nil
-}
-
-func (s *RoundState) RecordRotation(side string) error {
-	s.RotationCount[side]++
-	if s.RotationCount[side] > s.constants.Int("MaxRotationsPerTeam", 0) {
-		return newError("ROTATION_LIMIT_EXCEEDED", "MaxRotationsPerTeam exceeded for %s", side)
-	}
-	return nil
-}
-
-func (s *RoundState) ValidateEffectBatchSize(count int) error {
-	if count > s.constants.Int("MaxEffectsPerTimestamp", 0) {
-		return newError("EFFECT_LIMIT_EXCEEDED", "MaxEffectsPerTimestamp exceeded")
-	}
-	return nil
-}
-
-func (s *RoundState) AdvanceTimeline(at int) error {
-	if at < s.Timeline {
-		return newError("INVALID_TIMELINE", "timeline cannot move backwards")
-	}
-	if at > s.constants.Int("MaxRoundTimeline", 0) {
-		return newError("TIMELINE_LIMIT_EXCEEDED", "MaxRoundTimeline exceeded")
-	}
-	s.Timeline = at
-	return nil
 }
 
 func copyIntMap(source map[string]int) map[string]int {
@@ -263,7 +221,7 @@ func copyIntMap(source map[string]int) map[string]int {
 	return out
 }
 
-func sameLocation(a, b PlayerLocation) bool {
+func sameLocation(a, b playerLocation) bool {
 	if a.NodeID != b.NodeID || (a.Edge == nil) != (b.Edge == nil) {
 		return false
 	}

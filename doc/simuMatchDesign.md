@@ -6,7 +6,7 @@
 
 构建一套带 `Dust2` 地图语义的数值战斗引擎。
 
-系统不做真实 CS 空间仿真，不模拟逐帧移动、弹道、物理导航网格和连续视野传播。地图、视野、转点与炸弹不是事后叙事标签：它们分别由语义 `MapNode/MapEdge/Route`、可见性与情报、可打断 `ScheduledAction` 以及权威 `BombState` 参与实际结算；场景标签和数值修正只补充这些权威状态，不替代它们。
+系统不做真实 CS 空间仿真，不模拟逐帧移动、弹道、物理导航网格和连续视野传播。地图、视野、转点与炸弹不是事后叙事标签：它们分别由语义 `MapNode/MapEdge/Route`、可见性与情报、可打断 `scheduledAction` 以及权威 `bombState` 参与实际结算；场景标签和数值修正只补充这些权威状态，不替代它们。
 
 正式整场对局由 `MatchInput` 驱动，并始终按 RuleSet 推演到比赛终局。单回合测试、调试和批量标定使用内部 `RoundInput/roundSimulator`，但仍执行同一个 causal RoundEngine，不能通过 `MatchInput` 的固定回合数截断正式比赛。每小局由 Match 层派生 `RoundInput`：
 
@@ -66,8 +66,8 @@ PlayerState       选手回合状态
 MatchInput        整场模拟入参快照
 RoundInput        单回合模拟入参快照
 MatchState        跨回合状态、比分、半场、战术记忆
-RoundPlan         回合计划
-RoundState        回合状态
+roundPlan         回合计划
+roundState        回合状态
 StrategyMemory    跨回合战术倾向与反制记忆
 EncounterResolver 遭遇战结算
 BombResolver      下包/拆包结算
@@ -212,7 +212,7 @@ AI 决策只能读取本方 `KnownControl`，不能直接读取 `ActualControl`�
 | `success_next_phase` | string | 成功后阶段 |
 | `failure_fallbacks` | string[] | 失败后候选策略 |
 
-正式 Dust2 除六个 `side=T` 战术模板外，必须配置多个 `side=CT` setup 模板，至少表达 A/B/Mid 的初始覆盖与合法回防入口。CT setup 使用本方阵容、角色、属性、历史 `StrategyMemory` 和独立 `CTSetupSeed` 选择；不得读取本回合 T 已选模板、T Route/Intent 或其他隐藏状态。T 模板中的 `common_ct_setup_ids` 只描述赛前可知的地图先验，可用于 T 模板评分、Scenario 适配和标定，不得把其中某项强制成实际 CT setup。
+正式 Dust2 除六个 `side=T` 战术模板外，必须配置多个 `side=CT` setup 模板，至少表达 A/B/Mid 的初始覆盖与合法回防入口。CT setup 使用本方阵容、角色、属性、历史 `StrategyMemory` 和独立 `CTSetupSeed` 选择；不得读取本回合 T 已选模板、T Route/intent 或其他隐藏状态。T 模板中的 `common_ct_setup_ids` 只描述赛前可知的地图先验，可用于 T 模板评分、Scenario 适配和标定，不得把其中某项强制成实际 CT setup。
 
 #### `tb_scenario`
 
@@ -430,7 +430,7 @@ LocationSeed = Hash(RoundSeed, "event_location", EventID, SourceObjectID)
 | `UtilityBudget` | `Resource` | `Int` | `score` | 每队每回合可用于抽象道具行动的预算 |
 | `MaxStateTransitions` | `Clamp` | `Int` | `count` | 单回合状态转换上限 |
 | `MaxScheduledActions` | `Clamp` | `Int` | `count` | 单回合调度行动上限 |
-| `MaxEffectsPerTimestamp` | `Clamp` | `Int` | `count` | 单时间戳 Effect 上限 |
+| `MaxEffectsPerTimestamp` | `Clamp` | `Int` | `count` | 单时间戳 effect 上限 |
 | `MaxNoOpTransitions` | `Clamp` | `Int` | `count` | 进入恢复与无进展检查前允许的连续 NoOp 数 |
 | `MaxRotationsPerTeam` | `Clamp` | `Int` | `count` | 单队主动转点上限 |
 | `MaxRoundTimeline` | `Clamp` | `Int` | `s` | 单回合绝对时间线上限 |
@@ -651,12 +651,12 @@ Encounter =
 
 `EncounterResolver` 的职责：
 
-1. 根据 `RoundPlan` 和当前局势确定参战人员。
+1. 根据 `roundPlan` 和当前局势确定参战人员。
 2. 根据 `Scenario` 标签读取修正项。
 3. 计算双方 `EncounterScore`。
 4. 在 Encounter 启动时只确定 `CombatDuration`、pulse 数量/绝对时间并安排 future action，不预生成未来伤亡。
-5. 每个 `CombatPulse` 到时根据当时不可变快照生成 Damage/Resource Effect，提交后再派生击杀、控制结果和中断。
-6. 输出 `ReasonRecord`，由已成功应用的 Effect 投影为 `EventReason`。
+5. 每个 `CombatPulse` 到时根据当时不可变快照生成 Damage/Resource effect，提交后再派生击杀、控制结果和中断。
+6. 输出 `reasonRecord`，由已成功应用的 effect 投影为 `EventReason`。
 
 #### 交火触发条件
 
@@ -789,7 +789,7 @@ CombatStart
 
 `EngagementGraph` 是高级扩展，不是第一版主路径。
 
-第一版由 `RoundPlan` 和 `Scenario` 直接生成 `Encounter`。只有当后续需要更细的局部空间表达时，才使用 `EngagementGraph` 作为 `Encounter` 内部的辅助模型。
+第一版由 `roundPlan` 和 `Scenario` 直接生成 `Encounter`。只有当后续需要更细的局部空间表达时，才使用 `EngagementGraph` 作为 `Encounter` 内部的辅助模型。
 
 局部战场由 `EngagementGraph` 生成时，不直接使用完整 `Visibility` 连通图。
 
@@ -853,7 +853,7 @@ A_LONG / LONG_DOOR / PIT
 
 #### 选手战斗姿态
 
-每名参战选手在交火开始时确定 `CombatPosture`。
+每名参战选手在交火开始时确定 `combatPosture`。
 
 | 姿态 | 说明 | 特点 |
 |---|---|---|
@@ -921,7 +921,7 @@ PlayerCombatScore =
 1. 根据姿态和视野确定每名选手可攻击目标。
 2. 根据 `CombatScore` 和目标 `SurvivalScore` 计算命中/击杀概率。
 3. 从 `PulseSeed` 按 `ActorID/TargetID/RollKind` 派生独立 `ActorRollSeed`，完成目标、命中、致命伤害包及其他随机采样。
-4. 基于 pulse 开始快照生成全部 `Effect`，再原子应用伤害、压制、Focus 波动和 Stamina 消耗，并由应用后的 HP 派生死亡与击杀。
+4. 基于 pulse 开始快照生成全部 `effect`，再原子应用伤害、压制、Focus 波动和 Stamina 消耗，并由应用后的 HP 派生死亡与击杀。
 5. 根据实际击杀和受伤结果调整下一脉冲的 `Momentum` 和姿态。
 
 同一 `CombatPulse` 是一个原子战斗事务。所有在 pulse 开始快照中具备攻击资格的选手先完成目标选择、命中和伤害采样，再统一应用全部 `DamageEffect`；随后从应用后的 HP 派生死亡、`KILL`、`BOMB_DROP`、打断和控制权变化。某名选手在同一 pulse 中被击杀，不会取消其已经基于 pulse 快照形成的攻击。只有 CombatPulse 事务完成后，状态机才重新校验同秒的下包、拆包和移动等较低优先级行动。
@@ -1001,16 +1001,16 @@ TargetSurvivalScore =
 
 #### 结算结果
 
-Encounter 不再一次性返回完整伤亡表、权威状态或阻塞性的 `TimeCost`。`Start` 只调度未来 `CombatPulse/EncounterEnd`；每个 pulse 到达自己的 `ResolveAt` 时只返回待事务应用的 Effect：
+Encounter 不再一次性返回完整伤亡表、权威状态或阻塞性的 `TimeCost`。`Start` 只调度未来 `CombatPulse/EncounterEnd`；每个 pulse 到达自己的 `ResolveAt` 时只返回待事务应用的 effect：
 
 ```go
-type CombatPulseResult struct {
-    Effects       []Effect
-    ReasonRecords []ReasonRecord
+type combatPulseResult struct {
+    Effects       []effect
+    ReasonRecords []reasonRecord
 }
 ```
 
-公开事件、控制权、Momentum、炸弹掉落和最终玩家状态全部由成功应用的 Effect 及其派生 Effect 投影，resolver 不得直接写入权威 `RoundState`。
+公开事件、控制权、Momentum、炸弹掉落和最终玩家状态全部由成功应用的 effect 及其派生 effect 投影，resolver 不得直接写入权威 `roundState`。
 
 可能事件：
 
@@ -1098,7 +1098,7 @@ type TeamRoundStats struct {
 战术选择时增加记忆修正：
 
 ```text
-StrategyScore =
+strategyScore =
     TemplateBaseWeight
   + LineupFitScore
   + CurrentScorePressure
@@ -1136,7 +1136,7 @@ Round 6:
 
 | 边界 | 规则 |
 |---|---|
-| 影响范围 | 只影响 `SelectStrategyTemplate`、CT 开局防守倾向、补防初始权重 |
+| 影响范围 | 只影响 `selectStrategyTemplate`、CT 开局防守倾向、补防初始权重 |
 | 不影响 | 不直接修改 `Aim/Reaction` 等选手基础属性 |
 | 半场切换 | 角色互换后清空或衰减阵营相关记忆，保留队伍风格记忆 |
 | 可回放 | `StrategyMemory` 来自前序 `RoundResult`，同一 `MatchInput + seed` 必须稳定 |
@@ -1144,18 +1144,18 @@ Round 6:
 
 #### 信息模型
 
-AI 不允许读取全图真实信息。每方维护独立 `TeamIntel`。
+AI 不允许读取全图真实信息。每方维护独立 `teamIntel`。
 
 ```go
-type TeamIntel struct {
-    Records      []IntelRecord
-    KnownEnemies map[string]IntelRecord
-    KnownControl map[string]IntelRecord
-    SoundCues    []IntelRecord
-    BombIntel    IntelRecord
+type teamIntel struct {
+    Records      []intelRecord
+    KnownEnemies map[string]intelRecord
+    KnownControl map[string]intelRecord
+    SoundCues    []intelRecord
+    BombIntel    intelRecord
 }
 
-type IntelRecord struct {
+type intelRecord struct {
     Type       string
     TargetID   string
     NodeID     string
@@ -1180,8 +1180,8 @@ type IntelRecord struct {
 AI 决策输入只能使用：
 
 ```text
-RoundState public fields
-TeamIntel of current side
+roundState public fields
+teamIntel of current side
 KnownControl of current side
 Known bomb info
 ```
@@ -1233,7 +1233,7 @@ AI 决策必须把 `confidence` 纳入评分。低置信度信息只能影响评
 #### 下包尝试
 
 ```text
-CanAttemptPlant =
+canAttemptPlant =
     T 存活人数 >= 1
 AND Bomb 持有人位于 A_SITE 或 B_SITE
 AND Bomb 持有人当前不是 Engaged
@@ -1337,15 +1337,15 @@ CanDefuse =
     CT 存活
 AND 到达包点时间 + DefuseTime <= BombRemainingTime
 AND 拆包选手 Focus/Composure 判定成功
-AND CanDenyDefuse == false
+AND canDenyDefuse == false
 ```
 
 T 全灭但包已下时，仍执行拆包判定。
 
-`CanDenyDefuse`：
+`canDenyDefuse`：
 
 ```text
-CanDenyDefuse =
+canDenyDefuse =
     存在 T 存活
 AND T 能在 DefuseFinishAt 前获得视野或到达威胁点
 AND T 的 HP/Stamina/Focus 允许交火
@@ -1356,7 +1356,7 @@ AND T 未被控制、压制或阻断路径
 |---|---|
 | T 远离包点且赶不到 | 不能干扰拆包 |
 | T 藏在可见威胁点 | 可干扰或拖拆 |
-| CT 有 Utility 掩护 | 降低 `CanDenyDefuse` 成功率 |
+| CT 有 Utility 掩护 | 降低 `canDenyDefuse` 成功率 |
 | T 低 HP/低 Focus | 干扰评分下降 |
 | T 需要穿越 CT 控制点 | 先触发拦截或判定来不及 |
 
@@ -1391,7 +1391,7 @@ CombatDamage/Kill > BombDefuseComplete > BombExplode
 
 #### 炸弹掉落与拾取
 
-炸弹作为独立实体存在于 `BombState`。
+炸弹作为独立实体存在于 `bombState`。
 
 | 状态 | 说明 |
 |---|---|
@@ -1434,9 +1434,9 @@ PickupTime = clamp(BasePickupTime - ComposureModifier, MinPickupTime, MaxPickupT
 | 70 | 炸弹未下且 CT 全灭 | T | `CT_ELIMINATED` |
 | 60 | 下包前 `RoundTimer <= 0` 且炸弹未下 | CT | `TIME_EXPIRED` |
 | 40 | 已下包且 CT 全灭且无拆包可能 | T | `BOMB_SECURED` |
-| 30 | `NoProgressEligible` 且 `ValidNoProgress` 成立 | CT | `NO_PROGRESS_TIMEOUT` |
+| 30 | `NoProgressEligible` 且 `validNoProgress` 成立 | CT | `NO_PROGRESS_TIMEOUT` |
 
-`ValidNoProgress` 只是描述业务状态的纯条件，不会在普通事件批次后立即终局。只有连续 NoOp 达到 `MaxNoOpTransitions`、状态机已经通过 `NoProgressRecoveryState` 记录并完成一次确定性的 `ForceExecute`/恢复行动且仍无法产生合法进展后，才设置一次性的 `NoProgressEligible=true` 并执行 `NoProgressCheck`。终局纯函数只读取该资格标记和当前状态。恢复周期以 `CycleID` 标识：`Status=Running` 时，由该 `RecoveryActionID` 自身产生的排队、时间推进、移动、事件和完成 bookkeeping 不得清空恢复证明；恢复完成后若重新建立合法下包路径或普通可执行 action，则记为 `Succeeded` 并原子清空资格、NoOp 计数和恢复状态，若仍不可恢复则记为 `Failed` 并保留到紧随其后的 `NoProgressCheck`。来自其他 action/effect 的真实进展或恢复期间的外部打断会结束当前周期并原子清空上述状态。
+`validNoProgress` 只是描述业务状态的纯条件，不会在普通事件批次后立即终局。只有连续 NoOp 达到 `MaxNoOpTransitions`、状态机已经通过 `noProgressRecoveryState` 记录并完成一次确定性的 `ForceExecute`/恢复行动且仍无法产生合法进展后，才设置一次性的 `NoProgressEligible=true` 并执行 `NoProgressCheck`。终局纯函数只读取该资格标记和当前状态。恢复周期以 `CycleID` 标识：`Status=Running` 时，由该 `RecoveryActionID` 自身产生的排队、时间推进、移动、事件和完成 bookkeeping 不得清空恢复证明；恢复完成后若重新建立合法下包路径或普通可执行 action，则记为 `Succeeded` 并原子清空资格、NoOp 计数和恢复状态，若仍不可恢复则记为 `Failed` 并保留到紧随其后的 `NoProgressCheck`。来自其他 action/effect 的真实进展或恢复期间的外部打断会结束当前周期并原子清空上述状态。
 
 边界封口：
 
@@ -1495,7 +1495,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     A["RoundInput"] --> B["Load Tactical Config"]
-    B --> C["Initialize authoritative RoundState"]
+    B --> C["Initialize authoritative roundState"]
     C --> D["Select T Strategy and independent CT Setup"]
     D --> E["Assign Roles and schedule opening Move/Hold"]
     E --> F["Choose earliest Action or Deadline"]
@@ -1509,7 +1509,7 @@ flowchart TD
     L --> M["RoundResult"]
 ```
 
-第一版不构建物理导航网格，但必须在配置的 `MapNode/MapEdge/Route` 语义图上做有界确定性可达性与路径选择。AI 只生成当前状态下的 Intent/Action；Encounter 由双方实际位置、可见性、行动与拦截条件动态形成，不在开局按模板预生成固定序列。每次实际伤害、伤亡、情报、控制权、移动和炸弹变化都会反馈到后续决策。
+第一版不构建物理导航网格，但必须在配置的 `MapNode/MapEdge/Route` 语义图上做有界确定性可达性与路径选择。AI 只生成当前状态下的 intent/Action；Encounter 由双方实际位置、可见性、行动与拦截条件动态形成，不在开局按模板预生成固定序列。每次实际伤害、伤亡、情报、控制权、移动和炸弹变化都会反馈到后续决策。
 
 ### 3.3 状态机执行模型
 
@@ -1557,7 +1557,7 @@ CurrentState
 同一阶段可能存在多个候选行动。状态机使用事件调度器选择最早需要结算的行动。
 
 ```go
-type ScheduledAction struct {
+type scheduledAction struct {
     ActionID      string
     ActorIDs      []string
     Type          string
@@ -1584,7 +1584,7 @@ type ScheduledAction struct {
 同一个选手不能同时执行多个互斥行动。每个 `PlayerState` 持有当前行动引用。
 
 ```go
-type PlayerActionState struct {
+type playerActionState struct {
     CurrentActionID string
     ActionVersion   int
     Status          string // Idle / Moving / Holding / Engaged / Planting / Defusing
@@ -1618,13 +1618,13 @@ type PlayerActionState struct {
 行动拆成三层，避免持续动作和短动作混在一起。
 
 ```text
-Intent          // 战术意图：想做什么
+intent          // 战术意图：想做什么
 ActionInstance  // 具体行动：正在执行什么
-BusyInterval    // 时间占用：什么时候不能做别的
+busyInterval    // 时间占用：什么时候不能做别的
 ```
 
 ```go
-type Intent struct {
+type intent struct {
     IntentID string
     Type     string // AttackSite / Rotate / Hold / Plant / Defuse / Save
     Target   string
@@ -1643,7 +1643,7 @@ type ActionInstance struct {
     MinRequiredActors int
 }
 
-type BusyInterval struct {
+type busyInterval struct {
     ActorID string
     From    int
     To      int
@@ -1655,13 +1655,13 @@ type BusyInterval struct {
 
 | 场景 | 处理 |
 |---|---|
-| `Hold` | 持续 `Intent`，不自动完成；只在被替换、死亡、转点或交火打断时结束 |
-| `Plant/Defuse` 被打断 | `ActionInstance` 取消；`Intent` 可保留，交火后重新评估是否恢复 |
+| `Hold` | 持续 `intent`，不自动完成；只在被替换、死亡、转点或交火打断时结束 |
+| `Plant/Defuse` 被打断 | `ActionInstance` 取消；`intent` 可保留，交火后重新评估是否恢复 |
 | 多人同步拉枪 | 使用 group `ActionInstance`；成员死亡后按冻结的 `MinRequiredActors` 确定性判断剩余成员继续或整体取消 |
-| 转点中途被打断 | 已消耗时间和体能保留；剩余路径从当前 `OnEdgeLocation` 重新规划 |
-| 交火结束后恢复 | 原 `Intent` 重新评分，不自动恢复旧 `ActionInstance` |
+| 转点中途被打断 | 已消耗时间和体能保留；剩余路径从当前 `onEdgeLocation` 重新规划 |
+| 交火结束后恢复 | 原 `intent` 重新评分，不自动恢复旧 `ActionInstance` |
 
-`Intent` 可以持续，`ActionInstance` 是一次执行，`BusyInterval` 负责并行动作互斥。
+`intent` 可以持续，`ActionInstance` 是一次执行，`busyInterval` 负责并行动作互斥。
 
 #### 同秒优先级
 
@@ -1685,16 +1685,16 @@ type BusyInterval struct {
 ```text
 ResolveAt ASC
 Priority DESC
-ActionType ASC
+actionType ASC
 MinActorID ASC
 ActionID ASC
 ```
 
-Action/Effect/Event ID 都由稳定语义身份派生，不使用全局自增顺序。resolver 必须先按语义 tuple 稳定排序候选，再分配局部 ordinal：
+Action/effect/Event ID 都由稳定语义身份派生，不使用全局自增顺序。resolver 必须先按语义 tuple 稳定排序候选，再分配局部 ordinal：
 
 ```text
-ActionID = Hash(RoundSeed, ActionType, IntentID, StartAt, ResolveAt, SortedActorIDs, ActionOrdinal)
-EffectID = Hash(ActionID, EffectType, ActorID, TargetID, EffectOrdinal)
+ActionID = Hash(RoundSeed, actionType, IntentID, StartAt, ResolveAt, SortedActorIDs, ActionOrdinal)
+EffectID = Hash(ActionID, effectType, ActorID, TargetID, EffectOrdinal)
 EventID  = Hash(RoundSeed, "event", SourceActionID, SourceEffectID, EventType, EventOrdinal)
 ```
 
@@ -1728,18 +1728,18 @@ Timeline 未推进
 AND 无选手位置变化
 AND 无 HP/Stamina/Focus 变化
 AND 无控制权变化
-AND 无情报、Bomb、Intent/ActionQueue 变化
+AND 无情报、Bomb、intent/ActionQueue 变化
 AND 无事件产出
 ```
 
-通用状态指纹仍包含 action queue、事件和恢复状态，但“是否重置恢复周期”使用带来源的 `AppliedBatch` 判断，不能只比较两个无来源快照。当前 `RecoveryActionID` 自身的变更属于恢复周期内部进展；只有其完成后的可达性评估或其他 action/effect 的真实进展才能决定成功重置、失败保留或外部打断重置。
+通用状态指纹仍包含 action queue、事件和恢复状态，但“是否重置恢复周期”使用带来源的 `appliedBatch` 判断，不能只比较两个无来源快照。当前 `RecoveryActionID` 自身的变更属于恢复周期内部进展；只有其完成后的可达性评估或其他 action/effect 的真实进展才能决定成功重置、失败保留或外部打断重置。
 
 连续 `NoOp` 达到 `MaxNoOpTransitions` 后，状态机以 `CycleID = Hash(RoundSeed, "no_progress_recovery", RecoveryOrdinal)` 创建恢复周期并递增单回合单调的 `RecoveryOrdinal`；该 ordinal 在周期重置时不回退。创建后冻结当前 `NoOpCount`，并且在该周期内至多生成一次确定性恢复行动。`Status=Running` 期间不继续累计 NoOp；恢复 action 自身的状态变化只更新该周期，不触发通用 reset。恢复行动完成或确认不存在合法恢复行动后，才执行显式 `NoProgressCheck`：
 
 | 场景 | 处理 |
 |---|---|
 | 未下包且 T 可到达包点 | 强制 T 执行最近包点 |
-| 未下包且满足 `ValidNoProgress`（无可行下包计划且无行动可恢复可达性） | 设置 `NoProgressEligible`，由终局纯函数判 CT 胜，`NO_PROGRESS_TIMEOUT` |
+| 未下包且满足 `validNoProgress`（无可行下包计划且无行动可恢复可达性） | 设置 `NoProgressEligible`，由终局纯函数判 CT 胜，`NO_PROGRESS_TIMEOUT` |
 | 已下包 | 直接进入拆包/爆炸判定 |
 | 双方无法接敌 | 按时间耗尽或炸弹状态结算 |
 
@@ -1751,13 +1751,13 @@ AND 无事件产出
 |---|---|
 | 当前 `RecoveryActionID` 的排队、推进、到达或完成 bookkeeping | 保留 `CycleID/Status`，直到完成后统一评估是否恢复可达性 |
 | 恢复 action 成功建立合法下包路径或普通可执行 action | `Status=Succeeded`，随后清空 recovery、NoProgressEligible 和 NoOpCount，恢复正常规划 |
-| 恢复 action 完成但仍满足 `ValidNoProgress` | `Status=Failed`，保留失败证明，设置一次性 NoProgressEligible 并立即执行 NoProgressCheck |
+| 恢复 action 完成但仍满足 `validNoProgress` | `Status=Failed`，保留失败证明，设置一次性 NoProgressEligible 并立即执行 NoProgressCheck |
 | 当前周期确认不存在任何合法恢复 action | 直接记录 `Status=Failed/ResultCode=NO_LEGAL_RECOVERY`，再执行 NoProgressCheck |
 | 其他 action/effect 产生真实进展，或外部交火/状态变化打断恢复 | 清空当前 recovery 周期、NoProgressEligible 和 NoOpCount，重新从正常事件循环判断 |
 
 #### 移动中的拦截
 
-移动不是无风险传送。每条 `MapEdge` 可配置 `risk_points` 和 `intercept_nodes`。第一版不引入完整连续空间寻路，但也不把运行时事件强行钉死在配置点上：`risk_points` 和 `intercept_nodes` 是赛前语义锚点，用于提高某些路径上发生暴露、交火或拦截的概率；当事件真正发生时，状态机会根据移动进度、可见关系、参与者状态、路径端点和附近风险热点生成本局的 `OnEdgeLocation`。
+移动不是无风险传送。每条 `MapEdge` 可配置 `risk_points` 和 `intercept_nodes`。第一版不引入完整连续空间寻路，但也不把运行时事件强行钉死在配置点上：`risk_points` 和 `intercept_nodes` 是赛前语义锚点，用于提高某些路径上发生暴露、交火或拦截的概率；当事件真正发生时，状态机会根据移动进度、可见关系、参与者状态、路径端点和附近风险热点生成本局的 `onEdgeLocation`。
 
 ```text
 A_LONG -> MID -> CATWALK
@@ -1775,10 +1775,10 @@ VisibilityIntercept at 0:41
 
 #### 边上位置
 
-移动中被拦截时，选手不再简单归属起点或终点，而是归属 `OnEdgeLocation`。
+移动中被拦截时，选手不再简单归属起点或终点，而是归属 `onEdgeLocation`。
 
 ```go
-type OnEdgeLocation struct {
+type onEdgeLocation struct {
     EdgeID       string
     FromNode     string
     ToNode       string
@@ -1804,11 +1804,11 @@ OR CurrentEdgeLocation != nil
 | 场景 | 处理 |
 |---|---|
 | 选手在边上死亡 | 使用运行时生成的 `CurrentEdgeLocation` 作为死亡位置 |
-| 炸弹在边上掉落 | `Bomb.Location` 保存运行时生成的 `OnEdgeLocation` |
-| 前端地图标记 | 使用 `OnEdgeLocation.X/Y` |
+| 炸弹在边上掉落 | `Bomb.Location` 保存运行时生成的 `onEdgeLocation` |
+| 前端地图标记 | 使用 `onEdgeLocation.X/Y` |
 | 战报位置 | 使用 `DisplayName`，如 `A大过点`、`中路转点` |
 | 中途撤退 | 默认回最近安全节点；若被压制，回 `FromNode` |
-| 继续前进 | 从当前 `OnEdgeLocation.Progress` 继续计算剩余路径 |
+| 继续前进 | 从当前 `onEdgeLocation.Progress` 继续计算剩余路径 |
 
 `MapEdge.risk_points` 引用的 `MapNode` 应包含显示名和坐标，通常还会带有用于采样候选的几何范围：
 
@@ -1835,7 +1835,7 @@ for state.Phase != RoundEnd {
     state.Events = append(state.Events, eventBuilder.FromApplied(applied)...)
     updateIntelControlAndDecisionTriggers(state, applied)
 
-    if terminal := EvaluateRoundTerminal(state, applied); terminal != nil {
+    if terminal := evaluateRoundTerminal(state, applied); terminal != nil {
         enterRoundEnd(state, terminal)
         break
     }
@@ -1926,7 +1926,7 @@ CombatDuration
 CombatPulseActions + CombatEndAction
 ```
 
-`CombatDuration` 代表这次局部交火允许占用的时间窗；它不会让 scheduler 跳过中间时间，也不会提前确定整场交火结果。每个 `CombatPulseAction` 到达自己的绝对 `ResolveAt` 时，resolver 才读取最新存活、HP、Focus、Stamina、Suppression、Momentum、姿态和参与者快照并计算 Effect。
+`CombatDuration` 代表这次局部交火允许占用的时间窗；它不会让 scheduler 跳过中间时间，也不会提前确定整场交火结果。每个 `CombatPulseAction` 到达自己的绝对 `ResolveAt` 时，resolver 才读取最新存活、HP、Focus、Stamina、Suppression、Momentum、姿态和参与者快照并计算 effect。
 
 | 场景 | 耗时特点 |
 |---|---|
@@ -2011,7 +2011,7 @@ AI 决策会产生下一批行动：继续推进、转点、补防、牵制、�
 | `PostPlant` | 最终冲突和拆包判定 | 拆包、爆炸、全灭 |
 | `RoundEnd` | 回合结束 | 生成战报 |
 
-`RoundState.Phase` 是回合当前主导活动的解释性投影，不是排他性的全局行动锁。每个 `Intent`、`ActionInstance` 和 `Encounter` 维护自己的局部阶段与资格。只要 Actor、位置、Bomb 和时间前置条件满足，互不共享 Actor/区域的行动可以跨主导阶段并发：例如 A 大处于 `Clash` 时，B 区未参战选手仍可完成移动、进入 `SiteContest`、开始下包或触发新的中期决策。主导 Phase 不得要求所有 Active Encounter 清空后才允许其他区域产生新行动。
+`roundState.Phase` 是回合当前主导活动的解释性投影，不是排他性的全局行动锁。每个 `intent`、`ActionInstance` 和 `Encounter` 维护自己的局部阶段与资格。只要 Actor、位置、Bomb 和时间前置条件满足，互不共享 Actor/区域的行动可以跨主导阶段并发：例如 A 大处于 `Clash` 时，B 区未参战选手仍可完成移动、进入 `SiteContest`、开始下包或触发新的中期决策。主导 Phase 不得要求所有 Active Encounter 清空后才允许其他区域产生新行动。
 
 ### 3.5 核心数据结构
 
@@ -2051,10 +2051,10 @@ type MatchScore struct {
 `SideSwitch` 只修改 `SideByTeam` 以及下一回合的 `TeamTID/TeamCTID`，绝不交换、重置或按阵营累计 `ScoreByTeam`。所有比赛早停、加时和 `WinnerTeamID` 判定只读取权威队伍比分；`ScoreT/ScoreCT` 仅用于当前回合阵营视图和兼容旧客户端。
 
 ```go
-type RoundPlan struct {
+type roundPlan struct {
     TStrategyTemplateID string
     CTSetupTemplateID   string
-    RoleAssignments     []RoleAssignment
+    RoleAssignments     []roleAssignment
     OpeningRoutes       map[string]string // PlayerID -> RouteID
     BombCarrierID       string
 }
@@ -2083,10 +2083,10 @@ type EncounterPlan struct {
 }
 ```
 
-`EncounterPlan` 是运行时由实际位置、可见性、行动和冲突条件产生的局部计划，不存放在开局 `RoundPlan` 中，也不代表预定伤亡或胜方。
+`EncounterPlan` 是运行时由实际位置、可见性、行动和冲突条件产生的局部计划，不存放在开局 `roundPlan` 中，也不代表预定伤亡或胜方。
 
 ```go
-type NoProgressRecoveryState struct {
+type noProgressRecoveryState struct {
     CycleID         string
     Status          string // NotAttempted / Running / Failed / Succeeded
     RecoveryActionID string
@@ -2095,7 +2095,7 @@ type NoProgressRecoveryState struct {
     ResultCode      string
 }
 
-type RoundState struct {
+type roundState struct {
     RoundNumber int
     Phase       string
 
@@ -2106,15 +2106,15 @@ type RoundState struct {
     MapID     string
     TeamTID   string
     TeamCTID  string
-    RoundPlan RoundPlan
+    roundPlan roundPlan
     Players  map[string]*PlayerState
-    Nodes    map[string]*NodeRuntimeState
-    Intel    map[string]*TeamIntel
+    Nodes    map[string]*nodeRuntimeState
+    Intel    map[string]*teamIntel
 
-    Bomb             BombState
-    ActiveEngagements map[string]*EncounterState
-    Scheduler        *ActionScheduler
-    Utility          map[string]*TeamUtilityState
+    Bomb             bombState
+    ActiveEngagements map[string]*encounterState
+    Scheduler        *actionScheduler
+    Utility          map[string]*teamUtilityState
 
     MomentumT    int
     MomentumCT   int
@@ -2124,10 +2124,10 @@ type RoundState struct {
     NoOpCount       int
     NoProgressEligible bool
     RecoveryOrdinal int // 单回合单调递增，用于派生唯一 CycleID
-    RecoveryAttempt NoProgressRecoveryState
+    RecoveryAttempt noProgressRecoveryState
 
     Events   []GameEvent
-    Terminal *RoundTerminal
+    Terminal *roundTerminal
 }
 ```
 
@@ -2138,18 +2138,18 @@ type PlayerState struct {
     Side    string
     Weapon  WeaponLoadout
 
-    Location    PlayerLocation // Node XOR OnEdgeLocation
+    Location    playerLocation // Node XOR onEdgeLocation
     HP          int
     Stamina     int
     Focus       int
     Suppressed  bool
-    Posture     CombatPosture
+    Posture     combatPosture
 
     Alive       bool
     HasBomb     bool
 
-    Intent      PlayerIntent
-    Action      PlayerActionState
+    intent      PlayerIntent
+    Action      playerActionState
 
     Kills       int
     Deaths      int
@@ -2158,10 +2158,10 @@ type PlayerState struct {
 ```
 
 ```go
-type BombState struct {
+type bombState struct {
     Status       string // Carried / Dropped / Planting / Planted / Defusing / Exploded / Defused
     CarrierID    string
-    Location     PlayerLocation
+    Location     playerLocation
     PlantedSite  string
     PlantedAt    int
     ExplodeAt    int
@@ -2231,7 +2231,7 @@ type ReasonStateChange struct {
     After  ReasonValue // 只允许公开标量状态
 }
 
-type ReasonRecord struct { // 内部 resolver/effect 审计记录
+type reasonRecord struct { // 内部 resolver/effect 审计记录
     Code           string
     MainFactor     string
     Modifiers      []ReasonModifier
@@ -2271,7 +2271,7 @@ type EventStateSnapshot struct {
 }
 ```
 
-`ReasonRecord -> EventReason` 投影必须保留 `Code/MainFactor/Modifiers/ScoreDelta/Probability/Formula/Inputs/StateChanges/SourceActionID/SourceEffectID`，不得把 `float64 ScoreDelta` 截断为整数。`ReasonValue` 必须且只能设置与 Kind 对应的一个值字段，禁止把 map/object 塞入 StateChanges 造成非规范序列化。`GameEvent.SourceActionID/SourceEffectID` 必须从同一 ReasonRecord/AppliedEffect 复制，供稳定排序和审计；若事件来自真实 action 生命周期而无 Effect，则 `SourceEffectID` 为空但 `SourceActionID` 必须存在。`StateChanges` 只包含客户端允许看到的已应用标量变化，敌方隐藏 Intent、ActionQueue、未观察位置和 ActualControl 不得投影。
+`reasonRecord -> EventReason` 投影必须保留 `Code/MainFactor/Modifiers/ScoreDelta/Probability/Formula/Inputs/StateChanges/SourceActionID/SourceEffectID`，不得把 `float64 ScoreDelta` 截断为整数。`ReasonValue` 必须且只能设置与 Kind 对应的一个值字段，禁止把 map/object 塞入 StateChanges 造成非规范序列化。`GameEvent.SourceActionID/SourceEffectID` 必须从同一 reasonRecord/appliedEffect 复制，供稳定排序和审计；若事件来自真实 action 生命周期而无 effect，则 `SourceEffectID` 为空但 `SourceActionID` 必须存在。`StateChanges` 只包含客户端允许看到的已应用标量变化，敌方隐藏 intent、ActionQueue、未观察位置和 ActualControl 不得投影。
 
 `State` 是给前端回放用的可选快照。第一版至少在 `ROUND_START`、`BOMB_PLANT`、`BOMB_DEFUSE`、`BOMB_EXPLODE`、`ROUND_END` 输出完整快照；`KILL` 事件必须至少输出受影响玩家和比分/炸弹摘要。若带宽或响应体过大，可以在 RPC 层裁剪，但引擎结果必须保留。
 
@@ -2316,7 +2316,7 @@ type ExplainableReport struct {
 
 | 来源 | 处理 |
 |---|---|
-| 选手处于 `CurrentEdgeLocation` | 使用运行时生成的 `OnEdgeLocation.X/Y`，表示死在转点或过点途中 |
+| 选手处于 `CurrentEdgeLocation` | 使用运行时生成的 `onEdgeLocation.X/Y`，表示死在转点或过点途中 |
 | 事件语义来源是配置风险热点 | 将风险热点的 `MapNode.x/y` 或几何范围作为采样候选之一，并结合当时移动进度、视野、交火双方状态和路径端点生成最终坐标 |
 | 事件发生在 `MapNode` 且 `area_usages` 包含 `KillSample` 且区域几何有效 | 从该 `MapNode` 自身范围内采样 |
 | 事件发生在 `MapNode` 但没有可用采样范围 | 使用 `MapNode.x/y`，允许极小半径偏移 |
@@ -2378,32 +2378,46 @@ server/internal/match/
   repository.go       对局记录持久化，第一版可占位
 
 server/internal/framework/matchengine/
-  engine.go           整场/回合推演入口
-  match_state.go      跨回合状态、比分和战术记忆
-  round_state.go      回合状态
-  ruleset.go          规则集和输入参数校验
-  route_template.go   Dust2 战术模板
-  scenario.go         场景标签和修正
-  round_plan.go       回合计划生成
-  planner.go          候选 Encounter / 行动生成
-  scheduler.go        离散事件调度，第一版可轻量实现
-  transition.go       阶段切换规则
-  map_graph.go        正式第一版必需的语义辅助图；负责可达性、移动耗时和拦截候选，不实现物理寻路
-  decision.go         AI 决策
+  README.md / doc.go  维护入口、文件职责、公开边界与已知缺口
+  service.go          公开 Simulate 入口
+  input.go            比赛、队伍、选手、规则和武器输入
+  report.go           战报、公开状态和事件模型
+  map_config.go       地图语义与战斗配置快照
+  errors.go           结构化引擎错误
+  const.go            协议常量和默认规则
+  validation.go       输入与配置校验
+  engine.go           整场编排和统计聚合
+  match_rules.go      MR12、换边、加时与比分规则
+  round_contract.go   内部回合调用契约
+  round_engine.go     回合主循环、阶段与行动规划
+  round_state.go      回合权威状态、时钟和行动版本
+  action.go           行动与 Effect 模型
+  scheduler.go        离散事件优先队列与行动占用
+  strategy.go         战术模板选择和角色分配
+  decision.go         AI 评分与局势决策
+  intel.go            本方情报算法，生产接线仍待完善
+  opening_plan.go     开局重试算法，尚未接入生产开局选择
   match_memory.go     跨回合战术重复、反制和风格修正
+  movement.go         语义移动、进度与拦截算法
   encounter.go        遭遇战结算
   combat.go           脉冲级击杀/伤害结算
+  effect_apply.go     脉冲伤害和死亡提交
+  utility.go          道具预算
   bomb.go             炸弹逻辑
-  explainer.go        事件原因生成
+  terminal.go         纯终局判定
+  noop.go             无进展检测和恢复
+  round_projection.go 回合公共状态投影
+  event_projection.go 事件位置与实际计算解释
+  seed.go             稳定 seed 派生
   calibration.go      批量模拟和指标统计
-  event.go            事件生成
-  model.go            引擎模型
 ```
+
+以上是当前文件布局，文件仍属于同一个 `matchengine` package。算法要求与生产接线状态分别以 OpenSpec 和 [维护入口](../server/internal/framework/matchengine/README.md) 为准；保留的内部算法不代表已经参与正式比赛。
 
 ### 4.2 推演入口
 
 ```go
-type MatchEngine interface {
+type matchEngine interface {
     Simulate(ctx context.Context, input *MatchInput) (*MatchResult, error)
 }
 
@@ -2740,18 +2754,18 @@ engine := matchengine.NewService(mapConfig, logger)
 
 ```go
 type DecisionEngine interface {
-    SelectStrategyTemplate(ctx *DecisionContext) StrategyTemplate
-    AssignRoles(ctx *DecisionContext, strategy StrategyTemplate) []RoleAssignment
-    BuildOpeningEncounter(ctx *DecisionContext, plan RoundPlan) EncounterPlan
-    DecideMidRound(ctx *DecisionContext, plan RoundPlan) MidRoundDecision
-    BuildSiteEncounter(ctx *DecisionContext, plan RoundPlan) EncounterPlan
-    DecideBombPhase(ctx *DecisionContext, plan RoundPlan) BombDecision
+    selectStrategyTemplate(ctx *DecisionContext) StrategyTemplate
+    assignRoles(ctx *DecisionContext, strategy StrategyTemplate) []roleAssignment
+    BuildOpeningEncounter(ctx *DecisionContext, plan roundPlan) EncounterPlan
+    DecideMidRound(ctx *DecisionContext, plan roundPlan) MidRoundDecision
+    BuildSiteEncounter(ctx *DecisionContext, plan roundPlan) EncounterPlan
+    DecideBombPhase(ctx *DecisionContext, plan roundPlan) BombDecision
 }
 ```
 
 ```go
 type DecisionContext struct {
-    View           DecisionView
+    View           decisionView
     MatchScore     MatchScore
     StrategyMemory StrategyMemory
     Templates      []RouteTemplate
@@ -2760,27 +2774,27 @@ type DecisionContext struct {
     DecisionSeed   uint64
 }
 
-type DecisionView struct {
+type decisionView struct {
     Team               Side
-    Phase              RoundPhase
+    Phase              roundPhase
     Timeline           int
     RoundTimeRemaining int
     BombTimeRemaining  int
     OwnPlayers         []PlayerSnapshot
-    KnownControl       []KnownControlState
-    TeamIntel          []IntelRecord
+    KnownControl       []knownControlState
+    teamIntel          []intelRecord
     BombIntel          BombIntel
 }
 ```
 
-`DecisionView` 是只读投影，按稳定 ID 顺序构造。它不得包含敌方 Intent、敌方 ActionQueue、未观察敌方位置、全局 `ActualControl` 或可回溯到完整 `RoundState` 的引用。决策器从 `DecisionSeed` 为每个候选/roll 派生局部随机源，禁止持有或共享可变 `*rand.Rand`。
+`decisionView` 是只读投影，按稳定 ID 顺序构造。它不得包含敌方 intent、敌方 ActionQueue、未观察敌方位置、全局 `ActualControl` 或可回溯到完整 `roundState` 的引用。决策器从 `DecisionSeed` 为每个候选/roll 派生局部随机源，禁止持有或共享可变 `*rand.Rand`。
 
 ### 4.5 遭遇战结算接口
 
 ```go
 type EncounterResolver interface {
-    Start(ctx EncounterStartContext) EncounterSchedule
-    ResolvePulse(ctx CombatPulseContext) CombatPulseResult
+    Start(ctx EncounterStartContext) encounterSchedule
+    ResolvePulse(ctx CombatPulseContext) combatPulseResult
 }
 ```
 
@@ -2799,11 +2813,11 @@ type EncounterStartContext struct {
 ```
 
 ```go
-type EncounterSchedule struct {
+type encounterSchedule struct {
     CombatDuration int
-    PulseActions   []ScheduledAction
-    EndAction      ScheduledAction
-    ReasonRecords  []ReasonRecord
+    PulseActions   []scheduledAction
+    EndAction      scheduledAction
+    ReasonRecords  []reasonRecord
 }
 ```
 
@@ -2819,13 +2833,13 @@ type CombatPulseContext struct {
     PulseSeed   uint64
 }
 
-type CombatPulseResult struct {
-    Effects       []Effect
-    ReasonRecords []ReasonRecord
+type combatPulseResult struct {
+    Effects       []effect
+    ReasonRecords []reasonRecord
 }
 ```
 
-`Start` 只安排未来 pulse/end action，不返回未来事件或伤亡。`CombatPulseContext` 只包含该 pulse 开始时的不可变战斗快照；`ResolvePulse` 使用 `PulseSeed/ActorID/TargetID/RollKind` 派生每次 roll，并返回待原子应用的 Effect。resolver 不得直接修改权威 `PlayerState`，也不得消费共享可变 RNG。
+`Start` 只安排未来 pulse/end action，不返回未来事件或伤亡。`CombatPulseContext` 只包含该 pulse 开始时的不可变战斗快照；`ResolvePulse` 使用 `PulseSeed/ActorID/TargetID/RollKind` 派生每次 roll，并返回待原子应用的 effect。resolver 不得直接修改权威 `PlayerState`，也不得消费共享可变 RNG。
 
 ### 4.6 回合时间推进
 
@@ -2899,8 +2913,8 @@ ActionID ASC
 | 属性评分相同 | 使用稳定排序后，再用 Seed 派生随机扰动 |
 | 目标优先级相同 | 按 `ThreatScore`、距离、`PlayerID` 排序 |
 | 行动评分相同 | 按模板优先级，再按稳定排序键 |
-| 同一秒同优先级 action | 按 `ResolveAt/Priority/ActionType/MinActorID/ActionID` |
-| 同一 action 派生的公开事件 | 按 `Timestamp/Priority/ActionType/MinActorID/SourceActionID/SourceEffectID/EventID` |
+| 同一秒同优先级 action | 按 `ResolveAt/Priority/actionType/MinActorID/ActionID` |
+| 同一 action 派生的公开事件 | 按 `Timestamp/Priority/actionType/MinActorID/SourceActionID/SourceEffectID/EventID` |
 
 随机扰动必须有边界：
 
@@ -2956,7 +2970,7 @@ Go 实现必须把算法方向落实成可单测的规则。测试不只验证�
 | `HitChance` | clamp 到 `MinHitChance..MaxHitChance` |
 | `KillChance` | clamp 到 `0..min(MaxKillChance, HitChance)`，且公式中不使用 `TargetHPFactor` |
 | `PlantTime/DefuseTime/MoveTime` | 修正后仍在最小/最大耗时内 |
-| `StrategyScore` | clamp 到 `MinStrategyWeight..MaxStrategyWeight` 后再参与随机选择 |
+| `strategyScore` | clamp 到 `MinStrategyWeight..MaxStrategyWeight` 后再参与随机选择 |
 
 #### 平局和随机扰动规则
 
@@ -2966,8 +2980,8 @@ Go 实现必须把算法方向落实成可单测的规则。测试不只验证�
 | 近似同分 | `abs(delta) < CloseScoreGap` 时允许 `RandomNoise` 影响候选评分排序 |
 | 明显分差 | `abs(delta) >= DecisiveScoreGap` 时 `RandomNoise` 不能翻转评分排序；后续实际概率采样仍然执行 |
 | 多候选战术同分 | 按模板优先级、最近使用惩罚、稳定排序键处理 |
-| 多 action 同秒 | 按 `ResolveAt/Priority/ActionType/MinActorID/ActionID` |
-| 同 action 派生多事件 | 按 `Timestamp/Priority/ActionType/MinActorID/SourceActionID/SourceEffectID/EventID` |
+| 多 action 同秒 | 按 `ResolveAt/Priority/actionType/MinActorID/ActionID` |
+| 同 action 派生多事件 | 按 `Timestamp/Priority/actionType/MinActorID/SourceActionID/SourceEffectID/EventID` |
 
 #### 回合阶段优先级规则
 
@@ -3052,8 +3066,8 @@ Go 实现必须把算法方向落实成可单测的规则。测试不只验证�
 | 1 | 配置 `Dust2` 的六个 T RouteTemplate、多个独立 CT setup RouteTemplate、双方 Route、Scenario、MapTag、EncounterModifier、CombatConst、MapNode、MapEdge 与 Visibility，先通过阵营、人数闭合、完整覆盖、引用、权重和常量校验 |
 | 2 | 实现 `PlayerProfile`、`PlayerState`、Bomb、Control、Intel 与资源 clamp |
 | 3 | 实现语义 `map_graph` 的可达性、移动耗时、运行时边上位置和拦截候选 |
-| 4 | 实现 Action/Effect、Scheduler、deadline、批次事务、打断和纯终局判定 |
-| 5 | 实现只读 `DecisionView`、`SelectStrategyTemplate`、`AssignRoles` 和 OpeningPlan 确定性重试 |
+| 4 | 实现 Action/effect、Scheduler、deadline、批次事务、打断和纯终局判定 |
+| 5 | 实现只读 `decisionView`、`selectStrategyTemplate`、`assignRoles` 和 OpeningPlan 确定性重试 |
 | 6 | 实现 Opening/Mid/Site/Bomb Planner，支持继续打、转点、强攻、补防和并发行动 |
 | 7 | 实现 `EncounterResolver` 与原子 `CombatPulse`，由 DamageEffect 自然产生 `KILL` 和状态变化 |
 | 8 | 实现 `BombResolver`，覆盖下包、掉包、捡包、拆包、爆炸和同秒边界 |
@@ -3069,8 +3083,8 @@ Go 实现必须把算法方向落实成可单测的规则。测试不只验证�
 | 玩家回合内下指令 | 不支持 |
 | 完整 pathfinding | 不构建物理导航网格或连续空间寻路；第一版仍必须在配置的 `MapNode/MapEdge/Route` 语义图上执行有界确定性可达性与路径选择 |
 | 复杂 visibility 传播 | 不做链式视野合并，只作为场景修正或高级扩展 |
-| 细粒度中途拦截 | 不做逐帧碰撞；第一版用 `OnEdgeLocation`、`InterceptCheck`、`risk_points/intercept_nodes` 和实际 Encounter 抽象 |
-| 类实时 Action 调度器 | 第一版实现本文要求的轻量离散事件队列、互斥占用、版本失效和抽象 OnEdgeLocation；不做固定 tick、网络同步、逐帧动画、通用实时 ECS 或复杂行为树 |
+| 细粒度中途拦截 | 不做逐帧碰撞；第一版用 `onEdgeLocation`、`InterceptCheck`、`risk_points/intercept_nodes` 和实际 Encounter 抽象 |
+| 类实时 Action 调度器 | 第一版实现本文要求的轻量离散事件队列、互斥占用、版本失效和抽象 onEdgeLocation；不做固定 tick、网络同步、逐帧动画、通用实时 ECS 或复杂行为树 |
 | 过细 HP/压制模拟 | 保留数值状态，但前端先展示击杀和关键原因 |
 | 完整经济系统 | 暂不接入 |
 | 真实烟闪细节 | 第一版抽象为 `Utility` 和执行质量 |

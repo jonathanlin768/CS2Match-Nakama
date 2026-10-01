@@ -4,7 +4,7 @@ import "testing"
 
 func completedMemoryRound() *RoundResult {
 	return &RoundResult{
-		RoundNumber: 1, TeamTID: "team_a", TeamCTID: "team_b", WinnerTeamID: "team_a", Winner: SideT, WinReason: WinReasonElimination,
+		RoundNumber: 1, TeamTID: "team_a", TeamCTID: "team_b", WinnerTeamID: "team_a", Winner: SideT, WinReason: winReasonElimination,
 		StrategyTemplateID: "TPL_A", CTSetupTemplateID: "TPL_CT", Bomb: &BombPublicState{Site: "A"},
 		Events: []*GameEvent{{EventType: EventRoundEnd}},
 	}
@@ -12,17 +12,17 @@ func completedMemoryRound() *RoundResult {
 
 func TestStrategyMemoryUpdatesOnlyFromCompletedRoundAndDecaysAtSideSwitch(t *testing.T) {
 	memory := newStrategyMemory()
-	if _, err := UpdateStrategyMemoryFromRound(memory, &RoundResult{StrategyTemplateID: "TPL_A"}, "team_a", 3); err == nil {
+	if _, err := updateStrategyMemoryFromRound(memory, &RoundResult{StrategyTemplateID: "TPL_A"}, "team_a", 3); err == nil {
 		t.Fatal("incomplete result entered strategy memory")
 	}
-	updated, err := UpdateStrategyMemoryFromRound(memory, completedMemoryRound(), "team_a", 3)
+	updated, err := updateStrategyMemoryFromRound(memory, completedMemoryRound(), "team_a", 3)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if updated.PreviousSuccess["TPL_A"] != 1 || updated.CounterReads["TPL_A"] != 1 || len(updated.RecentTemplates) != 1 || updated.SideTendency["site:A"] != 1 {
 		t.Fatalf("completed result did not update memory: %+v", updated)
 	}
-	decayed := DecayStrategyMemoryForSideSwitch(StrategyMemory{PreviousSuccess: map[string]int{"TPL_A": 5}, CounterReads: map[string]int{"TPL_A": 3}, SideTendency: map[string]float64{"site:A": 3}, TeamStyle: map[string]float64{"aggression": 2}})
+	decayed := decayStrategyMemoryForSideSwitch(StrategyMemory{PreviousSuccess: map[string]int{"TPL_A": 5}, CounterReads: map[string]int{"TPL_A": 3}, SideTendency: map[string]float64{"site:A": 3}, TeamStyle: map[string]float64{"aggression": 2}})
 	if decayed.PreviousSuccess["TPL_A"] != 2 || decayed.CounterReads["TPL_A"] != 1 || decayed.SideTendency["site:A"] != 1.5 || decayed.TeamStyle["aggression"] != 2 {
 		t.Fatalf("side-switch decay boundary mismatch: %+v", decayed)
 	}
@@ -58,7 +58,7 @@ func TestExplainableReportGroupsOnlyExistingReasonsByPerspective(t *testing.T) {
 			{EventID: "evt-loss", SourceActionID: "act-loss", EventType: EventRotate, AttackerTeamID: "team_b", Reason: lossReason},
 		},
 	}
-	report := BuildExplainableReport(round)
+	report := buildExplainableReport(round)
 	if len(report.KeyEvents) != 2 || len(report.WinFactors) != 1 || report.WinFactors[0].Code != "ACTUAL_WIN_FACTOR" || len(report.LossReasons) != 2 {
 		t.Fatalf("report perspective aggregation mismatch: %+v", report)
 	}

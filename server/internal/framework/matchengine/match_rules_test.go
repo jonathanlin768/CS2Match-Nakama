@@ -2,9 +2,9 @@ package matchengine
 
 import "testing"
 
-func newTestScoreState(t *testing.T) *MatchScoreState {
+func newTestScoreState(t *testing.T) *matchScoreState {
 	t.Helper()
-	state, err := NewMatchScoreState("team_a", "team_b", map[string]string{
+	state, err := newMatchScoreState("team_a", "team_b", map[string]string{
 		"team_a": SideT,
 		"team_b": SideCT,
 	})

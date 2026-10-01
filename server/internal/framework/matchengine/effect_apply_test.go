@@ -5,19 +5,19 @@ import (
 	"testing"
 )
 
-func combatAction(state *RoundState, id string, actors ...string) ScheduledAction {
-	return ScheduledAction{ID: id, Type: ActionCombatPulse, ActorIDs: actors, StartAt: state.Timeline, ResolveAt: state.Timeline, Priority: PriorityCombatPulseCommit}
+func combatAction(state *roundState, id string, actors ...string) scheduledAction {
+	return scheduledAction{ID: id, Type: actionCombatPulse, ActorIDs: actors, StartAt: state.Timeline, ResolveAt: state.Timeline, Priority: priorityCombatPulseCommit}
 }
 
-func damageEffect(state *RoundState, action ScheduledAction, actor, target string, amount, ordinal int) Effect {
-	return Effect{ID: NewEffectID(state.Seed, action.ID, EffectDamage, ordinal), SourceActionID: action.ID, Type: EffectDamage, Priority: PriorityCombatPulseCommit, Timestamp: state.Timeline, ActorID: actor, TargetID: target, Amount: amount}
+func damageEffect(state *roundState, action scheduledAction, actor, target string, amount, ordinal int) effect {
+	return effect{ID: newEffectID(state.Seed, action.ID, effectDamage, ordinal), SourceActionID: action.ID, Type: effectDamage, Priority: priorityCombatPulseCommit, Timestamp: state.Timeline, ActorID: actor, TargetID: target, Amount: amount}
 }
 
 func TestCombatPulseCommitAllowsSamePulseTrade(t *testing.T) {
 	state := makeTestRoundState(t, 301)
 	tID, ctID := "team_a_p2", "team_b_p1"
 	action := combatAction(state, "pulse-trade", tID, ctID)
-	batch, err := ApplyCombatPulseCommit(state, action, []Effect{
+	batch, err := applyCombatPulseCommit(state, action, []effect{
 		damageEffect(state, action, tID, ctID, 100, 0),
 		damageEffect(state, action, ctID, tID, 100, 1),
 	})
@@ -36,7 +36,7 @@ func TestLethalHitDoesNotCancelSnapshotNonLethalRetaliation(t *testing.T) {
 	state := makeTestRoundState(t, 302)
 	t1, t2, ct := "team_a_p2", "team_a_p3", "team_b_p1"
 	action := combatAction(state, "pulse-retaliation", t1, ct)
-	_, err := ApplyCombatPulseCommit(state, action, []Effect{
+	_, err := applyCombatPulseCommit(state, action, []effect{
 		damageEffect(state, action, t1, ct, 100, 0),
 		damageEffect(state, action, ct, t2, 35, 1),
 	})
@@ -50,17 +50,17 @@ func TestLethalHitDoesNotCancelSnapshotNonLethalRetaliation(t *testing.T) {
 
 func TestMultiAttackerActualDamageAndKillAttributionAreStable(t *testing.T) {
 	t1, t2, target := "team_a_p2", "team_a_p3", "team_b_p1"
-	run := func(reverse bool) (*RoundState, *AppliedBatch) {
+	run := func(reverse bool) (*roundState, *appliedBatch) {
 		state := makeTestRoundState(t, 303)
 		action := combatAction(state, "pulse-multi", t1, t2)
-		effects := []Effect{
+		effects := []effect{
 			damageEffect(state, action, t1, target, 80, 0),
 			damageEffect(state, action, t2, target, 40, 1),
 		}
 		if reverse {
 			effects[0], effects[1] = effects[1], effects[0]
 		}
-		batch, err := ApplyCombatPulseCommit(state, action, effects)
+		batch, err := applyCombatPulseCommit(state, action, effects)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -77,26 +77,26 @@ func TestMultiAttackerActualDamageAndKillAttributionAreStable(t *testing.T) {
 }
 
 func TestCombatDeathInvalidatesExternalActionAndDropsBomb(t *testing.T) {
-	for _, status := range []ActionStatus{ActionMoving, ActionPlanting, ActionDefusing} {
+	for _, status := range []actionStatus{actionMoving, actionPlanting, actionDefusing} {
 		t.Run(string(status), func(t *testing.T) {
 			state := makeTestRoundState(t, 304)
 			victim := "team_a_p1"
-			if status == ActionDefusing {
+			if status == actionDefusing {
 				victim = "team_b_p1"
 				state.Players[state.Bomb.CarrierID].HasBomb = false
-				state.Bomb = BombState{Status: BombDefusing, Location: PlayerLocation{NodeID: "A_SITE"}, PlantedSite: "A", PlantedAt: 10, ExplodeAt: 40, DefuseActorID: victim, DefuseActionID: "external", DefuseStartAt: 20, DefuseFinishAt: 30}
+				state.Bomb = bombState{Status: bombDefusing, Location: playerLocation{NodeID: "A_SITE"}, PlantedSite: "A", PlantedAt: 10, ExplodeAt: 40, DefuseActorID: victim, DefuseActionID: "external", DefuseStartAt: 20, DefuseFinishAt: 30}
 			}
 			player := state.Players[victim]
-			player.Action = PlayerActionState{CurrentActionID: "external", Version: 4, Status: status, BusyUntil: 20}
+			player.Action = playerActionState{CurrentActionID: "external", Version: 4, Status: status, BusyUntil: 20}
 			action := combatAction(state, "pulse-interrupt", "team_b_p2")
-			_, err := ApplyCombatPulseCommit(state, action, []Effect{damageEffect(state, action, "team_b_p2", victim, 100, 0)})
+			_, err := applyCombatPulseCommit(state, action, []effect{damageEffect(state, action, "team_b_p2", victim, 100, 0)})
 			if err != nil {
 				t.Fatal(err)
 			}
 			if player.Action.CurrentActionID != "" || player.Action.Version != 5 || player.Alive {
 				t.Fatalf("death did not invalidate %s: %+v", status, player.Action)
 			}
-			if status == ActionPlanting && (state.Bomb.Status != BombDropped || state.Bomb.CarrierID != "" || player.HasBomb) {
+			if status == actionPlanting && (state.Bomb.Status != bombDropped || state.Bomb.CarrierID != "" || player.HasBomb) {
 				t.Fatalf("planting carrier death did not drop bomb: %+v", state.Bomb)
 			}
 		})
@@ -104,8 +104,8 @@ func TestCombatDeathInvalidatesExternalActionAndDropsBomb(t *testing.T) {
 }
 
 func TestSameSecondBombOrderingContracts(t *testing.T) {
-	location := PlayerLocation{NodeID: "A_SITE"}
-	bomb := BombState{Status: BombPlanted, Location: location, PlantedSite: "A", PlantedAt: 10, ExplodeAt: 40}
+	location := playerLocation{NodeID: "A_SITE"}
+	bomb := bombState{Status: bombPlanted, Location: location, PlantedSite: "A", PlantedAt: 10, ExplodeAt: 40}
 	if err := bomb.StartDefuse("ct1", "defuse", 30, 40); err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func TestSameSecondBombOrderingContracts(t *testing.T) {
 	if err := state.Bomb.CompletePlant(location, 40, 80); err != nil {
 		t.Fatalf("PlantComplete == RoundExpire must apply first: %v", err)
 	}
-	if state.Bomb.Status != BombPlanted {
+	if state.Bomb.Status != bombPlanted {
 		t.Fatalf("equal-time plant did not supersede round expiry: %s", state.Bomb.Status)
 	}
 }
@@ -135,26 +135,26 @@ func TestDefuserDeathMakesEqualTimeCompletionStale(t *testing.T) {
 	carrier := state.Bomb.CarrierID
 	state.Players[carrier].HasBomb = false
 	defuser := "team_b_p1"
-	state.Bomb = BombState{Status: BombPlanted, Location: PlayerLocation{NodeID: "A_SITE"}, PlantedSite: "A", PlantedAt: 0, ExplodeAt: 40}
+	state.Bomb = bombState{Status: bombPlanted, Location: playerLocation{NodeID: "A_SITE"}, PlantedSite: "A", PlantedAt: 0, ExplodeAt: 40}
 	if err := state.Bomb.StartDefuse(defuser, "defuse-complete", 30, 40); err != nil {
 		t.Fatal(err)
 	}
 	state.Timeline = 40
-	defuse := ScheduledAction{ID: "defuse-complete", Type: ActionDefuseComplete, ActorIDs: []string{defuser}, From: state.Players[defuser].Location, StartAt: 30, ResolveAt: 40, Priority: 70}
-	if err := BeginExclusiveAction(state, &defuse, ActionDefusing); err != nil {
+	defuse := scheduledAction{ID: "defuse-complete", Type: actionDefuseComplete, ActorIDs: []string{defuser}, From: state.Players[defuser].Location, StartAt: 30, ResolveAt: 40, Priority: 70}
+	if err := beginExclusiveAction(state, &defuse, actionDefusing); err != nil {
 		t.Fatal(err)
 	}
 	if err := state.Scheduler.Schedule(defuse); err != nil {
 		t.Fatal(err)
 	}
 	combat := combatAction(state, "pulse-defuser-death", "team_a_p2")
-	if _, err := ApplyCombatPulseCommit(state, combat, []Effect{damageEffect(state, combat, "team_a_p2", defuser, 100, 0)}); err != nil {
+	if _, err := applyCombatPulseCommit(state, combat, []effect{damageEffect(state, combat, "team_a_p2", defuser, 100, 0)}); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, ok := state.Scheduler.PopNextValid(state); ok {
 		t.Fatal("dead defuser's equal-time completion remained valid")
 	}
-	if state.Bomb.Status != BombPlanted {
+	if state.Bomb.Status != bombPlanted {
 		t.Fatalf("stale completion mutated bomb: %s", state.Bomb.Status)
 	}
 }

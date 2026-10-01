@@ -9,7 +9,7 @@ type openingSelection struct {
 	UsedDefault    bool
 }
 
-func (e *MatchEngine) planOpening(roundSeed int64, side string) (openingSelection, error) {
+func (e *matchEngine) planOpening(roundSeed int64, side string) (openingSelection, error) {
 	seedLabel, defaultKey := "opening_plan", "DefaultStrategyTemplateID"
 	if side == SideCT {
 		seedLabel, defaultKey = "ct_setup", "DefaultCTSetupTemplateID"
@@ -49,7 +49,7 @@ func (e *MatchEngine) planOpening(roundSeed int64, side string) (openingSelectio
 	return selection, nil
 }
 
-func (e *MatchEngine) resolveOpeningTemplate(template RouteTemplate, side string, rng interface{ Intn(int) int }) (openingSelection, error) {
+func (e *matchEngine) resolveOpeningTemplate(template RouteTemplate, side string, rng interface{ Intn(int) int }) (openingSelection, error) {
 	if template.Side != side || len(template.RouteIDs) == 0 || len(template.RouteAllocations) != len(template.RouteIDs) {
 		return openingSelection{}, newError("INVALID_OPENING_PLAN", "template %s has an invalid side or route set", template.ID)
 	}
@@ -71,7 +71,7 @@ func (e *MatchEngine) resolveOpeningTemplate(template RouteTemplate, side string
 	return openingSelection{Template: template, PrimaryRoute: e.input.MapConfig.Routes[primaryID]}, nil
 }
 
-func (e *MatchEngine) routeReachableFromSpawn(route Route, side string) bool {
+func (e *matchEngine) routeReachableFromSpawn(route Route, side string) bool {
 	spawnID := "T_SPAWN"
 	if side == SideCT {
 		spawnID = "CT_SPAWN"

@@ -1,16 +1,16 @@
 package matchengine
 
-// MatchScoreState owns team-identity scores and the current side assignment.
+// matchScoreState owns team-identity scores and the current side assignment.
 // Round simulation supplies only a natural winning team; this type deliberately
 // knows nothing about combat events or how a round winner was produced.
-type MatchScoreState struct {
+type matchScoreState struct {
 	TeamAID     string
 	TeamBID     string
 	ScoreByTeam map[string]int
 	SideByTeam  map[string]string
 }
 
-func NewMatchScoreState(teamAID, teamBID string, initialSideByTeam map[string]string) (*MatchScoreState, error) {
+func newMatchScoreState(teamAID, teamBID string, initialSideByTeam map[string]string) (*matchScoreState, error) {
 	if teamAID == "" || teamBID == "" || teamAID == teamBID {
 		return nil, newError("INVALID_MATCH_INPUT", "two distinct team ids are required")
 	}
@@ -19,7 +19,7 @@ func NewMatchScoreState(teamAID, teamBID string, initialSideByTeam map[string]st
 	if !validSide(sideA) || !validSide(sideB) || sideA == sideB {
 		return nil, newError("INVALID_MATCH_INPUT", "initial sides must assign one T and one CT")
 	}
-	return &MatchScoreState{
+	return &matchScoreState{
 		TeamAID: teamAID,
 		TeamBID: teamBID,
 		ScoreByTeam: map[string]int{
@@ -33,7 +33,7 @@ func NewMatchScoreState(teamAID, teamBID string, initialSideByTeam map[string]st
 	}, nil
 }
 
-func (s *MatchScoreState) ApplyRoundWinner(teamID string) error {
+func (s *matchScoreState) ApplyRoundWinner(teamID string) error {
 	if teamID != s.TeamAID && teamID != s.TeamBID {
 		return newError("SIMULATION_INVARIANT_ERROR", "round winner %q is not a match team", teamID)
 	}
@@ -41,11 +41,11 @@ func (s *MatchScoreState) ApplyRoundWinner(teamID string) error {
 	return nil
 }
 
-func (s *MatchScoreState) Score(teamID string) int {
+func (s *matchScoreState) Score(teamID string) int {
 	return s.ScoreByTeam[teamID]
 }
 
-func (s *MatchScoreState) TeamForSide(side string) string {
+func (s *matchScoreState) TeamForSide(side string) string {
 	for _, teamID := range []string{s.TeamAID, s.TeamBID} {
 		if s.SideByTeam[teamID] == side {
 			return teamID
@@ -54,7 +54,7 @@ func (s *MatchScoreState) TeamForSide(side string) string {
 	return ""
 }
 
-func (s *MatchScoreState) SwitchSides() {
+func (s *matchScoreState) SwitchSides() {
 	for _, teamID := range []string{s.TeamAID, s.TeamBID} {
 		if s.SideByTeam[teamID] == SideT {
 			s.SideByTeam[teamID] = SideCT
@@ -64,19 +64,19 @@ func (s *MatchScoreState) SwitchSides() {
 	}
 }
 
-func (s *MatchScoreState) RegulationComplete(rule RuleSet, roundsPlayed int) bool {
+func (s *matchScoreState) RegulationComplete(rule RuleSet, roundsPlayed int) bool {
 	return s.Score(s.TeamAID) >= rule.RegulationWinRounds ||
 		s.Score(s.TeamBID) >= rule.RegulationWinRounds ||
 		roundsPlayed >= rule.RegulationMaxRounds
 }
 
-func (s *MatchScoreState) ShouldEnterOvertime(rule RuleSet, roundsPlayed int) bool {
+func (s *matchScoreState) ShouldEnterOvertime(rule RuleSet, roundsPlayed int) bool {
 	return rule.OvertimeEnabled &&
 		roundsPlayed >= rule.RegulationMaxRounds &&
 		s.Score(s.TeamAID) == s.Score(s.TeamBID)
 }
 
 // OvertimeDecided intentionally refuses to end a match inside an MR3 block.
-func (s *MatchScoreState) OvertimeDecided(rule RuleSet, roundsInBlock int) bool {
+func (s *matchScoreState) OvertimeDecided(rule RuleSet, roundsInBlock int) bool {
 	return roundsInBlock >= rule.OvertimeBlockRounds && s.Score(s.TeamAID) != s.Score(s.TeamBID)
 }

@@ -8,9 +8,9 @@ import (
 	"strings"
 )
 
-// StateFingerprint covers every causal dimension used by NoOp detection. It
+// stateFingerprint covers every causal dimension used by NoOp detection. It
 // is stable across Go map insertion order.
-func StateFingerprint(state *RoundState) string {
+func stateFingerprint(state *roundState) string {
 	if state == nil {
 		return "nil"
 	}
@@ -45,13 +45,13 @@ func StateFingerprint(state *RoundState) string {
 		if intel == nil {
 			continue
 		}
-		records := append([]IntelRecord(nil), intel.Records...)
+		records := append([]intelRecord(nil), intel.Records...)
 		sort.SliceStable(records, func(i, j int) bool { return records[i].ID < records[j].ID })
 		for _, record := range records {
 			parts = append(parts, fmt.Sprintf("intel:%s:%s:%s:%s:%s:%d:%d:%d", side, record.ID, record.Type, record.TargetID, record.NodeID, record.Confidence, record.LastSeenAt, record.ExpiresAt))
 		}
 	}
-	actions := append([]ScheduledAction(nil), state.Scheduler.actions...)
+	actions := state.Scheduler.snapshot()
 	sort.SliceStable(actions, func(i, j int) bool { return actions[i].ID < actions[j].ID })
 	for _, action := range actions {
 		parts = append(parts, fmt.Sprintf("action:%s:%s:%d:%d:%s:%s:%s", action.ID, action.Type, action.StartAt, action.ResolveAt, strings.Join(action.ActorIDs, ","), action.ToNodeID, action.Payload.TargetID))
@@ -65,22 +65,22 @@ func StateFingerprint(state *RoundState) string {
 	return hex.EncodeToString(digest[:])
 }
 
-// ObserveStateProgress updates NoOp/recovery bookkeeping after one attempted
+// observeStateProgress updates NoOp/recovery bookkeeping after one attempted
 // transition. Progress created by the current recovery action intentionally
 // keeps that cycle alive until its completion is classified.
-func ObserveStateProgress(state *RoundState, beforeFingerprint, sourceActionID string) (bool, error) {
-	progressed := beforeFingerprint != StateFingerprint(state)
+func observeStateProgress(state *roundState, beforeFingerprint, sourceActionID string) (bool, error) {
+	progressed := beforeFingerprint != stateFingerprint(state)
 	if !progressed {
 		return false, state.RecordNoOp()
 	}
-	if state.RecoveryAttempt.Status == RecoveryRunning && sourceActionID == state.RecoveryAttempt.RecoveryActionID {
+	if state.RecoveryAttempt.Status == recoveryRunning && sourceActionID == state.RecoveryAttempt.RecoveryActionID {
 		return true, nil
 	}
 	resetRecoveryCycle(state)
 	return true, nil
 }
 
-func (s *RoundState) RecordNoOp() error {
+func (s *roundState) RecordNoOp() error {
 	limit := s.constants.Int("MaxNoOpTransitions", 0)
 	if limit <= 0 {
 		return newError("INVALID_COMBAT_CONSTANT", "MaxNoOpTransitions must be positive")
@@ -89,20 +89,20 @@ func (s *RoundState) RecordNoOp() error {
 		s.NoOpCount++
 	}
 	if s.NoOpCount == limit && s.RecoveryAttempt.CycleID == "" {
-		s.RecoveryAttempt = NoProgressRecoveryState{
+		s.RecoveryAttempt = noProgressRecoveryState{
 			CycleID: stableObjectID("recovery", s.Seed, "no_progress_recovery", s.RecoveryOrdinal),
-			Status:  RecoveryNotAttempted,
+			Status:  recoveryNotAttempted,
 		}
 		s.RecoveryOrdinal++
 	}
 	return nil
 }
 
-// ScheduleNoProgressRecovery attempts exactly one deterministic recovery
+// scheduleNoProgressRecovery attempts exactly one deterministic recovery
 // action for the active cycle. An unavailable action records a failed proof
 // and enables one explicit pure terminal check.
-func ScheduleNoProgressRecovery(state *RoundState) (*ScheduledAction, error) {
-	if state == nil || state.RecoveryAttempt.CycleID == "" || state.RecoveryAttempt.Status != RecoveryNotAttempted {
+func scheduleNoProgressRecovery(state *roundState) (*scheduledAction, error) {
+	if state == nil || state.RecoveryAttempt.CycleID == "" || state.RecoveryAttempt.Status != recoveryNotAttempted {
 		return nil, nil
 	}
 	if bombIsPostPlant(state.Bomb.Status) {
@@ -111,9 +111,9 @@ func ScheduleNoProgressRecovery(state *RoundState) (*ScheduledAction, error) {
 		return nil, nil
 	}
 	intentID := state.RecoveryAttempt.CycleID
-	if state.Bomb.Status == BombDropped {
+	if state.Bomb.Status == bombDropped {
 		for _, actorID := range sortedLivePlayerIDs(state, SideT) {
-			schedule, feedback, err := ScheduleBombRecovery(state, actorID, intentID, state.RecoveryOrdinal)
+			schedule, feedback, err := scheduleBombRecovery(state, actorID, intentID, state.RecoveryOrdinal)
 			if err != nil {
 				if engineError, ok := err.(*EngineError); ok && engineError.Code == "INVALID_PICKUP" {
 					continue
@@ -141,7 +141,7 @@ func ScheduleNoProgressRecovery(state *RoundState) (*ScheduledAction, error) {
 	}
 	if len(path.EdgeIDs) == 0 {
 		site := state.Nodes[siteNode].Node.Site
-		action, err := StartPlantAction(state, carrier.Profile.PlayerID, site, intentID, state.RecoveryOrdinal)
+		action, err := startPlantAction(state, carrier.Profile.PlayerID, site, intentID, state.RecoveryOrdinal)
 		if err != nil {
 			failRecovery(state, "PLANT_RECOVERY_REJECTED")
 			return nil, nil
@@ -149,7 +149,7 @@ func ScheduleNoProgressRecovery(state *RoundState) (*ScheduledAction, error) {
 		startRecovery(state, action.ID)
 		return &action, nil
 	}
-	action, err := StartMovement(state, []string{carrier.Profile.PlayerID}, path.EdgeIDs[0], MoveProfile{Tempo: "Fast"}, intentID, state.RecoveryOrdinal)
+	action, err := startMovement(state, []string{carrier.Profile.PlayerID}, path.EdgeIDs[0], moveProfile{Tempo: "Fast"}, intentID, state.RecoveryOrdinal)
 	if err != nil {
 		return nil, err
 	}
@@ -157,30 +157,30 @@ func ScheduleNoProgressRecovery(state *RoundState) (*ScheduledAction, error) {
 	return &action, nil
 }
 
-func CompleteNoProgressRecovery(state *RoundState, actionID string, succeeded bool, resultCode string) error {
-	if state == nil || state.RecoveryAttempt.Status != RecoveryRunning || state.RecoveryAttempt.RecoveryActionID != actionID {
+func completeNoProgressRecovery(state *roundState, actionID string, succeeded bool, resultCode string) error {
+	if state == nil || state.RecoveryAttempt.Status != recoveryRunning || state.RecoveryAttempt.RecoveryActionID != actionID {
 		return newError("SIMULATION_INVARIANT_ERROR", "recovery completion does not match the running cycle")
 	}
 	state.RecoveryAttempt.CompletedAt = state.Timeline
 	state.RecoveryAttempt.ResultCode = resultCode
 	if succeeded {
-		state.RecoveryAttempt.Status = RecoverySucceeded
+		state.RecoveryAttempt.Status = recoverySucceeded
 		state.NoProgressEligible = false
 		state.NoOpCount = 0
 		return nil
 	}
-	state.RecoveryAttempt.Status = RecoveryFailed
+	state.RecoveryAttempt.Status = recoveryFailed
 	state.NoProgressEligible = true
 	return nil
 }
 
-// ValidNoProgress checks only the business condition. Eligibility is checked
-// separately by EvaluateRoundTerminal.
-func ValidNoProgress(state *RoundState) (bool, error) {
+// validNoProgress checks only the business condition. Eligibility is checked
+// separately by evaluateRoundTerminal.
+func validNoProgress(state *roundState) (bool, error) {
 	if err := validateRuntimeGraph(state); err != nil {
 		return false, err
 	}
-	if state == nil || bombIsPostPlant(state.Bomb.Status) || state.Bomb.Status == BombPlanting || liveCount(state, SideT) == 0 {
+	if state == nil || bombIsPostPlant(state.Bomb.Status) || state.Bomb.Status == bombPlanting || liveCount(state, SideT) == 0 {
 		return false, nil
 	}
 	if pendingReachabilityAction(state) {
@@ -190,7 +190,7 @@ func ValidNoProgress(state *RoundState) (bool, error) {
 	if len(plantNodes) == 0 {
 		return false, newError("CONFIG_NO_PLANT_SITE", "runtime graph has no plant site")
 	}
-	if state.Bomb.Status == BombCarried {
+	if state.Bomb.Status == bombCarried {
 		carrier := state.Players[state.Bomb.CarrierID]
 		if carrier == nil || !carrier.Alive {
 			return false, terminalInvariant("carried bomb has no live carrier")
@@ -198,7 +198,7 @@ func ValidNoProgress(state *RoundState) (bool, error) {
 		from := projectedNodeID(carrier.Location)
 		return !canReachAny(state, from, plantNodes), nil
 	}
-	if state.Bomb.Status == BombDropped {
+	if state.Bomb.Status == bombDropped {
 		bombNode := bombRecoveryNode(state.Bomb.Location)
 		if !canReachAny(state, bombNode, plantNodes) {
 			return true, nil
@@ -213,27 +213,27 @@ func ValidNoProgress(state *RoundState) (bool, error) {
 	return false, nil
 }
 
-func startRecovery(state *RoundState, actionID string) {
-	state.RecoveryAttempt.Status = RecoveryRunning
+func startRecovery(state *roundState, actionID string) {
+	state.RecoveryAttempt.Status = recoveryRunning
 	state.RecoveryAttempt.RecoveryActionID = actionID
 	state.RecoveryAttempt.StartedAt = state.Timeline
 	state.NoProgressEligible = false
 }
 
-func failRecovery(state *RoundState, code string) {
-	state.RecoveryAttempt.Status = RecoveryFailed
+func failRecovery(state *roundState, code string) {
+	state.RecoveryAttempt.Status = recoveryFailed
 	state.RecoveryAttempt.CompletedAt = state.Timeline
 	state.RecoveryAttempt.ResultCode = code
 	state.NoProgressEligible = true
 }
 
-func resetRecoveryCycle(state *RoundState) {
+func resetRecoveryCycle(state *roundState) {
 	state.NoOpCount = 0
 	state.NoProgressEligible = false
-	state.RecoveryAttempt = NoProgressRecoveryState{Status: RecoveryNotAttempted}
+	state.RecoveryAttempt = noProgressRecoveryState{Status: recoveryNotAttempted}
 }
 
-func validateRuntimeGraph(state *RoundState) error {
+func validateRuntimeGraph(state *roundState) error {
 	if state == nil || len(state.Nodes) == 0 {
 		return newError("CONFIG_UNREACHABLE_NODE", "runtime graph has no nodes")
 	}
@@ -245,9 +245,9 @@ func validateRuntimeGraph(state *RoundState) error {
 	return nil
 }
 
-func pendingReachabilityAction(state *RoundState) bool {
-	for _, action := range state.Scheduler.actions {
-		if !oneOf(string(action.Type), string(ActionMovementArrive), string(ActionPickupComplete), string(ActionPlantComplete)) {
+func pendingReachabilityAction(state *roundState) bool {
+	for _, action := range state.Scheduler.snapshot() {
+		if !oneOf(string(action.Type), string(actionMovementArrive), string(actionPickupComplete), string(actionPlantComplete)) {
 			continue
 		}
 		for _, actorID := range validActionActors(state, action) {
@@ -259,11 +259,11 @@ func pendingReachabilityAction(state *RoundState) bool {
 	return false
 }
 
-func nearestReachablePlantSite(state *RoundState, from string) (string, PathResult, bool) {
+func nearestReachablePlantSite(state *roundState, from string) (string, pathResult, bool) {
 	bestNode := ""
-	best := PathResult{}
+	best := pathResult{}
 	for _, nodeID := range configuredPlantNodes(state) {
-		path, feedback, err := FindBoundedPath(&MapConfig{Nodes: runtimeNodes(state), Edges: state.mapEdges}, from, nodeID, len(state.Nodes)*4)
+		path, feedback, err := findBoundedPath(&MapConfig{Nodes: runtimeNodes(state), Edges: state.mapEdges}, from, nodeID, len(state.Nodes)*4)
 		if err != nil || feedback != nil {
 			continue
 		}
@@ -274,7 +274,7 @@ func nearestReachablePlantSite(state *RoundState, from string) (string, PathResu
 	return bestNode, best, bestNode != ""
 }
 
-func configuredPlantNodes(state *RoundState) []string {
+func configuredPlantNodes(state *roundState) []string {
 	var nodes []string
 	for id, node := range state.Nodes {
 		if node != nil && node.Node.Site != "" && node.Node.Site != "None" && hasString(node.Node.AreaUsages, "Plant") {
@@ -285,7 +285,7 @@ func configuredPlantNodes(state *RoundState) []string {
 	return nodes
 }
 
-func canReachAny(state *RoundState, from string, targets []string) bool {
+func canReachAny(state *roundState, from string, targets []string) bool {
 	for _, target := range targets {
 		if graphReachable(state, from, target) {
 			return true
@@ -294,7 +294,7 @@ func canReachAny(state *RoundState, from string, targets []string) bool {
 	return false
 }
 
-func graphReachable(state *RoundState, from, to string) bool {
+func graphReachable(state *roundState, from, to string) bool {
 	if state.Nodes[from] == nil || state.Nodes[to] == nil {
 		return false
 	}
@@ -322,7 +322,7 @@ func graphReachable(state *RoundState, from, to string) bool {
 	return false
 }
 
-func sortedLivePlayerIDs(state *RoundState, side string) []string {
+func sortedLivePlayerIDs(state *roundState, side string) []string {
 	var ids []string
 	for id, player := range state.Players {
 		if player != nil && player.Alive && player.Side == side {
@@ -333,7 +333,7 @@ func sortedLivePlayerIDs(state *RoundState, side string) []string {
 	return ids
 }
 
-func sortedPlayerIDs(state *RoundState) []string {
+func sortedPlayerIDs(state *roundState) []string {
 	ids := make([]string, 0, len(state.Players))
 	for id := range state.Players {
 		ids = append(ids, id)
@@ -342,7 +342,7 @@ func sortedPlayerIDs(state *RoundState) []string {
 	return ids
 }
 
-func locationKey(location PlayerLocation) string {
+func locationKey(location playerLocation) string {
 	if location.NodeID != "" {
 		return "node:" + location.NodeID
 	}

@@ -12,7 +12,7 @@ type scriptedTerminalSimulator struct {
 	mutateScores bool
 }
 
-func (s *scriptedTerminalSimulator) SimulateRound(_ context.Context, input *RoundInput) (*RoundSimulationResult, error) {
+func (s *scriptedTerminalSimulator) SimulateRound(_ context.Context, input *RoundInput) (*roundSimulationResult, error) {
 	index := len(s.inputs)
 	snapshot := *input
 	snapshot.ScoreByTeam = map[string]int{}
@@ -33,7 +33,7 @@ func (s *scriptedTerminalSimulator) SimulateRound(_ context.Context, input *Roun
 	if winnerTeamID == input.TeamT.TeamID {
 		winnerSide = SideT
 	}
-	return &RoundSimulationResult{
+	return &roundSimulationResult{
 		Round: &RoundResult{
 			RoundNumber:          input.RoundNumber,
 			Phase:                input.phase,
@@ -46,7 +46,7 @@ func (s *scriptedTerminalSimulator) SimulateRound(_ context.Context, input *Roun
 			TeamTID:              input.TeamT.TeamID,
 			TeamCTID:             input.TeamCT.TeamID,
 		},
-		Terminal: &RoundTerminal{WinnerTeamID: winnerTeamID, WinnerSide: winnerSide, WinReason: "test_terminal"},
+		Terminal: &roundTerminal{WinnerTeamID: winnerTeamID, WinnerSide: winnerSide, WinReason: "test_terminal"},
 	}, nil
 }
 

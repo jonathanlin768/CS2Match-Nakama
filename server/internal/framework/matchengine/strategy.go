@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-type ReasonRecord struct {
+type reasonRecord struct {
 	Code           string
 	Source         string
 	Value          float64
@@ -31,7 +31,7 @@ type StrategyMemory struct {
 	TeamStyle       map[string]float64
 }
 
-type StrategyScore struct {
+type strategyScore struct {
 	TemplateID           string
 	TemplateBaseWeight   float64
 	LineupFitScore       float64
@@ -42,24 +42,24 @@ type StrategyScore struct {
 	DeterministicScore   float64
 	RandomNoise          float64
 	FinalScore           float64
-	Reasons              []ReasonRecord
+	Reasons              []reasonRecord
 }
 
-type StrategySelection struct {
+type strategySelection struct {
 	Template       RouteTemplate
-	Score          StrategyScore
+	Score          strategyScore
 	AttemptOrdinal int
 	UsedDefault    bool
 }
 
-type RoleAssignmentResult struct {
-	Assignments []RoleAssignment
+type roleAssignmentResult struct {
+	Assignments []roleAssignment
 	GapRoles    []string
 	Penalty     float64
-	Reasons     []ReasonRecord
+	Reasons     []reasonRecord
 }
 
-func ScoreStrategyCandidates(config *MapConfig, team TeamInput, side string, scoreFor, scoreAgainst int, memory StrategyMemory, roundSeed int64, attemptOrdinal int) ([]StrategyScore, error) {
+func scoreStrategyCandidates(config *MapConfig, team TeamInput, side string, scoreFor, scoreAgainst int, memory StrategyMemory, roundSeed int64, attemptOrdinal int) ([]strategyScore, error) {
 	if config == nil || !validSide(side) {
 		return nil, newError("INVALID_STRATEGY_INPUT", "strategy scoring requires config and side")
 	}
@@ -73,7 +73,7 @@ func ScoreStrategyCandidates(config *MapConfig, team TeamInput, side string, sco
 	if len(templateIDs) == 0 {
 		return nil, newError("INVALID_OPENING_PLAN", "no %s strategy templates are configured", side)
 	}
-	results := make([]StrategyScore, 0, len(templateIDs))
+	results := make([]strategyScore, 0, len(templateIDs))
 	for _, templateID := range templateIDs {
 		template := config.RouteTemplates[templateID]
 		base := strategyTemplateBase(config, template)
@@ -86,11 +86,11 @@ func ScoreStrategyCandidates(config *MapConfig, team TeamInput, side string, sco
 		deterministic := base + fit + pressure + success - repeatPenalty - counterRisk
 		amplitude := strategyNoiseAmplitude(team, config.CombatConstants)
 		rawNoise := (stableUnit(roundSeed, "strategy", side, team.TeamID, templateID, attemptOrdinal)*2 - 1) * amplitude
-		results = append(results, StrategyScore{
+		results = append(results, strategyScore{
 			TemplateID: templateID, TemplateBaseWeight: base, LineupFitScore: fit, CurrentScorePressure: pressure,
 			PreviousSuccessBonus: success, RepeatPenalty: repeatPenalty, CounterReadRisk: counterRisk,
 			DeterministicScore: deterministic, RandomNoise: rawNoise,
-			Reasons: []ReasonRecord{
+			Reasons: []reasonRecord{
 				{Code: "TEMPLATE_BASE", Source: templateID, Value: base, Weight: 1},
 				{Code: "LINEUP_FIT", Source: team.TeamID, Value: fit, Weight: 1},
 				{Code: "SCORE_PRESSURE", Source: team.TeamID, Value: pressure, Weight: 1},
@@ -105,7 +105,7 @@ func ScoreStrategyCandidates(config *MapConfig, team TeamInput, side string, sco
 	maxScore := config.CombatConstants.Float("MaxStrategyWeight", 100)
 	for index := range results {
 		results[index].FinalScore = clampFloat(results[index].DeterministicScore+results[index].RandomNoise, minScore, maxScore)
-		results[index].Reasons = append(results[index].Reasons, ReasonRecord{Code: "BOUNDED_RANDOM_NOISE", Source: results[index].TemplateID, Value: results[index].RandomNoise, Weight: 1})
+		results[index].Reasons = append(results[index].Reasons, reasonRecord{Code: "BOUNDED_RANDOM_NOISE", Source: results[index].TemplateID, Value: results[index].RandomNoise, Weight: 1})
 	}
 	sort.SliceStable(results, func(i, j int) bool {
 		if results[i].FinalScore != results[j].FinalScore {
@@ -116,23 +116,23 @@ func ScoreStrategyCandidates(config *MapConfig, team TeamInput, side string, sco
 	return results, nil
 }
 
-func SelectStrategyTemplate(config *MapConfig, team TeamInput, side string, scoreFor, scoreAgainst int, memory StrategyMemory, roundSeed int64, attemptOrdinal int) (StrategySelection, error) {
-	scores, err := ScoreStrategyCandidates(config, team, side, scoreFor, scoreAgainst, memory, roundSeed, attemptOrdinal)
+func selectStrategyTemplate(config *MapConfig, team TeamInput, side string, scoreFor, scoreAgainst int, memory StrategyMemory, roundSeed int64, attemptOrdinal int) (strategySelection, error) {
+	scores, err := scoreStrategyCandidates(config, team, side, scoreFor, scoreAgainst, memory, roundSeed, attemptOrdinal)
 	if err != nil {
-		return StrategySelection{}, err
+		return strategySelection{}, err
 	}
 	winner := scores[0]
-	return StrategySelection{Template: config.RouteTemplates[winner.TemplateID], Score: winner, AttemptOrdinal: attemptOrdinal}, nil
+	return strategySelection{Template: config.RouteTemplates[winner.TemplateID], Score: winner, AttemptOrdinal: attemptOrdinal}, nil
 }
 
-// SelectCTSetup intentionally has no T plan/template argument. Its seed and
+// selectCTSetup intentionally has no T plan/template argument. Its seed and
 // inputs are restricted to CT-owned state and match memory.
-func SelectCTSetup(config *MapConfig, ctTeam TeamInput, scoreFor, scoreAgainst int, memory StrategyMemory, roundSeed int64, attemptOrdinal int) (StrategySelection, error) {
+func selectCTSetup(config *MapConfig, ctTeam TeamInput, scoreFor, scoreAgainst int, memory StrategyMemory, roundSeed int64, attemptOrdinal int) (strategySelection, error) {
 	ctSeed := deriveSeed(roundSeed, "ct_setup", attemptOrdinal)
-	return SelectStrategyTemplate(config, ctTeam, SideCT, scoreFor, scoreAgainst, memory, ctSeed, attemptOrdinal)
+	return selectStrategyTemplate(config, ctTeam, SideCT, scoreFor, scoreAgainst, memory, ctSeed, attemptOrdinal)
 }
 
-func AssignRoles(team TeamInput, template RouteTemplate) RoleAssignmentResult {
+func assignRoles(team TeamInput, template RouteTemplate) roleAssignmentResult {
 	playerIDs := make([]string, 0, len(team.Players))
 	profiles := make(map[string]PlayerProfile, len(team.Players))
 	for _, profile := range team.Players {
@@ -143,7 +143,7 @@ func AssignRoles(team TeamInput, template RouteTemplate) RoleAssignmentResult {
 	required := append([]string(nil), template.RequiredRoles...)
 	sort.Strings(required)
 	available := append([]string(nil), playerIDs...)
-	result := RoleAssignmentResult{}
+	result := roleAssignmentResult{}
 	for _, role := range required {
 		bestIndex, bestScore, exact := -1, -1.0, false
 		for index, playerID := range available {
@@ -159,12 +159,12 @@ func AssignRoles(team TeamInput, template RouteTemplate) RoleAssignmentResult {
 			continue
 		}
 		playerID := available[bestIndex]
-		result.Assignments = append(result.Assignments, RoleAssignment{PlayerID: playerID, Role: role})
+		result.Assignments = append(result.Assignments, roleAssignment{PlayerID: playerID, Role: role})
 		available = append(available[:bestIndex], available[bestIndex+1:]...)
 		if !exact {
 			result.GapRoles = append(result.GapRoles, role)
 			result.Penalty += 5
-			result.Reasons = append(result.Reasons, ReasonRecord{Code: "ROLE_GAP", Source: role, Value: -5, Weight: 1, Detail: playerID + " is the stable fallback"})
+			result.Reasons = append(result.Reasons, reasonRecord{Code: "ROLE_GAP", Source: role, Value: -5, Weight: 1, Detail: playerID + " is the stable fallback"})
 		}
 	}
 	for _, playerID := range available {
@@ -174,37 +174,37 @@ func AssignRoles(team TeamInput, template RouteTemplate) RoleAssignmentResult {
 			sort.Strings(sorted)
 			role = sorted[0]
 		}
-		result.Assignments = append(result.Assignments, RoleAssignment{PlayerID: playerID, Role: role})
+		result.Assignments = append(result.Assignments, roleAssignment{PlayerID: playerID, Role: role})
 	}
 	sort.Slice(result.Assignments, func(i, j int) bool { return result.Assignments[i].PlayerID < result.Assignments[j].PlayerID })
 	return result
 }
 
-func BuildRoundPlan(input *RoundInput, tTemplate, ctTemplate RouteTemplate) (RoundPlan, []ReasonRecord, error) {
+func buildRoundPlan(input *RoundInput, tTemplate, ctTemplate RouteTemplate) (roundPlan, []reasonRecord, error) {
 	if input == nil || input.MapConfig == nil || tTemplate.Side != SideT || ctTemplate.Side != SideCT {
-		return RoundPlan{}, nil, newError("INVALID_OPENING_PLAN", "round plan requires T and CT templates")
+		return roundPlan{}, nil, newError("INVALID_OPENING_PLAN", "round plan requires T and CT templates")
 	}
-	tRoles, ctRoles := AssignRoles(input.TeamT, tTemplate), AssignRoles(input.TeamCT, ctTemplate)
-	plan := RoundPlan{
+	tRoles, ctRoles := assignRoles(input.TeamT, tTemplate), assignRoles(input.TeamCT, ctTemplate)
+	plan := roundPlan{
 		TStrategyTemplateID: tTemplate.ID, CTSetupTemplateID: ctTemplate.ID,
-		RoleAssignments: append(append([]RoleAssignment(nil), tRoles.Assignments...), ctRoles.Assignments...), OpeningRoutes: map[string]string{},
+		RoleAssignments: append(append([]roleAssignment(nil), tRoles.Assignments...), ctRoles.Assignments...), OpeningRoutes: map[string]string{},
 	}
 	if err := assignOpeningRoutes(plan.OpeningRoutes, input.TeamT, tTemplate, input.MapConfig); err != nil {
-		return RoundPlan{}, nil, err
+		return roundPlan{}, nil, err
 	}
 	if err := assignOpeningRoutes(plan.OpeningRoutes, input.TeamCT, ctTemplate, input.MapConfig); err != nil {
-		return RoundPlan{}, nil, err
+		return roundPlan{}, nil, err
 	}
-	carrier, err := SelectBombCarrier(input.TeamT, tRoles.Assignments, plan.OpeningRoutes, input.MapConfig)
+	carrier, err := selectBombCarrier(input.TeamT, tRoles.Assignments, plan.OpeningRoutes, input.MapConfig)
 	if err != nil {
-		return RoundPlan{}, nil, err
+		return roundPlan{}, nil, err
 	}
 	plan.BombCarrierID = carrier
-	reasons := append(append([]ReasonRecord(nil), tRoles.Reasons...), ctRoles.Reasons...)
+	reasons := append(append([]reasonRecord(nil), tRoles.Reasons...), ctRoles.Reasons...)
 	return plan, reasons, nil
 }
 
-func SelectBombCarrier(team TeamInput, assignments []RoleAssignment, routes map[string]string, config *MapConfig) (string, error) {
+func selectBombCarrier(team TeamInput, assignments []roleAssignment, routes map[string]string, config *MapConfig) (string, error) {
 	roles := make(map[string]string, len(assignments))
 	for _, assignment := range assignments {
 		roles[assignment.PlayerID] = assignment.Role
@@ -217,7 +217,7 @@ func SelectBombCarrier(team TeamInput, assignments []RoleAssignment, routes map[
 		if !ok || len(route.Nodes) == 0 {
 			continue
 		}
-		if _, feedback, err := FindBoundedPath(config, "T_SPAWN", route.Nodes[len(route.Nodes)-1], len(config.Nodes)*4); err != nil || feedback != nil {
+		if _, feedback, err := findBoundedPath(config, "T_SPAWN", route.Nodes[len(route.Nodes)-1], len(config.Nodes)*4); err != nil || feedback != nil {
 			continue
 		}
 		score := float64(profile.Attributes.Composure+profile.Attributes.Discipline) / 2
@@ -237,7 +237,7 @@ func SelectBombCarrier(team TeamInput, assignments []RoleAssignment, routes map[
 	return bestID, nil
 }
 
-func DeployOpeningActions(state *RoundState) ([]ScheduledAction, error) {
+func deployOpeningActions(state *roundState) ([]scheduledAction, error) {
 	if state == nil || state.Timeline != 0 {
 		return nil, newError("INVALID_OPENING_PLAN", "opening deployment must run at timeline zero")
 	}
@@ -246,7 +246,7 @@ func DeployOpeningActions(state *RoundState) ([]ScheduledAction, error) {
 		playerIDs = append(playerIDs, playerID)
 	}
 	sort.Strings(playerIDs)
-	actions := make([]ScheduledAction, 0, len(playerIDs))
+	actions := make([]scheduledAction, 0, len(playerIDs))
 	for ordinal, playerID := range playerIDs {
 		player := state.Players[playerID]
 		routeID := state.Plan.OpeningRoutes[playerID]
@@ -258,7 +258,7 @@ func DeployOpeningActions(state *RoundState) ([]ScheduledAction, error) {
 		if player.Location.NodeID == route.Nodes[0] && len(route.Nodes) > 1 {
 			nextNode = route.Nodes[1]
 		} else if player.Location.NodeID != route.Nodes[0] {
-			path, feedback, err := FindBoundedPath(&MapConfig{Nodes: runtimeNodes(state), Edges: state.mapEdges}, player.Location.NodeID, route.Nodes[0], len(state.Nodes)*4)
+			path, feedback, err := findBoundedPath(&MapConfig{Nodes: runtimeNodes(state), Edges: state.mapEdges}, player.Location.NodeID, route.Nodes[0], len(state.Nodes)*4)
 			if err != nil || feedback != nil || len(path.NodeIDs) < 2 {
 				return nil, newError("INVALID_OPENING_PLAN", "player %s cannot reach route %s", playerID, routeID)
 			}
@@ -281,7 +281,7 @@ func DeployOpeningActions(state *RoundState) ([]ScheduledAction, error) {
 			templateID = state.Plan.CTSetupTemplateID
 		}
 		template := state.routeTemplates[templateID]
-		action, err := StartMovement(state, []string{playerID}, edgeID, MoveProfile{Tempo: template.Tempo}, "opening:"+playerID+":"+routeID, ordinal)
+		action, err := startMovement(state, []string{playerID}, edgeID, moveProfile{Tempo: template.Tempo}, "opening:"+playerID+":"+routeID, ordinal)
 		if err != nil {
 			return nil, err
 		}
@@ -290,7 +290,7 @@ func DeployOpeningActions(state *RoundState) ([]ScheduledAction, error) {
 	return actions, nil
 }
 
-func DecayStrategyMemoryForSideSwitch(memory StrategyMemory) StrategyMemory {
+func decayStrategyMemoryForSideSwitch(memory StrategyMemory) StrategyMemory {
 	out := StrategyMemory{
 		PreviousSuccess: copyStringIntMap(memory.PreviousSuccess), CounterReads: copyStringIntMap(memory.CounterReads),
 		SideTendency: map[string]float64{}, TeamStyle: copyStringFloatMap(memory.TeamStyle),
@@ -382,11 +382,11 @@ func strategyNoiseAmplitude(team TeamInput, constants CombatConstants) float64 {
 	return constants.Float("MaxRandomNoise", 0) * (1 - 0.75*clampProbability(stability))
 }
 
-func protectDecisiveStrategyTrend(scores []StrategyScore, decisiveGap float64) {
+func protectDecisiveStrategyTrend(scores []strategyScore, decisiveGap float64) {
 	if len(scores) < 2 {
 		return
 	}
-	order := append([]StrategyScore(nil), scores...)
+	order := append([]strategyScore(nil), scores...)
 	sort.Slice(order, func(i, j int) bool {
 		if order[i].DeterministicScore != order[j].DeterministicScore {
 			return order[i].DeterministicScore > order[j].DeterministicScore
@@ -499,19 +499,19 @@ func assignOpeningRoutes(target map[string]string, team TeamInput, template Rout
 	return nil
 }
 
-func startOpeningHold(state *RoundState, playerID, routeID string, ordinal int) (ScheduledAction, error) {
+func startOpeningHold(state *roundState, playerID, routeID string, ordinal int) (scheduledAction, error) {
 	player := state.Players[playerID]
 	intentID := "opening-hold:" + playerID + ":" + routeID
-	action := ScheduledAction{IntentID: intentID, Type: ActionHoldStart, ActorIDs: []string{playerID}, From: player.Location, StartAt: 0, ResolveAt: 0, Priority: 30, MinRequiredActors: 1, Payload: ActionPayload{TargetID: player.Location.NodeID}}
-	action.ID = NewActionID(state.Seed, action.Type, intentID, 0, 0, action.ActorIDs, ordinal)
-	if err := BeginExclusiveAction(state, &action, ActionHolding); err != nil {
-		return ScheduledAction{}, err
+	action := scheduledAction{IntentID: intentID, Type: actionHoldStart, ActorIDs: []string{playerID}, From: player.Location, StartAt: 0, ResolveAt: 0, Priority: 30, MinRequiredActors: 1, Payload: actionPayload{TargetID: player.Location.NodeID}}
+	action.ID = newActionID(state.Seed, action.Type, intentID, 0, 0, action.ActorIDs, ordinal)
+	if err := beginExclusiveAction(state, &action, actionHolding); err != nil {
+		return scheduledAction{}, err
 	}
-	player.Intent = Intent{ID: intentID, Type: IntentHold, TargetID: player.Location.NodeID, CreatedAt: 0}
-	player.Posture = PostureHolding
+	player.Intent = intent{ID: intentID, Type: intentHold, TargetID: player.Location.NodeID, CreatedAt: 0}
+	player.Posture = postureHolding
 	if err := state.Scheduler.Schedule(action); err != nil {
 		cancelActionForActors(state, action)
-		return ScheduledAction{}, err
+		return scheduledAction{}, err
 	}
 	return action, nil
 }
@@ -531,7 +531,7 @@ func edgeBetween(edges map[string]MapEdge, from, to string) (string, bool) {
 	return "", false
 }
 
-func runtimeNodes(state *RoundState) map[string]MapNode {
+func runtimeNodes(state *roundState) map[string]MapNode {
 	out := make(map[string]MapNode, len(state.Nodes))
 	for id, node := range state.Nodes {
 		out[id] = node.Node

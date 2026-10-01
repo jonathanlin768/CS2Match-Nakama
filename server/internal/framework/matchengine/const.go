@@ -1,6 +1,39 @@
 package matchengine
 
 const (
+	SideT  = "T"
+	SideCT = "CT"
+
+	EventMatchStart       = "MATCH_START"
+	EventRoundStart       = "ROUND_START"
+	EventHalfTime         = "HALF_TIME"
+	EventSideSwitch       = "SIDE_SWITCH"
+	EventOvertime         = "OVERTIME_START"
+	EventDamage           = "DAMAGE"
+	EventKill             = "KILL"
+	EventStrategyAdjusted = "STRATEGY_ADJUSTED"
+	EventRotate           = "ROTATE"
+	EventReinforce        = "REINFORCE"
+	EventControlGained    = "CONTROL_GAINED"
+	EventBombDrop         = "BOMB_DROP"
+	EventBombPickup       = "BOMB_PICKUP"
+	EventPlantStart       = "BOMB_PLANT_START"
+	EventPlantInterrupt   = "BOMB_PLANT_INTERRUPT"
+	EventDefuseStart      = "DEFUSE_START"
+	EventDefuseInterrupt  = "DEFUSE_INTERRUPT"
+	EventBombPlant        = "BOMB_PLANT"
+	EventBombDefuse       = "BOMB_DEFUSE"
+	EventBombExplode      = "BOMB_EXPLODE"
+	EventRoundEnd         = "ROUND_END"
+	EventMatchEnd         = "MATCH_END"
+	BombStatusCarried     = "Carried"
+	BombStatusPlanted     = "Planted"
+	BombStatusDefused     = "Defused"
+	BombStatusExplode     = "Exploded"
+	BombStatusDropped     = "Dropped"
+)
+
+const (
 	DefaultMapID      = "de_dust2"
 	DefaultMapName    = "Dust II"
 	DefaultMapVersion = "draft-dust2-semantic-v1"

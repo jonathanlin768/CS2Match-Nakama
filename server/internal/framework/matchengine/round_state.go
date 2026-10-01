@@ -5,70 +5,70 @@ import (
 	"sort"
 )
 
-type RoundPhase string
-type CombatPosture string
-type RecoveryStatus string
-type ControlStatus string
-type BombRuntimeStatus string
+type roundPhase string
+type combatPosture string
+type recoveryStatus string
+type controlStatus string
+type bombRuntimeStatus string
 
 const (
-	PhaseOpeningDeploy RoundPhase = "OpeningDeploy"
-	PhaseAdvance       RoundPhase = "Advance"
-	PhaseClash         RoundPhase = "Clash"
-	PhaseRotate        RoundPhase = "RotateDecision"
-	PhaseSiteContest   RoundPhase = "SiteContest"
-	PhasePlanting      RoundPhase = "Planting"
-	PhasePostPlant     RoundPhase = "PostPlant"
-	PhaseRoundEnd      RoundPhase = "RoundEnd"
+	phaseOpeningDeploy roundPhase = "OpeningDeploy"
+	phaseAdvance       roundPhase = "Advance"
+	phaseClash         roundPhase = "Clash"
+	phaseRotate        roundPhase = "RotateDecision"
+	phaseSiteContest   roundPhase = "SiteContest"
+	phasePlanting      roundPhase = "Planting"
+	phasePostPlant     roundPhase = "PostPlant"
+	phaseRoundEnd      roundPhase = "RoundEnd"
 
-	PostureDefault  CombatPosture = "Default"
-	PostureHolding  CombatPosture = "Holding"
-	PostureMoving   CombatPosture = "Moving"
-	PostureEngaged  CombatPosture = "Engaged"
-	PostureRetaking CombatPosture = "Retaking"
+	postureDefault  combatPosture = "Default"
+	postureHolding  combatPosture = "Holding"
+	postureMoving   combatPosture = "Moving"
+	postureEngaged  combatPosture = "Engaged"
+	postureRetaking combatPosture = "Retaking"
 
-	RecoveryNotAttempted RecoveryStatus = "NotAttempted"
-	RecoveryRunning      RecoveryStatus = "Running"
-	RecoveryFailed       RecoveryStatus = "Failed"
-	RecoverySucceeded    RecoveryStatus = "Succeeded"
+	recoveryNotAttempted recoveryStatus = "NotAttempted"
+	recoveryRunning      recoveryStatus = "Running"
+	recoveryFailed       recoveryStatus = "Failed"
+	recoverySucceeded    recoveryStatus = "Succeeded"
 
-	ControlUnknown   ControlStatus = "Unknown"
-	ControlT         ControlStatus = "T"
-	ControlCT        ControlStatus = "CT"
-	ControlContested ControlStatus = "Contested"
+	controlUnknown   controlStatus = "Unknown"
+	controlT         controlStatus = "T"
+	controlCT        controlStatus = "CT"
+	controlContested controlStatus = "Contested"
 
-	BombCarried  BombRuntimeStatus = "Carried"
-	BombDropped  BombRuntimeStatus = "Dropped"
-	BombPlanting BombRuntimeStatus = "Planting"
-	BombPlanted  BombRuntimeStatus = "Planted"
-	BombDefusing BombRuntimeStatus = "Defusing"
-	BombDefused  BombRuntimeStatus = "Defused"
-	BombExploded BombRuntimeStatus = "Exploded"
+	bombCarried  bombRuntimeStatus = "Carried"
+	bombDropped  bombRuntimeStatus = "Dropped"
+	bombPlanting bombRuntimeStatus = "Planting"
+	bombPlanted  bombRuntimeStatus = "Planted"
+	bombDefusing bombRuntimeStatus = "Defusing"
+	bombDefused  bombRuntimeStatus = "Defused"
+	bombExploded bombRuntimeStatus = "Exploded"
 )
 
-type RoleAssignment struct {
+type roleAssignment struct {
 	PlayerID string
 	Role     string
 }
 
-type RoundPlan struct {
+type roundPlan struct {
 	TStrategyTemplateID string
 	CTSetupTemplateID   string
-	RoleAssignments     []RoleAssignment
+	RoleAssignments     []roleAssignment
 	OpeningRoutes       map[string]string
 	BombCarrierID       string
 }
 
-type NoProgressRecoveryState struct {
+type noProgressRecoveryState struct {
 	CycleID          string
-	Status           RecoveryStatus
+	Status           recoveryStatus
 	RecoveryActionID string
 	StartedAt        int
 	CompletedAt      int
 	ResultCode       string
 }
 
-type RoundPlayerState struct {
+type roundPlayerState struct {
 	Profile PlayerProfile
 	TeamID  string
 	Side    string
@@ -81,10 +81,10 @@ type RoundPlayerState struct {
 	Suppressed bool
 	Momentum   int
 
-	Location     PlayerLocation
-	Posture      CombatPosture
-	Intent       Intent
-	Action       PlayerActionState
+	Location     playerLocation
+	Posture      combatPosture
+	Intent       intent
+	Action       playerActionState
 	EngagementID string
 
 	HasBomb bool
@@ -93,22 +93,22 @@ type RoundPlayerState struct {
 	Damage  int
 }
 
-type KnownControlState struct {
-	Status     ControlStatus
+type knownControlState struct {
+	Status     controlStatus
 	UpdatedAt  int
 	ObservedBy []string
 	ExpiresAt  int
 }
 
-type NodeRuntimeState struct {
+type nodeRuntimeState struct {
 	Node          MapNode
-	ActualControl ControlStatus
-	KnownControl  map[string]KnownControlState
+	ActualControl controlStatus
+	KnownControl  map[string]knownControlState
 	UpdatedAt     int
 }
 
-func (n *NodeRuntimeState) ResolveContest(result ControlStatus, at, ttl int, observedBy map[string][]string) error {
-	if result == ControlContested || !oneOf(string(result), string(ControlUnknown), string(ControlT), string(ControlCT)) {
+func (n *nodeRuntimeState) ResolveContest(result controlStatus, at, ttl int, observedBy map[string][]string) error {
+	if result == controlContested || !oneOf(string(result), string(controlUnknown), string(controlT), string(controlCT)) {
 		return newError("SIMULATION_INVARIANT_ERROR", "node %s contest did not resolve to a legal control state", n.Node.ID)
 	}
 	n.ActualControl = result
@@ -119,23 +119,23 @@ func (n *NodeRuntimeState) ResolveContest(result ControlStatus, at, ttl int, obs
 			continue
 		}
 		sort.Strings(observers)
-		n.KnownControl[side] = KnownControlState{Status: result, UpdatedAt: at, ObservedBy: observers, ExpiresAt: at + ttl}
+		n.KnownControl[side] = knownControlState{Status: result, UpdatedAt: at, ObservedBy: observers, ExpiresAt: at + ttl}
 	}
 	return nil
 }
 
-func (n *NodeRuntimeState) DecayKnownControl(side string, timeline int) {
+func (n *nodeRuntimeState) DecayKnownControl(side string, timeline int) {
 	known, ok := n.KnownControl[side]
 	if !ok || known.ExpiresAt == 0 || timeline < known.ExpiresAt {
 		return
 	}
-	known.Status = ControlUnknown
+	known.Status = controlUnknown
 	known.ObservedBy = nil
 	known.UpdatedAt = timeline
 	n.KnownControl[side] = known
 }
 
-type IntelRecord struct {
+type intelRecord struct {
 	ID             string
 	Type           string
 	TargetID       string
@@ -150,15 +150,15 @@ type IntelRecord struct {
 	ExpiresAt      int
 }
 
-type TeamIntel struct {
-	Records      []IntelRecord
-	KnownEnemies map[string]IntelRecord
-	KnownControl map[string]IntelRecord
-	SoundCues    []IntelRecord
-	BombIntel    *IntelRecord
+type teamIntel struct {
+	Records      []intelRecord
+	KnownEnemies map[string]intelRecord
+	KnownControl map[string]intelRecord
+	SoundCues    []intelRecord
+	BombIntel    *intelRecord
 }
 
-type EncounterState struct {
+type encounterState struct {
 	ID             string
 	SourceActionID string
 	ScenarioID     string
@@ -171,19 +171,19 @@ type EncounterState struct {
 	MaxPulses      int
 	InitiativeSide string
 	Status         string
-	Reasons        []ReasonRecord
+	Reasons        []reasonRecord
 }
 
-type TeamUtilityState struct {
+type teamUtilityState struct {
 	Budget  int
 	Spent   int
-	Windows []UtilityWindow
+	Windows []utilityWindow
 }
 
-type BombState struct {
-	Status         BombRuntimeStatus
+type bombState struct {
+	Status         bombRuntimeStatus
 	CarrierID      string
-	Location       PlayerLocation
+	Location       playerLocation
 	DroppedAt      int
 	PlantedSite    string
 	PlantedAt      int
@@ -198,11 +198,11 @@ type BombState struct {
 	DefuseFinishAt int
 }
 
-func (b *BombState) Drop(location PlayerLocation, at int) error {
-	if !location.Valid() || (b.Status != BombCarried && b.Status != BombPlanting) {
+func (b *bombState) Drop(location playerLocation, at int) error {
+	if !location.Valid() || (b.Status != bombCarried && b.Status != bombPlanting) {
 		return newError("SIMULATION_INVARIANT_ERROR", "bomb cannot drop from status %s", b.Status)
 	}
-	b.Status = BombDropped
+	b.Status = bombDropped
 	b.CarrierID = ""
 	b.Location = location
 	b.DroppedAt = at
@@ -210,71 +210,71 @@ func (b *BombState) Drop(location PlayerLocation, at int) error {
 	return nil
 }
 
-func (b *BombState) StartPlant(actorID, actionID, site string, startAt, finishAt int) error {
-	if b.Status != BombCarried || b.CarrierID != actorID || actionID == "" || finishAt <= startAt {
+func (b *bombState) StartPlant(actorID, actionID, site string, startAt, finishAt int) error {
+	if b.Status != bombCarried || b.CarrierID != actorID || actionID == "" || finishAt <= startAt {
 		return newError("SIMULATION_INVARIANT_ERROR", "invalid plant start")
 	}
-	b.Status = BombPlanting
+	b.Status = bombPlanting
 	b.PlantActorID, b.PlantActionID = actorID, actionID
 	b.PlantedSite, b.PlantStartAt, b.PlantFinishAt = site, startAt, finishAt
 	return nil
 }
 
-func (b *BombState) CompletePlant(location PlayerLocation, at, explodeAt int) error {
-	if b.Status != BombPlanting || !location.Valid() || at != b.PlantFinishAt || explodeAt <= at {
+func (b *bombState) CompletePlant(location playerLocation, at, explodeAt int) error {
+	if b.Status != bombPlanting || !location.Valid() || at != b.PlantFinishAt || explodeAt <= at {
 		return newError("SIMULATION_INVARIANT_ERROR", "invalid plant completion")
 	}
-	b.Status = BombPlanted
+	b.Status = bombPlanted
 	b.CarrierID = ""
 	b.Location = location
 	b.PlantedAt, b.ExplodeAt = at, explodeAt
 	return nil
 }
 
-func (b *BombState) InterruptPlant(actorID, actionID string) bool {
-	if b.Status != BombPlanting || b.PlantActorID != actorID || b.PlantActionID != actionID {
+func (b *bombState) InterruptPlant(actorID, actionID string) bool {
+	if b.Status != bombPlanting || b.PlantActorID != actorID || b.PlantActionID != actionID {
 		return false
 	}
-	b.Status = BombCarried
+	b.Status = bombCarried
 	b.PlantActorID, b.PlantActionID = "", ""
 	b.PlantStartAt, b.PlantFinishAt = 0, 0
 	b.PlantedSite = ""
 	return true
 }
 
-func (b *BombState) StartDefuse(actorID, actionID string, startAt, finishAt int) error {
-	if b.Status != BombPlanted || actorID == "" || actionID == "" || finishAt <= startAt || finishAt > b.ExplodeAt {
+func (b *bombState) StartDefuse(actorID, actionID string, startAt, finishAt int) error {
+	if b.Status != bombPlanted || actorID == "" || actionID == "" || finishAt <= startAt || finishAt > b.ExplodeAt {
 		return newError("SIMULATION_INVARIANT_ERROR", "invalid defuse start")
 	}
-	b.Status = BombDefusing
+	b.Status = bombDefusing
 	b.DefuseActorID, b.DefuseActionID = actorID, actionID
 	b.DefuseStartAt, b.DefuseFinishAt = startAt, finishAt
 	return nil
 }
 
-func (b *BombState) CompleteDefuse(at int) error {
-	if b.Status != BombDefusing || at != b.DefuseFinishAt || at > b.ExplodeAt {
+func (b *bombState) CompleteDefuse(at int) error {
+	if b.Status != bombDefusing || at != b.DefuseFinishAt || at > b.ExplodeAt {
 		return newError("SIMULATION_INVARIANT_ERROR", "invalid defuse completion")
 	}
-	b.Status = BombDefused
+	b.Status = bombDefused
 	return nil
 }
 
-func (b *BombState) InterruptDefuse(actorID, actionID string) bool {
-	if b.Status != BombDefusing || b.DefuseActorID != actorID || b.DefuseActionID != actionID {
+func (b *bombState) InterruptDefuse(actorID, actionID string) bool {
+	if b.Status != bombDefusing || b.DefuseActorID != actorID || b.DefuseActionID != actionID {
 		return false
 	}
-	b.Status = BombPlanted
+	b.Status = bombPlanted
 	b.DefuseActorID, b.DefuseActionID = "", ""
 	b.DefuseStartAt, b.DefuseFinishAt = 0, 0
 	return true
 }
 
-func (b *BombState) Pickup(actorID string, location PlayerLocation, at int) error {
-	if b.Status != BombDropped || actorID == "" || !location.Valid() || !sameLocation(b.Location, location) {
+func (b *bombState) Pickup(actorID string, location playerLocation, at int) error {
+	if b.Status != bombDropped || actorID == "" || !location.Valid() || !sameLocation(b.Location, location) {
 		return newError("SIMULATION_INVARIANT_ERROR", "invalid bomb pickup")
 	}
-	b.Status = BombCarried
+	b.Status = bombCarried
 	b.CarrierID = actorID
 	b.Location = location
 	b.DroppedAt = 0
@@ -282,23 +282,23 @@ func (b *BombState) Pickup(actorID string, location PlayerLocation, at int) erro
 	return nil
 }
 
-func (b *BombState) Explode(at int) error {
-	if (b.Status != BombPlanted && b.Status != BombDefusing) || at != b.ExplodeAt {
+func (b *bombState) Explode(at int) error {
+	if (b.Status != bombPlanted && b.Status != bombDefusing) || at != b.ExplodeAt {
 		return newError("SIMULATION_INVARIANT_ERROR", "invalid bomb explosion")
 	}
-	b.Status = BombExploded
+	b.Status = bombExploded
 	return nil
 }
 
-func (b *BombState) clearActions() {
+func (b *bombState) clearActions() {
 	b.PlantActionID, b.PlantActorID = "", ""
 	b.DefuseActionID, b.DefuseActorID = "", ""
 }
 
-type RoundState struct {
+type roundState struct {
 	RoundNumber int
 	Seed        int64
-	Phase       RoundPhase
+	Phase       roundPhase
 	Timeline    int
 
 	RoundDeadline int
@@ -309,27 +309,27 @@ type RoundState struct {
 	TeamAID       string
 	TeamBID       string
 	ScoreByTeam   map[string]int
-	Plan          RoundPlan
+	Plan          roundPlan
 
-	Players            map[string]*RoundPlayerState
-	Bomb               BombState
-	Nodes              map[string]*NodeRuntimeState
-	Intel              map[string]*TeamIntel
-	ActiveEngagements  map[string]*EncounterState
-	Scheduler          *ActionScheduler
+	Players            map[string]*roundPlayerState
+	Bomb               bombState
+	Nodes              map[string]*nodeRuntimeState
+	Intel              map[string]*teamIntel
+	ActiveEngagements  map[string]*encounterState
+	Scheduler          *actionScheduler
 	MomentumT          int
 	MomentumCT         int
-	Utility            map[string]*TeamUtilityState
+	Utility            map[string]*teamUtilityState
 	DecisionCount      int
 	RotationCount      map[string]int
 	TransitionCount    int
 	NoOpCount          int
 	NoProgressEligible bool
 	RecoveryOrdinal    int
-	RecoveryAttempt    NoProgressRecoveryState
+	RecoveryAttempt    noProgressRecoveryState
 	Events             []*GameEvent
-	Terminal           *RoundTerminal
-	PhaseHistory       []RoundPhase
+	Terminal           *roundTerminal
+	PhaseHistory       []roundPhase
 	constants          CombatConstants
 	mapEdges           map[string]MapEdge
 	routes             map[string]Route
@@ -341,15 +341,15 @@ type RoundState struct {
 	weaponSpecs        map[string]WeaponSpec
 }
 
-func NewRoundState(input *RoundInput, plan RoundPlan) (*RoundState, error) {
+func newRoundState(input *RoundInput, plan roundPlan) (*roundState, error) {
 	if input == nil || input.MapConfig == nil {
 		return nil, newError("INVALID_ROUND_INPUT", "round input/map config is nil")
 	}
 	constants := input.MapConfig.CombatConstants
-	state := &RoundState{
+	state := &roundState{
 		RoundNumber:        input.RoundNumber,
 		Seed:               input.Seed,
-		Phase:              PhaseOpeningDeploy,
+		Phase:              phaseOpeningDeploy,
 		RoundDeadline:      constants.Int("RoundTimeLimit", 0),
 		MapID:              input.MapID,
 		TeamTID:            input.TeamT.TeamID,
@@ -358,15 +358,15 @@ func NewRoundState(input *RoundInput, plan RoundPlan) (*RoundState, error) {
 		TeamBID:            input.TeamBID,
 		ScoreByTeam:        copyIntMap(input.ScoreByTeam),
 		Plan:               plan,
-		Players:            map[string]*RoundPlayerState{},
-		Nodes:              map[string]*NodeRuntimeState{},
-		Intel:              map[string]*TeamIntel{},
-		ActiveEngagements:  map[string]*EncounterState{},
-		Scheduler:          NewActionScheduler(constants),
-		Utility:            map[string]*TeamUtilityState{},
+		Players:            map[string]*roundPlayerState{},
+		Nodes:              map[string]*nodeRuntimeState{},
+		Intel:              map[string]*teamIntel{},
+		ActiveEngagements:  map[string]*encounterState{},
+		Scheduler:          newActionScheduler(constants),
+		Utility:            map[string]*teamUtilityState{},
 		RotationCount:      map[string]int{SideT: 0, SideCT: 0},
-		RecoveryAttempt:    NoProgressRecoveryState{Status: RecoveryNotAttempted},
-		PhaseHistory:       []RoundPhase{PhaseOpeningDeploy},
+		RecoveryAttempt:    noProgressRecoveryState{Status: recoveryNotAttempted},
+		PhaseHistory:       []roundPhase{phaseOpeningDeploy},
 		constants:          constants,
 		mapEdges:           input.MapConfig.Edges,
 		routes:             input.MapConfig.Routes,
@@ -384,17 +384,17 @@ func NewRoundState(input *RoundInput, plan RoundPlan) (*RoundState, error) {
 		state.TeamBID = input.TeamCT.TeamID
 	}
 	for _, side := range []string{SideT, SideCT} {
-		state.Intel[side] = &TeamIntel{KnownEnemies: map[string]IntelRecord{}, KnownControl: map[string]IntelRecord{}}
-		state.Utility[side] = &TeamUtilityState{Budget: constants.Int("UtilityBudget", 0)}
+		state.Intel[side] = &teamIntel{KnownEnemies: map[string]intelRecord{}, KnownControl: map[string]intelRecord{}}
+		state.Utility[side] = &teamUtilityState{Budget: constants.Int("UtilityBudget", 0)}
 	}
 	for id, node := range input.MapConfig.Nodes {
-		actual := ControlUnknown
+		actual := controlUnknown
 		if node.DefaultSide == SideT {
-			actual = ControlT
+			actual = controlT
 		} else if node.DefaultSide == SideCT {
-			actual = ControlCT
+			actual = controlCT
 		}
-		state.Nodes[id] = &NodeRuntimeState{Node: node, ActualControl: actual, KnownControl: map[string]KnownControlState{}}
+		state.Nodes[id] = &nodeRuntimeState{Node: node, ActualControl: actual, KnownControl: map[string]knownControlState{}}
 	}
 	if err := state.addTeamPlayers(input.TeamT, SideT, input.SideLoadouts[SideT], "T_SPAWN"); err != nil {
 		return nil, err
@@ -407,16 +407,16 @@ func NewRoundState(input *RoundInput, plan RoundPlan) (*RoundState, error) {
 		return nil, newError("INVALID_OPENING_PLAN", "bomb carrier %s is not a live T player", plan.BombCarrierID)
 	}
 	carrier.HasBomb = true
-	state.Bomb = BombState{Status: BombCarried, CarrierID: carrier.Profile.PlayerID, Location: carrier.Location}
-	InitializeUtilityBudget(state, SideT, input.MapConfig.RouteTemplates[plan.TStrategyTemplateID])
-	InitializeUtilityBudget(state, SideCT, input.MapConfig.RouteTemplates[plan.CTSetupTemplateID])
+	state.Bomb = bombState{Status: bombCarried, CarrierID: carrier.Profile.PlayerID, Location: carrier.Location}
+	initializeUtilityBudget(state, SideT, input.MapConfig.RouteTemplates[plan.TStrategyTemplateID])
+	initializeUtilityBudget(state, SideCT, input.MapConfig.RouteTemplates[plan.CTSetupTemplateID])
 	if err := state.ClampAndValidate(); err != nil {
 		return nil, err
 	}
 	return state, nil
 }
 
-func (s *RoundState) addTeamPlayers(team TeamInput, side string, loadout WeaponLoadout, spawnID string) error {
+func (s *roundState) addTeamPlayers(team TeamInput, side string, loadout WeaponLoadout, spawnID string) error {
 	if len(team.Players) != 5 {
 		return newError("INVALID_LINEUP", "team %s must contain five players", team.TeamID)
 	}
@@ -427,16 +427,16 @@ func (s *RoundState) addTeamPlayers(team TeamInput, side string, loadout WeaponL
 		if _, duplicate := s.Players[profile.PlayerID]; duplicate {
 			return newError("INVALID_LINEUP", "duplicate player %s", profile.PlayerID)
 		}
-		s.Players[profile.PlayerID] = &RoundPlayerState{
+		s.Players[profile.PlayerID] = &roundPlayerState{
 			Profile: profile, TeamID: team.TeamID, Side: side, Weapon: loadout,
 			Alive: true, HP: s.constants.Int("MaxHP", 0), Stamina: s.constants.Int("MaxStamina", 0), Focus: s.constants.Int("MaxFocus", 0),
-			Location: PlayerLocation{NodeID: spawnID}, Posture: PostureDefault, Action: PlayerActionState{Status: ActionIdle},
+			Location: playerLocation{NodeID: spawnID}, Posture: postureDefault, Action: playerActionState{Status: actionIdle},
 		}
 	}
 	return nil
 }
 
-func (s *RoundState) ClampAndValidate() error {
+func (s *roundState) ClampAndValidate() error {
 	minHP, maxHP := s.constants.Int("MinHP", 0), s.constants.Int("MaxHP", 0)
 	minStamina, maxStamina := s.constants.Int("MinStamina", 0), s.constants.Int("MaxStamina", 0)
 	minFocus, maxFocus := s.constants.Int("MinFocus", 0), s.constants.Int("MaxFocus", 0)
@@ -468,19 +468,19 @@ func (s *RoundState) ClampAndValidate() error {
 		}
 		if player.HasBomb {
 			carrierCount++
-			if s.Bomb.CarrierID != id || (s.Bomb.Status != BombCarried && s.Bomb.Status != BombPlanting) {
+			if s.Bomb.CarrierID != id || (s.Bomb.Status != bombCarried && s.Bomb.Status != bombPlanting) {
 				return newError("SIMULATION_INVARIANT_ERROR", "player/bomb carrier state disagrees for %s", id)
 			}
 		}
 	}
-	if s.Bomb.Status == BombCarried || s.Bomb.Status == BombPlanting {
+	if s.Bomb.Status == bombCarried || s.Bomb.Status == bombPlanting {
 		if carrierCount != 1 {
 			return newError("SIMULATION_INVARIANT_ERROR", "carried bomb must have exactly one player carrier")
 		}
 	} else if carrierCount != 0 || s.Bomb.CarrierID != "" {
 		return newError("SIMULATION_INVARIANT_ERROR", "non-carried bomb still has a carrier")
 	}
-	if s.Phase == PhaseRoundEnd && s.Terminal == nil {
+	if s.Phase == phaseRoundEnd && s.Terminal == nil {
 		return newError("SIMULATION_INVARIANT_ERROR", "RoundEnd phase has no terminal")
 	}
 	return nil
@@ -496,6 +496,84 @@ func clampProbability(value float64) float64 {
 	return value
 }
 
-func (s *RoundState) String() string {
+func (s *roundState) String() string {
 	return fmt.Sprintf("round=%d phase=%s t=%d players=%d", s.RoundNumber, s.Phase, s.Timeline, len(s.Players))
+}
+
+type nextTimeKind string
+
+const (
+	nextTimeNone     nextTimeKind = "None"
+	nextTimeAction   nextTimeKind = "Action"
+	nextTimeRound    nextTimeKind = "RoundDeadline"
+	nextTimeBomb     nextTimeKind = "BombDeadline"
+	nextTimeIntel    nextTimeKind = "IntelDecay"
+	nextTimeControl  nextTimeKind = "ControlDecay"
+	nextTimeDecision nextTimeKind = "DecisionDeadline"
+)
+
+func (s *roundState) NextTime() (int, nextTimeKind) {
+	next, kind := int(^uint(0)>>1), nextTimeNone
+	consider := func(at int, candidate nextTimeKind) {
+		if at > s.Timeline && (at < next || (at == next && candidate < kind)) {
+			next, kind = at, candidate
+		}
+	}
+	if action, ok := s.Scheduler.Peek(); ok {
+		consider(action.ResolveAt, nextTimeAction)
+	}
+	if s.Bomb.Status == bombPlanted || s.Bomb.Status == bombDefusing {
+		consider(s.BombDeadline, nextTimeBomb)
+	} else {
+		consider(s.RoundDeadline-s.constants.Int("ForceExecuteThreshold", 0), nextTimeDecision)
+		consider(s.RoundDeadline, nextTimeRound)
+	}
+	for _, intel := range s.Intel {
+		for _, record := range intel.Records {
+			consider(record.ExpiresAt, nextTimeIntel)
+		}
+	}
+	for _, node := range s.Nodes {
+		for _, known := range node.KnownControl {
+			consider(known.ExpiresAt, nextTimeControl)
+		}
+	}
+	if kind == nextTimeNone {
+		return s.Timeline, kind
+	}
+	return next, kind
+}
+
+func (s *roundState) RecordTransition() error {
+	s.TransitionCount++
+	if s.TransitionCount > s.constants.Int("MaxStateTransitions", 0) {
+		return newError("STATE_TRANSITION_LIMIT_EXCEEDED", "MaxStateTransitions exceeded")
+	}
+	return nil
+}
+
+func (s *roundState) RecordRotation(side string) error {
+	s.RotationCount[side]++
+	if s.RotationCount[side] > s.constants.Int("MaxRotationsPerTeam", 0) {
+		return newError("ROTATION_LIMIT_EXCEEDED", "MaxRotationsPerTeam exceeded for %s", side)
+	}
+	return nil
+}
+
+func (s *roundState) ValidateEffectBatchSize(count int) error {
+	if count > s.constants.Int("MaxEffectsPerTimestamp", 0) {
+		return newError("EFFECT_LIMIT_EXCEEDED", "MaxEffectsPerTimestamp exceeded")
+	}
+	return nil
+}
+
+func (s *roundState) AdvanceTimeline(at int) error {
+	if at < s.Timeline {
+		return newError("INVALID_TIMELINE", "timeline cannot move backwards")
+	}
+	if at > s.constants.Int("MaxRoundTimeline", 0) {
+		return newError("TIMELINE_LIMIT_EXCEEDED", "MaxRoundTimeline exceeded")
+	}
+	s.Timeline = at
+	return nil
 }

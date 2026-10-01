@@ -12,9 +12,9 @@ func cloneStrategyMemory(memory StrategyMemory) StrategyMemory {
 	return out
 }
 
-// UpdateStrategyMemoryFromRound accepts only a completed causal RoundResult;
+// updateStrategyMemoryFromRound accepts only a completed causal RoundResult;
 // no in-progress or predicted outcome can enter the next round's planner.
-func UpdateStrategyMemoryFromRound(memory StrategyMemory, round *RoundResult, teamID string, repeatWindow int) (StrategyMemory, error) {
+func updateStrategyMemoryFromRound(memory StrategyMemory, round *RoundResult, teamID string, repeatWindow int) (StrategyMemory, error) {
 	if round == nil || round.WinnerTeamID == "" || round.WinReason == "" || !roundHasEvent(round, EventRoundEnd) {
 		return memory, newError("INCOMPLETE_ROUND_RESULT", "strategy memory requires a completed RoundResult")
 	}
@@ -43,17 +43,17 @@ func UpdateStrategyMemoryFromRound(memory StrategyMemory, round *RoundResult, te
 	return out, nil
 }
 
-func (e *MatchEngine) updateStrategyMemory(round *RoundResult) {
+func (e *matchEngine) updateStrategyMemory(round *RoundResult) {
 	window := e.input.MapConfig.CombatConstants.Int("StrategyRepeatWindow", 0)
 	for _, teamID := range []string{e.input.TeamA.TeamID, e.input.TeamB.TeamID} {
-		memory, err := UpdateStrategyMemoryFromRound(e.strategyMemory[teamID], round, teamID, window)
+		memory, err := updateStrategyMemoryFromRound(e.strategyMemory[teamID], round, teamID, window)
 		if err == nil {
 			e.strategyMemory[teamID] = memory
 		}
 	}
 }
 
-func (e *MatchEngine) aggregateRoundStats(round *RoundResult) {
+func (e *matchEngine) aggregateRoundStats(round *RoundResult) {
 	killsThisRound := map[string]int{}
 	for _, event := range round.Events {
 		if event == nil {

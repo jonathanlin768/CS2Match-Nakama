@@ -5,7 +5,7 @@ import (
 	"sort"
 )
 
-type CombatModifierInput struct {
+type combatModifierInput struct {
 	RoleTagModifier     float64
 	WeaponModifier      float64
 	PostureModifier     float64
@@ -16,29 +16,29 @@ type CombatModifierInput struct {
 	SuppressionPenalty  float64
 }
 
-type PlayerCombatScoreBreakdown struct {
+type playerCombatScoreBreakdown struct {
 	WeightedPlayerScore float64
-	CombatModifierInput
+	combatModifierInput
 	PlayerCombatScore float64
-	Reasons           []ReasonRecord
+	Reasons           []reasonRecord
 }
 
-type SurvivalModifierInput struct {
+type survivalModifierInput struct {
 	CoverModifier       float64
 	TeamSupportModifier float64
 	MovementExposure    float64
 	DamagePenalty       float64
 }
 
-type TargetSurvivalBreakdown struct {
+type targetSurvivalBreakdown struct {
 	Positioning float64
 	Reaction    float64
 	Focus       float64
-	SurvivalModifierInput
+	survivalModifierInput
 	TargetSurvivalScore float64
 }
 
-type CoordinationMetrics struct {
+type coordinationMetrics struct {
 	TradeCoverage float64
 	Crossfire     float64
 	Spacing       float64
@@ -46,11 +46,11 @@ type CoordinationMetrics struct {
 	Isolation     float64
 }
 
-func (metrics CoordinationMetrics) Total() float64 {
+func (metrics coordinationMetrics) Total() float64 {
 	return metrics.TradeCoverage + metrics.Crossfire + metrics.Spacing + metrics.SyncPeek - metrics.Isolation
 }
 
-type EncounterScoreBreakdown struct {
+type encounterScoreBreakdown struct {
 	Side                        string
 	PlayerScoreSum              float64
 	TeamModifier                float64
@@ -61,10 +61,10 @@ type EncounterScoreBreakdown struct {
 	BoundedRandomNoise          float64
 	DeterministicEncounterScore float64
 	FinalScore                  float64
-	Reasons                     []ReasonRecord
+	Reasons                     []reasonRecord
 }
 
-type PulsePlayerSnapshot struct {
+type pulsePlayerSnapshot struct {
 	PlayerID   string
 	TeamID     string
 	Side       string
@@ -76,22 +76,22 @@ type PulsePlayerSnapshot struct {
 	Stamina    int
 	Focus      int
 	Suppressed bool
-	Posture    CombatPosture
-	Location   PlayerLocation
+	Posture    combatPosture
+	Location   playerLocation
 	X          float64
 	Y          float64
 }
 
-type CombatPulseSnapshot struct {
+type combatPulseSnapshot struct {
 	EncounterID    string
 	Scenario       Scenario
 	Timeline       int
-	Players        map[string]PulsePlayerSnapshot
+	Players        map[string]pulsePlayerSnapshot
 	ActorIDs       []string
 	VisibleTargets map[string]map[string]bool
 }
 
-type TargetCandidate struct {
+type targetCandidate struct {
 	PlayerID    string
 	ThreatScore float64
 	Exposure    float64
@@ -100,7 +100,7 @@ type TargetCandidate struct {
 	TieRoll     float64
 }
 
-type AttackProbabilities struct {
+type attackProbabilities struct {
 	RawHitChance     float64
 	HitChance        float64
 	BaseShotDamage   float64
@@ -111,7 +111,7 @@ type AttackProbabilities struct {
 	KillChance       float64
 }
 
-type AttackWindowResult struct {
+type attackWindowResult struct {
 	ActorID       string
 	TargetID      string
 	Hit           bool
@@ -119,33 +119,33 @@ type AttackWindowResult struct {
 	HitRoll       float64
 	LethalRoll    float64
 	DamageRoll    float64
-	Probabilities AttackProbabilities
-	Effect        Effect
+	Probabilities attackProbabilities
+	Effect        effect
 }
 
-type CombatPulseResult struct {
+type combatPulseResult struct {
 	EncounterID string
 	PulseIndex  int
-	Snapshot    CombatPulseSnapshot
-	Attacks     []AttackWindowResult
-	Batch       *AppliedBatch
+	Snapshot    combatPulseSnapshot
+	Attacks     []attackWindowResult
+	Batch       *appliedBatch
 	ShouldEnd   bool
 	EndReason   string
 }
 
-func CalculatePlayerCombatScore(state *RoundState, playerID, scenarioID string, modifiers CombatModifierInput) (PlayerCombatScoreBreakdown, error) {
+func calculatePlayerCombatScore(state *roundState, playerID, scenarioID string, modifiers combatModifierInput) (playerCombatScoreBreakdown, error) {
 	player := state.Players[playerID]
 	if player == nil || state.scenarios[scenarioID].ID == "" {
-		return PlayerCombatScoreBreakdown{}, newError("INVALID_COMBAT_SCORE", "combat score requires player and scenario")
+		return playerCombatScoreBreakdown{}, newError("INVALID_COMBAT_SCORE", "combat score requires player and scenario")
 	}
-	weighted, err := WeightedScenarioPlayerScore(player.Profile.Attributes, scenarioID, state.encounterModifiers)
+	weighted, err := weightedScenarioPlayerScore(player.Profile.Attributes, scenarioID, state.encounterModifiers)
 	if err != nil {
-		return PlayerCombatScoreBreakdown{}, err
+		return playerCombatScoreBreakdown{}, err
 	}
 	score := weighted + modifiers.RoleTagModifier + modifiers.WeaponModifier + modifiers.PostureModifier + modifiers.VisibilityModifier + modifiers.TeamSupportModifier - modifiers.StaminaPenalty - modifiers.DamagePenalty - modifiers.SuppressionPenalty
-	return PlayerCombatScoreBreakdown{
-		WeightedPlayerScore: weighted, CombatModifierInput: modifiers, PlayerCombatScore: score,
-		Reasons: []ReasonRecord{
+	return playerCombatScoreBreakdown{
+		WeightedPlayerScore: weighted, combatModifierInput: modifiers, PlayerCombatScore: score,
+		Reasons: []reasonRecord{
 			{Code: "WEIGHTED_PLAYER_SCORE", Source: playerID, Value: weighted, Weight: 1},
 			{Code: "ROLE_TAG", Source: playerID, Value: modifiers.RoleTagModifier, Weight: 1},
 			{Code: "WEAPON", Source: player.Weapon.Primary, Value: modifiers.WeaponModifier, Weight: 1},
@@ -159,7 +159,7 @@ func CalculatePlayerCombatScore(state *RoundState, playerID, scenarioID string, 
 	}, nil
 }
 
-func WeightedScenarioPlayerScore(attributes PlayerAttributes, scenarioID string, modifiers map[string]EncounterModifier) (float64, error) {
+func weightedScenarioPlayerScore(attributes PlayerAttributes, scenarioID string, modifiers map[string]EncounterModifier) (float64, error) {
 	weights := map[string]int{}
 	for _, modifier := range modifiers {
 		if modifier.ScenarioID == scenarioID && modifier.Factor == "ScenarioWeight" && (modifier.Side == "Both" || modifier.Side == "") {
@@ -188,16 +188,16 @@ func WeightedScenarioPlayerScore(attributes PlayerAttributes, scenarioID string,
 	return weighted / 100, nil
 }
 
-func CalculateTargetSurvivalScore(player *RoundPlayerState, modifiers SurvivalModifierInput) TargetSurvivalBreakdown {
+func calculateTargetSurvivalScore(player *roundPlayerState, modifiers survivalModifierInput) targetSurvivalBreakdown {
 	positioning := float64(player.Profile.Attributes.Positioning)
 	reaction := float64(player.Profile.Attributes.Reaction)
 	focus := float64(player.Focus)
 	score := positioning + reaction + modifiers.CoverModifier + modifiers.TeamSupportModifier + focus - modifiers.MovementExposure - modifiers.DamagePenalty
-	return TargetSurvivalBreakdown{Positioning: positioning, Reaction: reaction, Focus: focus, SurvivalModifierInput: modifiers, TargetSurvivalScore: score}
+	return targetSurvivalBreakdown{Positioning: positioning, Reaction: reaction, Focus: focus, survivalModifierInput: modifiers, TargetSurvivalScore: score}
 }
 
-func CalculateCoordination(state *RoundState, encounter *EncounterState, side string) CoordinationMetrics {
-	participants := make([]*RoundPlayerState, 0)
+func calculateCoordination(state *roundState, encounter *encounterState, side string) coordinationMetrics {
+	participants := make([]*roundPlayerState, 0)
 	locations := map[string]int{}
 	for _, actorID := range encounter.ActorIDs {
 		player := state.Players[actorID]
@@ -207,7 +207,7 @@ func CalculateCoordination(state *RoundState, encounter *EncounterState, side st
 		participants = append(participants, player)
 		locations[coordinationLocationKey(player.Location)]++
 	}
-	metrics := CoordinationMetrics{}
+	metrics := coordinationMetrics{}
 	if len(participants) >= 2 {
 		metrics.TradeCoverage = float64(len(participants)-1) * 2
 		metrics.Spacing = float64(len(locations)-1) * 1.5
@@ -216,7 +216,7 @@ func CalculateCoordination(state *RoundState, encounter *EncounterState, side st
 		}
 		syncCount := 0
 		for _, player := range participants {
-			if player.Posture == PostureMoving || player.Posture == PostureEngaged {
+			if player.Posture == postureMoving || player.Posture == postureEngaged {
 				syncCount++
 			}
 		}
@@ -229,21 +229,21 @@ func CalculateCoordination(state *RoundState, encounter *EncounterState, side st
 	return metrics
 }
 
-func CalculateEncounterScorePair(state *RoundState, encounter *EncounterState, scenarioID string, seed int64) (map[string]EncounterScoreBreakdown, error) {
+func calculateEncounterScorePair(state *roundState, encounter *encounterState, scenarioID string, seed int64) (map[string]encounterScoreBreakdown, error) {
 	scenario := state.scenarios[scenarioID]
 	if scenario.ID == "" {
 		return nil, newError("INVALID_ENCOUNTER", "scenario %s is missing", scenarioID)
 	}
-	results := map[string]EncounterScoreBreakdown{}
+	results := map[string]encounterScoreBreakdown{}
 	for _, side := range []string{SideT, SideCT} {
-		coordination := CalculateCoordination(state, encounter, side)
+		coordination := calculateCoordination(state, encounter, side)
 		playerSum := 0.0
 		for _, actorID := range encounter.ActorIDs {
 			player := state.Players[actorID]
 			if player == nil || !player.Alive || player.Side != side {
 				continue
 			}
-			breakdown, err := CalculatePlayerCombatScore(state, actorID, scenarioID, defaultCombatModifiers(state, player, scenario, coordination))
+			breakdown, err := calculatePlayerCombatScore(state, actorID, scenarioID, defaultCombatModifiers(state, player, scenario, coordination))
 			if err != nil {
 				return nil, err
 			}
@@ -251,7 +251,7 @@ func CalculateEncounterScorePair(state *RoundState, encounter *EncounterState, s
 		}
 		teamModifier := coordination.Total()
 		scenarioModifier := float64(scenario.BaseWeight) / 5
-		utilityModifier := ScopedUtilityModifier(state, side, UtilityOpeningInitiative, "", encounter.ID, state.Timeline)
+		utilityModifier := scopedUtilityModifier(state, side, utilityOpeningInitiative, "", encounter.ID, state.Timeline)
 		momentumModifier := float64(state.MomentumT)
 		if side == SideCT {
 			momentumModifier = float64(state.MomentumCT)
@@ -260,11 +260,11 @@ func CalculateEncounterScorePair(state *RoundState, encounter *EncounterState, s
 		timePressure := encounterTimePressure(state, side)
 		deterministic := playerSum + teamModifier + scenarioModifier + utilityModifier + momentumModifier + timePressure
 		noise := (stableUnit(seed, side, "encounter_noise")*2 - 1) * strategyNoiseAmplitude(teamInputFromState(state, side), state.constants)
-		results[side] = EncounterScoreBreakdown{
+		results[side] = encounterScoreBreakdown{
 			Side: side, PlayerScoreSum: playerSum, TeamModifier: teamModifier, ScenarioModifier: scenarioModifier,
 			UtilityModifier: utilityModifier, MomentumModifier: momentumModifier, TimePressureModifier: timePressure,
 			BoundedRandomNoise: noise, DeterministicEncounterScore: deterministic,
-			Reasons: []ReasonRecord{
+			Reasons: []reasonRecord{
 				{Code: "PLAYER_COMBAT_SUM", Source: encounter.ID, Value: playerSum, Weight: 1},
 				{Code: "TEAM_COORDINATION", Source: side, Value: teamModifier, Weight: 1},
 				{Code: "SCENARIO", Source: scenarioID, Value: scenarioModifier, Weight: 1},
@@ -278,20 +278,20 @@ func CalculateEncounterScorePair(state *RoundState, encounter *EncounterState, s
 	for _, side := range []string{SideT, SideCT} {
 		result := results[side]
 		result.FinalScore = result.DeterministicEncounterScore + result.BoundedRandomNoise
-		result.Reasons = append(result.Reasons, ReasonRecord{Code: "BOUNDED_RANDOM_NOISE", Source: encounter.ID, Value: result.BoundedRandomNoise, Weight: 1})
+		result.Reasons = append(result.Reasons, reasonRecord{Code: "BOUNDED_RANDOM_NOISE", Source: encounter.ID, Value: result.BoundedRandomNoise, Weight: 1})
 		if math.Abs(results[SideT].DeterministicEncounterScore-results[SideCT].DeterministicEncounterScore) <= state.constants.Float("CloseScoreGap", 0) {
-			result.Reasons = append(result.Reasons, ReasonRecord{Code: "CLOSE_SCORE", Source: encounter.ID, Value: 1, Weight: 1})
+			result.Reasons = append(result.Reasons, reasonRecord{Code: "CLOSE_SCORE", Source: encounter.ID, Value: 1, Weight: 1})
 		}
 		results[side] = result
 	}
 	return results, nil
 }
 
-func CreateCombatPulseSnapshot(state *RoundState, encounter *EncounterState) (CombatPulseSnapshot, error) {
-	if encounter == nil || encounter.Status != EncounterActive {
-		return CombatPulseSnapshot{}, newError("INVALID_COMBAT_PULSE", "pulse requires active encounter")
+func createCombatPulseSnapshot(state *roundState, encounter *encounterState) (combatPulseSnapshot, error) {
+	if encounter == nil || encounter.Status != encounterActive {
+		return combatPulseSnapshot{}, newError("INVALID_COMBAT_PULSE", "pulse requires active encounter")
 	}
-	snapshot := CombatPulseSnapshot{EncounterID: encounter.ID, Scenario: state.scenarios[encounter.ScenarioID], Timeline: state.Timeline, Players: map[string]PulsePlayerSnapshot{}, VisibleTargets: map[string]map[string]bool{}}
+	snapshot := combatPulseSnapshot{EncounterID: encounter.ID, Scenario: state.scenarios[encounter.ScenarioID], Timeline: state.Timeline, Players: map[string]pulsePlayerSnapshot{}, VisibleTargets: map[string]map[string]bool{}}
 	for _, actorID := range encounter.ActorIDs {
 		player := state.Players[actorID]
 		if player == nil || !player.Alive || player.EngagementID != encounter.ID {
@@ -299,7 +299,7 @@ func CreateCombatPulseSnapshot(state *RoundState, encounter *EncounterState) (Co
 		}
 		snapshot.ActorIDs = append(snapshot.ActorIDs, actorID)
 		x, y := runtimeXY(state, player.Location)
-		snapshot.Players[actorID] = PulsePlayerSnapshot{
+		snapshot.Players[actorID] = pulsePlayerSnapshot{
 			PlayerID: actorID, TeamID: player.TeamID, Side: player.Side, Profile: player.Profile, Weapon: cloneLoadout(player.Weapon),
 			WeaponSpec: state.weaponSpecs[player.Weapon.Primary], Alive: player.Alive, HP: player.HP, Stamina: player.Stamina, Focus: player.Focus,
 			Suppressed: player.Suppressed, Posture: player.Posture, Location: clonePlayerLocation(player.Location), X: x, Y: y,
@@ -318,18 +318,18 @@ func CreateCombatPulseSnapshot(state *RoundState, encounter *EncounterState) (Co
 	return snapshot, nil
 }
 
-func SelectCombatTarget(snapshot CombatPulseSnapshot, actorID string, pulseSeed int64, constants CombatConstants) (TargetCandidate, bool) {
+func selectCombatTarget(snapshot combatPulseSnapshot, actorID string, pulseSeed int64, constants CombatConstants) (targetCandidate, bool) {
 	actor, ok := snapshot.Players[actorID]
 	if !ok || !actor.Alive {
-		return TargetCandidate{}, false
+		return targetCandidate{}, false
 	}
-	var candidates []TargetCandidate
+	var candidates []targetCandidate
 	for _, targetID := range snapshot.ActorIDs {
 		target := snapshot.Players[targetID]
 		if !target.Alive || target.Side == actor.Side || snapshot.VisibleTargets != nil && snapshot.VisibleTargets[actorID] != nil && !snapshot.VisibleTargets[actorID][targetID] {
 			continue
 		}
-		candidate := TargetCandidate{
+		candidate := targetCandidate{
 			PlayerID: targetID, ThreatScore: snapshotThreatScore(target), Exposure: snapshotExposure(target),
 			Distance: math.Hypot(actor.X-target.X, actor.Y-target.Y), HP: target.HP,
 			TieRoll: stableUnit(pulseSeed, actorID, targetID, "target"),
@@ -337,7 +337,7 @@ func SelectCombatTarget(snapshot CombatPulseSnapshot, actorID string, pulseSeed 
 		candidates = append(candidates, candidate)
 	}
 	if len(candidates) == 0 {
-		return TargetCandidate{}, false
+		return targetCandidate{}, false
 	}
 	sort.SliceStable(candidates, func(i, j int) bool {
 		if candidates[i].ThreatScore != candidates[j].ThreatScore {
@@ -372,7 +372,7 @@ func SelectCombatTarget(snapshot CombatPulseSnapshot, actorID string, pulseSeed 
 	return candidates[0], true
 }
 
-func CalculateAttackProbabilities(combatScore, survivalScore float64, weapon WeaponSpec, targetArmor bool, scenario Scenario, visibility Visibility, constants CombatConstants) AttackProbabilities {
+func calculateAttackProbabilities(combatScore, survivalScore float64, weapon WeaponSpec, targetArmor bool, scenario Scenario, visibility Visibility, constants CombatConstants) attackProbabilities {
 	combatScale := constants.Float("CombatScale", 1)
 	rawHit := 1 / (1 + math.Exp(-(combatScore-survivalScore)/combatScale))
 	hit := clampFloat(rawHit, constants.Float("MinHitChance", 0), constants.Float("MaxHitChance", 1))
@@ -388,26 +388,26 @@ func CalculateAttackProbabilities(combatScore, survivalScore float64, weapon Wea
 	exposure := clampFloat(1+float64(visibility.ExposureModifier)/100, constants.Float("MinExposureModifier", 0), constants.Float("MaxExposureModifier", 2))
 	rawKill := hit * damagePotential * exposure
 	kill := clampFloat(math.Min(rawKill, hit), 0, constants.Float("MaxKillChance", 1))
-	return AttackProbabilities{RawHitChance: rawHit, HitChance: hit, BaseShotDamage: baseShotDamage, BurstCapacity: burst, DamagePotential: damagePotential, ExposureModifier: exposure, RawKillChance: rawKill, KillChance: kill}
+	return attackProbabilities{RawHitChance: rawHit, HitChance: hit, BaseShotDamage: baseShotDamage, BurstCapacity: burst, DamagePotential: damagePotential, ExposureModifier: exposure, RawKillChance: rawKill, KillChance: kill}
 }
 
-func ResolveAttackWindow(state *RoundState, snapshot CombatPulseSnapshot, action ScheduledAction, actorID string, target TargetCandidate, pulseSeed int64, ordinal int) (AttackWindowResult, error) {
+func resolveAttackWindow(state *roundState, snapshot combatPulseSnapshot, action scheduledAction, actorID string, target targetCandidate, pulseSeed int64, ordinal int) (attackWindowResult, error) {
 	actorSnapshot, targetSnapshot := snapshot.Players[actorID], snapshot.Players[target.PlayerID]
 	actorState, targetState := state.Players[actorID], state.Players[target.PlayerID]
-	coordination := CalculateCoordination(state, state.ActiveEngagements[snapshot.EncounterID], actorSnapshot.Side)
-	combatBreakdown, err := CalculatePlayerCombatScore(state, actorID, snapshot.Scenario.ID, defaultCombatModifiers(state, actorState, snapshot.Scenario, coordination))
+	coordination := calculateCoordination(state, state.ActiveEngagements[snapshot.EncounterID], actorSnapshot.Side)
+	combatBreakdown, err := calculatePlayerCombatScore(state, actorID, snapshot.Scenario.ID, defaultCombatModifiers(state, actorState, snapshot.Scenario, coordination))
 	if err != nil {
-		return AttackWindowResult{}, err
+		return attackWindowResult{}, err
 	}
-	survival := CalculateTargetSurvivalScore(targetState, defaultSurvivalModifiers(state, targetState, snapshot.Scenario, CalculateCoordination(state, state.ActiveEngagements[snapshot.EncounterID], targetSnapshot.Side)))
+	survival := calculateTargetSurvivalScore(targetState, defaultSurvivalModifiers(state, targetState, snapshot.Scenario, calculateCoordination(state, state.ActiveEngagements[snapshot.EncounterID], targetSnapshot.Side)))
 	visibility := visibilityForLocations(state, actorSnapshot.Location, targetSnapshot.Location)
-	probabilities := CalculateAttackProbabilities(combatBreakdown.PlayerCombatScore, survival.TargetSurvivalScore, actorSnapshot.WeaponSpec, targetSnapshot.Weapon.Armor, snapshot.Scenario, visibility, state.constants)
+	probabilities := calculateAttackProbabilities(combatBreakdown.PlayerCombatScore, survival.TargetSurvivalScore, actorSnapshot.WeaponSpec, targetSnapshot.Weapon.Armor, snapshot.Scenario, visibility, state.constants)
 	hitRoll := stableUnit(pulseSeed, actorID, target.PlayerID, "hit")
 	lethalRoll := stableUnit(pulseSeed, actorID, target.PlayerID, "lethal")
 	damageRoll := stableUnit(pulseSeed, actorID, target.PlayerID, "damage")
-	result := AttackWindowResult{ActorID: actorID, TargetID: target.PlayerID, HitRoll: hitRoll, LethalRoll: lethalRoll, DamageRoll: damageRoll, Probabilities: probabilities}
+	result := attackWindowResult{ActorID: actorID, TargetID: target.PlayerID, HitRoll: hitRoll, LethalRoll: lethalRoll, DamageRoll: damageRoll, Probabilities: probabilities}
 	if hitRoll >= probabilities.HitChance {
-		result.Effect = Effect{ID: NewEffectID(state.Seed, action.ID, EffectMiss, ordinal), SourceActionID: action.ID, Type: EffectMiss, Priority: PriorityCombatPulseCommit, Timestamp: state.Timeline, ActorID: actorID, TargetID: target.PlayerID, StringValue: actorSnapshot.WeaponSpec.ID}
+		result.Effect = effect{ID: newEffectID(state.Seed, action.ID, effectMiss, ordinal), SourceActionID: action.ID, Type: effectMiss, Priority: priorityCombatPulseCommit, Timestamp: state.Timeline, ActorID: actorID, TargetID: target.PlayerID, StringValue: actorSnapshot.WeaponSpec.ID}
 		return result, nil
 	}
 	result.Hit = true
@@ -420,11 +420,11 @@ func ResolveAttackWindow(state *RoundState, snapshot CombatPulseSnapshot, action
 	if result.LethalWindow {
 		damage = maxInt(damage, targetSnapshot.HP)
 	}
-	result.Effect = Effect{
-		ID: NewEffectID(state.Seed, action.ID, EffectDamage, ordinal), SourceActionID: action.ID, Type: EffectDamage,
-		Priority: PriorityCombatPulseCommit, Timestamp: state.Timeline, ActorID: actorID, TargetID: target.PlayerID,
+	result.Effect = effect{
+		ID: newEffectID(state.Seed, action.ID, effectDamage, ordinal), SourceActionID: action.ID, Type: effectDamage,
+		Priority: priorityCombatPulseCommit, Timestamp: state.Timeline, ActorID: actorID, TargetID: target.PlayerID,
 		Amount: damage, StringValue: actorSnapshot.WeaponSpec.ID,
-		ReasonRecords: []ReasonRecord{
+		ReasonRecords: []reasonRecord{
 			{Code: "HIT_CHANCE", Source: actorID, Value: probabilities.HitChance, Weight: 1, Probability: floatPointer(probabilities.HitChance), Formula: "Hit = HitRoll < HitChance", Inputs: map[string]float64{"hit_roll": hitRoll, "hit_chance": probabilities.HitChance, "kill_chance": probabilities.KillChance}},
 			{Code: "KILL_CHANCE", Source: target.PlayerID, Value: probabilities.KillChance, Weight: 1},
 			{Code: "WEAPON_DAMAGE", Source: actorSnapshot.WeaponSpec.ID, Value: probabilities.BaseShotDamage, Weight: 1},
@@ -435,43 +435,43 @@ func ResolveAttackWindow(state *RoundState, snapshot CombatPulseSnapshot, action
 
 func floatPointer(value float64) *float64 { return &value }
 
-func ResolveCombatPulse(state *RoundState, action ScheduledAction) (*CombatPulseResult, error) {
-	if state == nil || action.Type != ActionCombatPulse || action.ResolveAt != state.Timeline {
+func resolveCombatPulse(state *roundState, action scheduledAction) (*combatPulseResult, error) {
+	if state == nil || action.Type != actionCombatPulse || action.ResolveAt != state.Timeline {
 		return nil, newError("INVALID_COMBAT_PULSE", "invalid combat pulse action")
 	}
 	encounter := state.ActiveEngagements[action.Payload.TargetID]
-	if encounter == nil || encounter.Status != EncounterActive {
+	if encounter == nil || encounter.Status != encounterActive {
 		return nil, newError("INVALID_COMBAT_PULSE", "encounter is not active")
 	}
-	snapshot, err := CreateCombatPulseSnapshot(state, encounter)
+	snapshot, err := createCombatPulseSnapshot(state, encounter)
 	if err != nil {
 		return nil, err
 	}
 	pulseIndex := encounter.PulsesResolved
 	pulseSeed := deriveSeed(state.Seed, "encounter", encounter.ID, pulseIndex, action.ResolveAt)
-	result := &CombatPulseResult{EncounterID: encounter.ID, PulseIndex: pulseIndex, Snapshot: snapshot}
-	damageEffects := make([]Effect, 0, len(snapshot.ActorIDs))
+	result := &combatPulseResult{EncounterID: encounter.ID, PulseIndex: pulseIndex, Snapshot: snapshot}
+	damageEffects := make([]effect, 0, len(snapshot.ActorIDs))
 	for ordinal, actorID := range snapshot.ActorIDs {
-		target, ok := SelectCombatTarget(snapshot, actorID, pulseSeed, state.constants)
+		target, ok := selectCombatTarget(snapshot, actorID, pulseSeed, state.constants)
 		if !ok {
 			continue
 		}
-		attack, err := ResolveAttackWindow(state, snapshot, action, actorID, target, pulseSeed, ordinal)
+		attack, err := resolveAttackWindow(state, snapshot, action, actorID, target, pulseSeed, ordinal)
 		if err != nil {
 			return nil, err
 		}
 		result.Attacks = append(result.Attacks, attack)
-		if attack.Effect.Type == EffectDamage {
+		if attack.Effect.Type == effectDamage {
 			damageEffects = append(damageEffects, attack.Effect)
 		}
 	}
-	batch, err := ApplyCombatPulseCommit(state, action, damageEffects)
+	batch, err := applyCombatPulseCommit(state, action, damageEffects)
 	if err != nil {
 		return nil, err
 	}
 	missCount := 0
 	for _, attack := range result.Attacks {
-		if attack.Effect.Type == EffectMiss {
+		if attack.Effect.Type == effectMiss {
 			missCount++
 		}
 	}
@@ -479,18 +479,18 @@ func ResolveCombatPulse(state *RoundState, action ScheduledAction) (*CombatPulse
 		return nil, err
 	}
 	for _, attack := range result.Attacks {
-		if attack.Effect.Type == EffectMiss {
-			batch.Effects = append(batch.Effects, AppliedEffect{Effect: attack.Effect})
+		if attack.Effect.Type == effectMiss {
+			batch.Effects = append(batch.Effects, appliedEffect{Effect: attack.Effect})
 		}
 	}
 	applyCombatAftermath(state, snapshot, result.Attacks, batch)
 	encounter.PulsesResolved++
 	result.Batch = batch
-	result.ShouldEnd, result.EndReason = EncounterShouldEnd(state, encounter)
+	result.ShouldEnd, result.EndReason = encounterShouldEnd(state, encounter)
 	return result, nil
 }
 
-func defaultCombatModifiers(state *RoundState, player *RoundPlayerState, scenario Scenario, coordination CoordinationMetrics) CombatModifierInput {
+func defaultCombatModifiers(state *roundState, player *roundPlayerState, scenario Scenario, coordination coordinationMetrics) combatModifierInput {
 	weapon := state.weaponSpecs[player.Weapon.Primary]
 	role := 0.0
 	if hasFold(player.Profile.RoleTags, "Entry") && scenario.Phase == "SiteEntry" {
@@ -499,13 +499,13 @@ func defaultCombatModifiers(state *RoundState, player *RoundPlayerState, scenari
 	if hasFold(player.Profile.RoleTags, "Support") {
 		role += 2
 	}
-	posture := map[CombatPosture]float64{PostureHolding: 6, PostureEngaged: 3, PostureMoving: -5, PostureRetaking: 2}[player.Posture]
+	posture := map[combatPosture]float64{postureHolding: 6, postureEngaged: 3, postureMoving: -5, postureRetaking: 2}[player.Posture]
 	visibilityModifier := 0.0
 	if player.Location.Edge != nil {
 		visibilityModifier -= 4
 	}
 	configuredPosture, configuredVisibility, configuredSupport := configuredCombatTerms(state, player, scenario)
-	return CombatModifierInput{
+	return combatModifierInput{
 		RoleTagModifier: role, WeaponModifier: float64(weapon.Damage-30)/2 + float64(weapon.RoundsPerMinute)/600,
 		PostureModifier: posture + configuredPosture, VisibilityModifier: visibilityModifier + configuredVisibility, TeamSupportModifier: coordination.Total() + configuredSupport,
 		StaminaPenalty:     float64(state.constants.Int("MaxStamina", 100)-player.Stamina) / 10,
@@ -514,7 +514,7 @@ func defaultCombatModifiers(state *RoundState, player *RoundPlayerState, scenari
 	}
 }
 
-func configuredCombatTerms(state *RoundState, player *RoundPlayerState, scenario Scenario) (posture, visibility, support float64) {
+func configuredCombatTerms(state *roundState, player *roundPlayerState, scenario Scenario) (posture, visibility, support float64) {
 	tagIDs := append([]string(nil), scenario.MapTagIDs...)
 	sort.Strings(tagIDs)
 	for _, tagID := range tagIDs {
@@ -558,19 +558,19 @@ func configuredCombatTerms(state *RoundState, player *RoundPlayerState, scenario
 	return posture, visibility, support
 }
 
-func defaultSurvivalModifiers(state *RoundState, player *RoundPlayerState, _ Scenario, coordination CoordinationMetrics) SurvivalModifierInput {
+func defaultSurvivalModifiers(state *roundState, player *roundPlayerState, _ Scenario, coordination coordinationMetrics) survivalModifierInput {
 	cover := 0.0
-	if player.Posture == PostureHolding {
+	if player.Posture == postureHolding {
 		cover = 8
 	}
 	movement := 0.0
-	if player.Location.Edge != nil || player.Posture == PostureMoving {
+	if player.Location.Edge != nil || player.Posture == postureMoving {
 		movement = 10
 	}
-	return SurvivalModifierInput{CoverModifier: cover, TeamSupportModifier: coordination.Total(), MovementExposure: movement, DamagePenalty: float64(state.constants.Int("MaxHP", 100)-player.HP) / 10}
+	return survivalModifierInput{CoverModifier: cover, TeamSupportModifier: coordination.Total(), MovementExposure: movement, DamagePenalty: float64(state.constants.Int("MaxHP", 100)-player.HP) / 10}
 }
 
-func protectEncounterTrend(results map[string]EncounterScoreBreakdown, decisiveGap float64) {
+func protectEncounterTrend(results map[string]encounterScoreBreakdown, decisiveGap float64) {
 	gap := math.Abs(results[SideT].DeterministicEncounterScore - results[SideCT].DeterministicEncounterScore)
 	if gap < decisiveGap {
 		return
@@ -583,18 +583,18 @@ func protectEncounterTrend(results map[string]EncounterScoreBreakdown, decisiveG
 	}
 }
 
-func applyCombatAftermath(state *RoundState, snapshot CombatPulseSnapshot, attacks []AttackWindowResult, batch *AppliedBatch) {
+func applyCombatAftermath(state *roundState, snapshot combatPulseSnapshot, attacks []attackWindowResult, batch *appliedBatch) {
 	for _, attack := range attacks {
 		if attacker := state.Players[attack.ActorID]; attacker != nil && attacker.Alive {
 			attacker.Focus = clampInt(attacker.Focus-2, state.constants.Int("MinFocus", 0), state.constants.Int("MaxFocus", 100))
 			attacker.Stamina = clampInt(attacker.Stamina-2, state.constants.Int("MinStamina", 0), state.constants.Int("MaxStamina", 100))
-			attacker.Posture = PostureEngaged
+			attacker.Posture = postureEngaged
 		}
 		if attack.Hit {
 			if target := state.Players[attack.TargetID]; target != nil && target.Alive {
 				target.Focus = clampInt(target.Focus-8, state.constants.Int("MinFocus", 0), state.constants.Int("MaxFocus", 100))
 				target.Suppressed = true
-				target.Posture = PostureHolding
+				target.Posture = postureHolding
 			}
 		}
 	}
@@ -617,7 +617,7 @@ func applyCombatAftermath(state *RoundState, snapshot CombatPulseSnapshot, attac
 	_ = snapshot
 }
 
-func teamInputFromState(state *RoundState, side string) TeamInput {
+func teamInputFromState(state *roundState, side string) TeamInput {
 	team := TeamInput{}
 	ids := make([]string, 0)
 	for id, player := range state.Players {
@@ -633,7 +633,7 @@ func teamInputFromState(state *RoundState, side string) TeamInput {
 	return team
 }
 
-func encounterTimePressure(state *RoundState, side string) float64 {
+func encounterTimePressure(state *roundState, side string) float64 {
 	remaining := state.RoundDeadline - state.Timeline
 	threshold := state.constants.Int("ForceExecuteThreshold", 1)
 	if remaining >= threshold {
@@ -646,7 +646,7 @@ func encounterTimePressure(state *RoundState, side string) float64 {
 	return -pressure
 }
 
-func coordinationLocationKey(location PlayerLocation) string {
+func coordinationLocationKey(location playerLocation) string {
 	if location.NodeID != "" {
 		return "node:" + location.NodeID
 	}
@@ -656,26 +656,26 @@ func coordinationLocationKey(location PlayerLocation) string {
 	return "unknown"
 }
 
-func snapshotThreatScore(player PulsePlayerSnapshot) float64 {
+func snapshotThreatScore(player pulsePlayerSnapshot) float64 {
 	attributes := player.Profile.Attributes
 	return float64(attributes.Firepower+attributes.Aim+attributes.Reaction+attributes.Awareness) / 4
 }
 
-func snapshotExposure(player PulsePlayerSnapshot) float64 {
+func snapshotExposure(player pulsePlayerSnapshot) float64 {
 	exposure := 0.0
 	if player.Location.Edge != nil {
 		exposure += 20
 	}
-	if player.Posture == PostureMoving {
+	if player.Posture == postureMoving {
 		exposure += 15
 	}
-	if player.Posture == PostureHolding {
+	if player.Posture == postureHolding {
 		exposure -= 10
 	}
 	return exposure
 }
 
-func runtimeXY(state *RoundState, location PlayerLocation) (float64, float64) {
+func runtimeXY(state *roundState, location playerLocation) (float64, float64) {
 	if location.Edge != nil {
 		return location.Edge.X, location.Edge.Y
 	}
@@ -685,7 +685,7 @@ func runtimeXY(state *RoundState, location PlayerLocation) (float64, float64) {
 	return 0, 0
 }
 
-func visibilityForLocations(state *RoundState, from, to PlayerLocation) Visibility {
+func visibilityForLocations(state *roundState, from, to playerLocation) Visibility {
 	fromNode, toNode := projectedNodeID(from), projectedNodeID(to)
 	ids := make([]string, 0, len(state.visibility))
 	for id := range state.visibility {

@@ -6,62 +6,62 @@ import (
 	"strings"
 )
 
-type IntentType string
-type ActionType string
-type ActionStatus string
-type EffectType string
+type intentType string
+type actionType string
+type actionStatus string
+type effectType string
 
 const (
-	IntentMove       IntentType = "Move"
-	IntentHold       IntentType = "Hold"
-	IntentEngage     IntentType = "Engage"
-	IntentPlant      IntentType = "Plant"
-	IntentDefuse     IntentType = "Defuse"
-	IntentPickupBomb IntentType = "PickupBomb"
+	intentMove       intentType = "Move"
+	intentHold       intentType = "Hold"
+	intentEngage     intentType = "Engage"
+	intentPlant      intentType = "Plant"
+	intentDefuse     intentType = "Defuse"
+	intentPickupBomb intentType = "PickupBomb"
 
-	ActionMoveStart       ActionType = "MoveStart"
-	ActionMovementArrive  ActionType = "MovementArrive"
-	ActionInterceptCheck  ActionType = "InterceptCheck"
-	ActionHoldStart       ActionType = "HoldStart"
-	ActionEncounterStart  ActionType = "EncounterStart"
-	ActionCombatPulse     ActionType = "CombatPulse"
-	ActionCombatEnd       ActionType = "CombatEnd"
-	ActionDecisionResolve ActionType = "DecisionResolve"
-	ActionPlantStart      ActionType = "PlantStart"
-	ActionPlantComplete   ActionType = "PlantComplete"
-	ActionPickupComplete  ActionType = "PickupComplete"
-	ActionDefuseStart     ActionType = "DefuseStart"
-	ActionDefuseComplete  ActionType = "DefuseComplete"
-	ActionBombExplode     ActionType = "BombExplode"
-	ActionRoundExpire     ActionType = "RoundExpire"
-	ActionIntelDecay      ActionType = "IntelDecay"
-	ActionControlDecay    ActionType = "ControlDecay"
+	actionMoveStart       actionType = "MoveStart"
+	actionMovementArrive  actionType = "MovementArrive"
+	actionInterceptCheck  actionType = "InterceptCheck"
+	actionHoldStart       actionType = "HoldStart"
+	actionEncounterStart  actionType = "EncounterStart"
+	actionCombatPulse     actionType = "CombatPulse"
+	actionCombatEnd       actionType = "CombatEnd"
+	actionDecisionResolve actionType = "DecisionResolve"
+	actionPlantStart      actionType = "PlantStart"
+	actionPlantComplete   actionType = "PlantComplete"
+	actionPickupComplete  actionType = "PickupComplete"
+	actionDefuseStart     actionType = "DefuseStart"
+	actionDefuseComplete  actionType = "DefuseComplete"
+	actionBombExplode     actionType = "BombExplode"
+	actionRoundExpire     actionType = "RoundExpire"
+	actionIntelDecay      actionType = "IntelDecay"
+	actionControlDecay    actionType = "ControlDecay"
 
-	ActionIdle     ActionStatus = "Idle"
-	ActionMoving   ActionStatus = "Moving"
-	ActionHolding  ActionStatus = "Holding"
-	ActionEngaged  ActionStatus = "Engaged"
-	ActionPlanting ActionStatus = "Planting"
-	ActionDefusing ActionStatus = "Defusing"
+	actionIdle     actionStatus = "Idle"
+	actionMoving   actionStatus = "Moving"
+	actionHolding  actionStatus = "Holding"
+	actionEngaged  actionStatus = "Engaged"
+	actionPlanting actionStatus = "Planting"
+	actionDefusing actionStatus = "Defusing"
 
-	EffectDamage    EffectType = "Damage"
-	EffectMiss      EffectType = "Miss"
-	EffectDeath     EffectType = "Death"
-	EffectBombDrop  EffectType = "BombDrop"
-	EffectMove      EffectType = "Move"
-	EffectControl   EffectType = "Control"
-	EffectBombState EffectType = "BombState"
+	effectDamage    effectType = "Damage"
+	effectMiss      effectType = "Miss"
+	effectDeath     effectType = "Death"
+	effectBombDrop  effectType = "BombDrop"
+	effectMove      effectType = "Move"
+	effectControl   effectType = "Control"
+	effectBombState effectType = "BombState"
 )
 
-type Intent struct {
+type intent struct {
 	ID        string
-	Type      IntentType
+	Type      intentType
 	TargetID  string
 	Priority  int
 	CreatedAt int
 }
 
-type OnEdgeLocation struct {
+type onEdgeLocation struct {
 	EdgeID      string
 	FromNode    string
 	ToNode      string
@@ -71,30 +71,30 @@ type OnEdgeLocation struct {
 	DisplayName string
 }
 
-type PlayerLocation struct {
+type playerLocation struct {
 	NodeID string
-	Edge   *OnEdgeLocation
+	Edge   *onEdgeLocation
 }
 
-func (l PlayerLocation) Valid() bool {
+func (l playerLocation) Valid() bool {
 	return (l.NodeID != "") != (l.Edge != nil)
 }
 
-type BusyInterval struct {
+type busyInterval struct {
 	ActionID string
 	StartAt  int
 	EndAt    int
 }
 
-type PlayerActionState struct {
+type playerActionState struct {
 	CurrentActionID string
 	Version         int
-	Status          ActionStatus
+	Status          actionStatus
 	BusyUntil       int
-	Busy            BusyInterval
+	Busy            busyInterval
 }
 
-type ActionPayload struct {
+type actionPayload struct {
 	ScenarioID     string
 	Site           string
 	EdgeID         string
@@ -104,23 +104,23 @@ type ActionPayload struct {
 	ParticipantIDs []string
 }
 
-type ScheduledAction struct {
+type scheduledAction struct {
 	ID                string
 	ParentActionID    string
 	IntentID          string
-	Type              ActionType
+	Type              actionType
 	ActorIDs          []string
-	From              PlayerLocation
+	From              playerLocation
 	ToNodeID          string
 	StartAt           int
 	ResolveAt         int
 	Priority          int
 	VersionByActor    map[string]int
 	MinRequiredActors int
-	Payload           ActionPayload
+	Payload           actionPayload
 }
 
-func (a ScheduledAction) MinActorID() string {
+func (a scheduledAction) MinActorID() string {
 	if len(a.ActorIDs) == 0 {
 		return ""
 	}
@@ -129,10 +129,10 @@ func (a ScheduledAction) MinActorID() string {
 	return actors[0]
 }
 
-type Effect struct {
+type effect struct {
 	ID             string
 	SourceActionID string
-	Type           EffectType
+	Type           effectType
 	Priority       int
 	Timestamp      int
 	ActorID        string
@@ -140,17 +140,17 @@ type Effect struct {
 	Amount         int
 	NodeID         string
 	StringValue    string
-	ReasonRecords  []ReasonRecord
+	ReasonRecords  []reasonRecord
 }
 
-type AppliedEffect struct {
-	Effect        Effect
+type appliedEffect struct {
+	Effect        effect
 	AppliedAmount int
 }
 
-type AppliedBatch struct {
+type appliedBatch struct {
 	Timestamp int
-	Effects   []AppliedEffect
+	Effects   []appliedEffect
 	Events    []*GameEvent
 }
 
@@ -158,30 +158,30 @@ func stableObjectID(prefix string, parts ...interface{}) string {
 	return fmt.Sprintf("%s_%016x", prefix, uint64(deriveSeed(parts...)))
 }
 
-func NewActionID(roundSeed int64, actionType ActionType, intentID string, startAt, resolveAt int, actorIDs []string, ordinal int) string {
+func newActionID(roundSeed int64, actionType actionType, intentID string, startAt, resolveAt int, actorIDs []string, ordinal int) string {
 	actors := append([]string(nil), actorIDs...)
 	sort.Strings(actors)
 	return stableObjectID("act", roundSeed, string(actionType), intentID, startAt, resolveAt, strings.Join(actors, ","), ordinal)
 }
 
-func NewEffectID(roundSeed int64, actionID string, effectType EffectType, ordinal int) string {
+func newEffectID(roundSeed int64, actionID string, effectType effectType, ordinal int) string {
 	return stableObjectID("eff", roundSeed, actionID, string(effectType), ordinal)
 }
 
-func NewEventID(roundSeed int64, actionID, effectID, eventType string, ordinal int) string {
+func newEventID(roundSeed int64, actionID, effectID, eventType string, ordinal int) string {
 	return stableObjectID("evt", roundSeed, "event", actionID, effectID, eventType, ordinal)
 }
 
-func newActionLifecycleEvent(state *RoundState, action ScheduledAction, eventType, message string, ordinal int) (*GameEvent, error) {
+func newActionLifecycleEvent(state *roundState, action scheduledAction, eventType, message string, ordinal int) (*GameEvent, error) {
 	if state == nil || action.ID == "" || eventType == "" {
 		return nil, newError("INVALID_ACTION_EVENT", "action lifecycle event requires state, action and event type")
 	}
-	reason, err := ProjectReasonRecord(ReasonRecord{Code: eventType, Source: string(action.Type), Value: 1, Weight: 1, SourceActionID: action.ID}, action.ID, "")
+	reason, err := projectReasonRecord(reasonRecord{Code: eventType, Source: string(action.Type), Value: 1, Weight: 1, SourceActionID: action.ID}, action.ID, "")
 	if err != nil {
 		return nil, err
 	}
 	event := &GameEvent{
-		EventID: NewEventID(state.Seed, action.ID, "", eventType, ordinal), SourceActionID: action.ID,
+		EventID: newEventID(state.Seed, action.ID, "", eventType, ordinal), SourceActionID: action.ID,
 		Timestamp: int64(state.Timeline), EventType: eventType, Message: message, Reason: reason,
 		sortPriority: action.Priority, sortActionType: string(action.Type), sortMinActorID: action.MinActorID(),
 	}

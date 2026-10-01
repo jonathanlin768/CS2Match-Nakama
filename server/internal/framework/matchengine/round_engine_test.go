@@ -19,10 +19,10 @@ func TestCausalRoundEngineRunsAuthoritativeLoopToTerminal(t *testing.T) {
 	if violations := roundInvariantViolations(result.Round); len(violations) > 0 {
 		t.Fatalf("causal round invariant violations: %v", violations)
 	}
-	if len(result.PhaseHistory) < 3 || result.PhaseHistory[0] != PhaseOpeningDeploy || result.PhaseHistory[len(result.PhaseHistory)-1] != PhaseRoundEnd {
+	if len(result.PhaseHistory) < 3 || result.PhaseHistory[0] != phaseOpeningDeploy || result.PhaseHistory[len(result.PhaseHistory)-1] != phaseRoundEnd {
 		t.Fatalf("phase projection did not cycle to RoundEnd: %v", result.PhaseHistory)
 	}
-	if !hasPhase(result.PhaseHistory, PhaseAdvance) || !hasPhase(result.PhaseHistory, PhaseClash) {
+	if !hasPhase(result.PhaseHistory, phaseAdvance) || !hasPhase(result.PhaseHistory, phaseClash) {
 		t.Fatalf("opening movement/contact phases missing: %v", result.PhaseHistory)
 	}
 }
@@ -100,12 +100,12 @@ func TestCausalRoundEngineSupportsRepeatedClashAndDecisionPhases(t *testing.T) {
 		}
 		clashes := 0
 		for _, phase := range result.PhaseHistory {
-			if phase == PhaseClash {
+			if phase == phaseClash {
 				clashes++
 			}
 		}
 		coveredRepeatedClash = coveredRepeatedClash || clashes >= 2
-		coveredDecision = coveredDecision || hasPhase(result.PhaseHistory, PhaseRotate)
+		coveredDecision = coveredDecision || hasPhase(result.PhaseHistory, phaseRotate)
 	}
 	if !coveredRepeatedClash || !coveredDecision {
 		t.Fatalf("phase loop coverage missing: repeated_clash=%t decision=%t", coveredRepeatedClash, coveredDecision)
@@ -115,20 +115,20 @@ func TestCausalRoundEngineSupportsRepeatedClashAndDecisionPhases(t *testing.T) {
 func TestDecisionLimitAllowsOnlyOneForcedFallbackPerSide(t *testing.T) {
 	state := makeTestRoundState(t, 1440)
 	state.DecisionCount = state.constants.Int("MaxDecisionCount", 0)
-	runtime := &causalRoundRuntime{state: state, decisionCandidates: map[string]DecisionCandidate{}, forcedDecisionUsed: map[string]bool{}}
+	runtime := &causalRoundRuntime{state: state, decisionCandidates: map[string]decisionCandidate{}, forcedDecisionUsed: map[string]bool{}}
 	if err := runtime.scheduleDecisions(); err != nil {
 		t.Fatal(err)
 	}
 	if !runtime.forcedDecisionUsed[SideT] || !runtime.forcedDecisionUsed[SideCT] {
 		t.Fatalf("decision limit did not record one fallback per side: %+v", runtime.forcedDecisionUsed)
 	}
-	state.Scheduler.actions = nil
-	runtime.decisionCandidates = map[string]DecisionCandidate{}
+	state.Scheduler.clear()
+	runtime.decisionCandidates = map[string]decisionCandidate{}
 	if err := runtime.scheduleDecisions(); err != nil {
 		t.Fatal(err)
 	}
-	if len(state.Scheduler.actions) != 0 {
-		t.Fatalf("decision limit kept scheduling fallback actions: %+v", state.Scheduler.actions)
+	if state.Scheduler.Len() != 0 {
+		t.Fatalf("decision limit kept scheduling fallback actions: %+v", state.Scheduler.snapshot())
 	}
 }
 
@@ -143,14 +143,14 @@ func TestScenarioSelectionUsesCurrentContactPhase(t *testing.T) {
 	if got := runtime.scenarioForContact("A_SITE"); got != "ENTRY" {
 		t.Fatalf("site contact used %s instead of SiteEntry", got)
 	}
-	state.Bomb.Status = BombPlanted
+	state.Bomb.Status = bombPlanted
 	state.Bomb.PlantedSite = "A"
 	if got := runtime.scenarioForContact("A_SITE"); got != "RETAKE" {
 		t.Fatalf("post-plant contact used %s instead of Retake", got)
 	}
 }
 
-func hasPhase(phases []RoundPhase, target RoundPhase) bool {
+func hasPhase(phases []roundPhase, target roundPhase) bool {
 	for _, phase := range phases {
 		if phase == target {
 			return true

@@ -3,73 +3,73 @@ package matchengine
 import "fmt"
 
 const (
-	WinReasonElimination       = "elimination"
-	WinReasonTimeout           = "timeout"
-	WinReasonBombDefused       = "bomb_defused"
-	WinReasonBombExploded      = "bomb_exploded"
-	WinReasonBombSecured       = "bomb_secured"
-	WinReasonNoProgressTimeout = "no_progress_timeout"
+	winReasonElimination       = "elimination"
+	winReasonTimeout           = "timeout"
+	winReasonBombDefused       = "bomb_defused"
+	winReasonBombExploded      = "bomb_exploded"
+	winReasonBombSecured       = "bomb_secured"
+	winReasonNoProgressTimeout = "no_progress_timeout"
 )
 
-// EvaluateRoundTerminal is deliberately pure: it only inspects the state
+// evaluateRoundTerminal is deliberately pure: it only inspects the state
 // produced by the just-applied timestamp batch and never rolls, repairs or
 // advances the simulation.
-func EvaluateRoundTerminal(state *RoundState, applied AppliedBatch) (*RoundTerminal, error) {
-	if err := ValidateTerminalInvariants(state); err != nil {
+func evaluateRoundTerminal(state *roundState, applied appliedBatch) (*roundTerminal, error) {
+	if err := validateTerminalInvariants(state); err != nil {
 		return nil, err
 	}
 	tAlive, ctAlive := liveCount(state, SideT), liveCount(state, SideCT)
-	if state.Bomb.Status == BombDefused {
-		return newRoundTerminal(state, SideCT, WinReasonBombDefused, "BOMB_DEFUSED"), nil
+	if state.Bomb.Status == bombDefused {
+		return newRoundTerminal(state, SideCT, winReasonBombDefused, "BOMB_DEFUSED"), nil
 	}
-	if state.Bomb.Status == BombExploded {
-		return newRoundTerminal(state, SideT, WinReasonBombExploded, "BOMB_EXPLODED"), nil
+	if state.Bomb.Status == bombExploded {
+		return newRoundTerminal(state, SideT, winReasonBombExploded, "BOMB_EXPLODED"), nil
 	}
 	if !bombIsPostPlant(state.Bomb.Status) {
 		if tAlive == 0 {
 			code := "T_ELIMINATED"
-			if state.Bomb.Status == BombDropped {
+			if state.Bomb.Status == bombDropped {
 				code = "T_ELIMINATED_BOMB_DROPPED"
 			}
-			return newRoundTerminal(state, SideCT, WinReasonElimination, code), nil
+			return newRoundTerminal(state, SideCT, winReasonElimination, code), nil
 		}
 		if ctAlive == 0 {
-			return newRoundTerminal(state, SideT, WinReasonElimination, "CT_ELIMINATED"), nil
+			return newRoundTerminal(state, SideT, winReasonElimination, "CT_ELIMINATED"), nil
 		}
 		if state.Timeline >= state.RoundDeadline {
-			return newRoundTerminal(state, SideCT, WinReasonTimeout, "ROUND_TIME_EXPIRED"), nil
+			return newRoundTerminal(state, SideCT, winReasonTimeout, "ROUND_TIME_EXPIRED"), nil
 		}
 		if state.NoProgressEligible {
-			valid, err := ValidNoProgress(state)
+			valid, err := validNoProgress(state)
 			if err != nil {
 				return nil, err
 			}
 			if valid {
-				return newRoundTerminal(state, SideCT, WinReasonNoProgressTimeout, "NO_PROGRESS_CONFIRMED"), nil
+				return newRoundTerminal(state, SideCT, winReasonNoProgressTimeout, "NO_PROGRESS_CONFIRMED"), nil
 			}
 		}
 		return nil, nil
 	}
 	if ctAlive == 0 && !batchContainsEvent(applied, EventBombDefuse) {
-		return newRoundTerminal(state, SideT, WinReasonBombSecured, "CT_ELIMINATED_POST_PLANT"), nil
+		return newRoundTerminal(state, SideT, winReasonBombSecured, "CT_ELIMINATED_POST_PLANT"), nil
 	}
 	return nil, nil
 }
 
-func newRoundTerminal(state *RoundState, side, publicCode, code string) *RoundTerminal {
+func newRoundTerminal(state *roundState, side, publicCode, code string) *roundTerminal {
 	teamID := state.TeamTID
 	if side == SideCT {
 		teamID = state.TeamCTID
 	}
-	return &RoundTerminal{
+	return &roundTerminal{
 		WinnerTeamID: teamID,
 		WinnerSide:   side,
 		WinReason:    publicCode,
-		Reason:       ReasonRecord{Code: code, Source: "EvaluateRoundTerminal", Value: 1, Weight: 1},
+		Reason:       reasonRecord{Code: code, Source: "EvaluateRoundTerminal", Value: 1, Weight: 1},
 	}
 }
 
-func liveCount(state *RoundState, side string) int {
+func liveCount(state *roundState, side string) int {
 	count := 0
 	for _, player := range state.Players {
 		if player != nil && player.Side == side && player.Alive {
@@ -79,11 +79,11 @@ func liveCount(state *RoundState, side string) int {
 	return count
 }
 
-func bombIsPostPlant(status BombRuntimeStatus) bool {
-	return status == BombPlanted || status == BombDefusing || status == BombDefused || status == BombExploded
+func bombIsPostPlant(status bombRuntimeStatus) bool {
+	return status == bombPlanted || status == bombDefusing || status == bombDefused || status == bombExploded
 }
 
-func batchContainsEvent(batch AppliedBatch, eventType string) bool {
+func batchContainsEvent(batch appliedBatch, eventType string) bool {
 	for _, event := range batch.Events {
 		if event != nil && event.EventType == eventType {
 			return true
@@ -92,9 +92,9 @@ func batchContainsEvent(batch AppliedBatch, eventType string) bool {
 	return false
 }
 
-// ValidateTerminalInvariants is strict and non-mutating. Invalid terminal
+// validateTerminalInvariants is strict and non-mutating. Invalid terminal
 // state is a simulation error; it is never clamped into a plausible result.
-func ValidateTerminalInvariants(state *RoundState) error {
+func validateTerminalInvariants(state *roundState) error {
 	if state == nil || state.Scheduler == nil || state.RoundDeadline <= 0 || state.Timeline < 0 {
 		return terminalInvariant("round state, scheduler or timer is invalid")
 	}
@@ -142,46 +142,46 @@ func ValidateTerminalInvariants(state *RoundState) error {
 	if roundEndCount > 1 || (roundEndCount == 1 && state.Terminal == nil) {
 		return terminalInvariant("ROUND_END lifecycle disagrees with terminal state")
 	}
-	if state.Phase == PhaseRoundEnd && state.Terminal == nil {
+	if state.Phase == phaseRoundEnd && state.Terminal == nil {
 		return terminalInvariant("RoundEnd phase has no terminal")
 	}
 	return nil
 }
 
-func validateTerminalBomb(state *RoundState, carrierCount int) error {
+func validateTerminalBomb(state *roundState, carrierCount int) error {
 	bomb := state.Bomb
 	if !bomb.Location.Valid() || !runtimeLocationConfigured(state, bomb.Location) {
 		return terminalInvariant("bomb has an invalid semantic location")
 	}
 	switch bomb.Status {
-	case BombCarried, BombPlanting:
+	case bombCarried, bombPlanting:
 		if carrierCount != 1 || bomb.CarrierID == "" || state.BombDeadline != 0 {
 			return terminalInvariant("carried/planting bomb carrier or deadline is inconsistent")
 		}
-		if bomb.Status == BombPlanting && (bomb.PlantActionID == "" || bomb.PlantActorID != bomb.CarrierID || bomb.PlantFinishAt <= bomb.PlantStartAt) {
+		if bomb.Status == bombPlanting && (bomb.PlantActionID == "" || bomb.PlantActorID != bomb.CarrierID || bomb.PlantFinishAt <= bomb.PlantStartAt) {
 			return terminalInvariant("plant action lifecycle is inconsistent")
 		}
-	case BombDropped:
+	case bombDropped:
 		if carrierCount != 0 || bomb.CarrierID != "" || bomb.DroppedAt > state.Timeline || state.BombDeadline != 0 {
 			return terminalInvariant("dropped bomb state is inconsistent")
 		}
-	case BombPlanted, BombDefusing, BombDefused, BombExploded:
+	case bombPlanted, bombDefusing, bombDefused, bombExploded:
 		if carrierCount != 0 || bomb.CarrierID != "" || bomb.PlantedSite == "" || bomb.PlantedAt > state.Timeline || bomb.ExplodeAt <= bomb.PlantedAt || state.BombDeadline != bomb.ExplodeAt {
 			return terminalInvariant("post-plant bomb state or timer is inconsistent")
 		}
 		if !hasEvent(state.Events, EventBombPlant) {
 			return terminalInvariant("post-plant bomb has no applied BOMB_PLANT event")
 		}
-		if bomb.Status == BombDefusing {
+		if bomb.Status == bombDefusing {
 			actor := state.Players[bomb.DefuseActorID]
 			if actor == nil || !actor.Alive || actor.Side != SideCT || actor.Action.CurrentActionID != bomb.DefuseActionID || bomb.DefuseFinishAt <= bomb.DefuseStartAt || bomb.DefuseFinishAt > bomb.ExplodeAt {
 				return terminalInvariant("defuse action lifecycle is inconsistent")
 			}
 		}
-		if bomb.Status == BombDefused && !hasEvent(state.Events, EventBombDefuse) {
+		if bomb.Status == bombDefused && !hasEvent(state.Events, EventBombDefuse) {
 			return terminalInvariant("Defused state has no applied BOMB_DEFUSE event")
 		}
-		if bomb.Status == BombExploded && !hasEvent(state.Events, EventBombExplode) {
+		if bomb.Status == bombExploded && !hasEvent(state.Events, EventBombExplode) {
 			return terminalInvariant("Exploded state has no applied BOMB_EXPLODE event")
 		}
 	default:
@@ -190,7 +190,7 @@ func validateTerminalBomb(state *RoundState, carrierCount int) error {
 	return nil
 }
 
-func runtimeLocationConfigured(state *RoundState, location PlayerLocation) bool {
+func runtimeLocationConfigured(state *roundState, location playerLocation) bool {
 	if location.NodeID != "" {
 		_, ok := state.Nodes[location.NodeID]
 		return ok

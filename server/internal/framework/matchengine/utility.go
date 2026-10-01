@@ -5,19 +5,19 @@ import (
 	"sort"
 )
 
-type UtilityEffectType string
+type utilityEffectType string
 
 const (
-	UtilityVisibilitySuppression UtilityEffectType = "VisibilitySuppression"
-	UtilityOpeningInitiative     UtilityEffectType = "OpeningInitiative"
-	UtilityExposureReduction     UtilityEffectType = "ExposureReduction"
-	UtilitySyncPeekQuality       UtilityEffectType = "SyncPeekQuality"
-	UtilityPlantCover            UtilityEffectType = "PlantCover"
-	UtilityDefuseCover           UtilityEffectType = "DefuseCover"
+	utilityVisibilitySuppression utilityEffectType = "VisibilitySuppression"
+	utilityOpeningInitiative     utilityEffectType = "OpeningInitiative"
+	utilityExposureReduction     utilityEffectType = "ExposureReduction"
+	utilitySyncPeekQuality       utilityEffectType = "SyncPeekQuality"
+	utilityPlantCover            utilityEffectType = "PlantCover"
+	utilityDefuseCover           utilityEffectType = "DefuseCover"
 )
 
-type UtilityRequest struct {
-	Type             UtilityEffectType
+type utilityRequest struct {
+	Type             utilityEffectType
 	ActorIDs         []string
 	ScopeActionID    string
 	ScopeEncounterID string
@@ -26,9 +26,9 @@ type UtilityRequest struct {
 	BaseCost         int
 }
 
-type UtilityWindow struct {
+type utilityWindow struct {
 	ID               string
-	Type             UtilityEffectType
+	Type             utilityEffectType
 	Side             string
 	ActorIDs         []string
 	ScopeActionID    string
@@ -39,13 +39,13 @@ type UtilityWindow struct {
 	Modifier         float64
 }
 
-type UtilitySpendResult struct {
+type utilitySpendResult struct {
 	Applied bool
-	Window  *UtilityWindow
-	Reason  ReasonRecord
+	Window  *utilityWindow
+	Reason  reasonRecord
 }
 
-func InitializeUtilityBudget(state *RoundState, side string, template RouteTemplate) int {
+func initializeUtilityBudget(state *roundState, side string, template RouteTemplate) int {
 	if state == nil || state.Utility[side] == nil {
 		return 0
 	}
@@ -77,17 +77,17 @@ func InitializeUtilityBudget(state *RoundState, side string, template RouteTempl
 	return state.Utility[side].Budget
 }
 
-func SpendUtility(state *RoundState, side string, request UtilityRequest) (UtilitySpendResult, error) {
+func spendUtility(state *roundState, side string, request utilityRequest) (utilitySpendResult, error) {
 	teamUtility := state.Utility[side]
 	if teamUtility == nil || request.BaseCost <= 0 || request.Duration <= 0 || request.StartAt < state.Timeline || request.StartAt+request.Duration > state.constants.Int("MaxRoundTimeline", 0) {
-		return UtilitySpendResult{}, newError("INVALID_UTILITY", "utility request is invalid")
+		return utilitySpendResult{}, newError("INVALID_UTILITY", "utility request is invalid")
 	}
 	if request.ScopeActionID == "" && request.ScopeEncounterID == "" {
-		return UtilitySpendResult{}, newError("INVALID_UTILITY", "utility must be scoped to an action or encounter")
+		return utilitySpendResult{}, newError("INVALID_UTILITY", "utility must be scoped to an action or encounter")
 	}
 	actors := validUtilityActors(state, side, request.ActorIDs)
 	if len(actors) == 0 {
-		return UtilitySpendResult{}, newError("INVALID_UTILITY", "utility has no valid actors")
+		return utilitySpendResult{}, newError("INVALID_UTILITY", "utility has no valid actors")
 	}
 	supportCount, utilityTotal := 0, 0
 	for _, actorID := range actors {
@@ -101,11 +101,11 @@ func SpendUtility(state *RoundState, side string, request UtilityRequest) (Utili
 	cost := maxInt(1, int(math.Ceil(float64(request.BaseCost)/efficiency)))
 	remaining := teamUtility.Budget - teamUtility.Spent
 	if cost > remaining {
-		return UtilitySpendResult{Reason: ReasonRecord{Code: "LOW_UTILITY", Source: side, Value: float64(remaining - cost), Weight: 1, Detail: "insufficient scoped UtilityBudget"}}, nil
+		return utilitySpendResult{Reason: reasonRecord{Code: "LOW_UTILITY", Source: side, Value: float64(remaining - cost), Weight: 1, Detail: "insufficient scoped UtilityBudget"}}, nil
 	}
 	averageUtility := float64(utilityTotal) / float64(len(actors))
 	modifier := utilityBaseModifier(request.Type) * (0.5 + averageUtility/200)
-	window := UtilityWindow{
+	window := utilityWindow{
 		ID:   stableObjectID("util", state.Seed, side, string(request.Type), request.ScopeActionID, request.ScopeEncounterID, request.StartAt, request.Duration, teamUtility.Spent),
 		Type: request.Type, Side: side, ActorIDs: actors, ScopeActionID: request.ScopeActionID, ScopeEncounterID: request.ScopeEncounterID,
 		StartAt: request.StartAt, EndAt: request.StartAt + request.Duration, Cost: cost, Modifier: modifier,
@@ -115,35 +115,35 @@ func SpendUtility(state *RoundState, side string, request UtilityRequest) (Utili
 	sort.SliceStable(teamUtility.Windows, func(i, j int) bool { return teamUtility.Windows[i].ID < teamUtility.Windows[j].ID })
 	copy := window
 	copy.ActorIDs = append([]string(nil), window.ActorIDs...)
-	return UtilitySpendResult{Applied: true, Window: &copy, Reason: ReasonRecord{Code: "UTILITY_SPENT", Source: window.ID, Value: -float64(cost), Weight: modifier}}, nil
+	return utilitySpendResult{Applied: true, Window: &copy, Reason: reasonRecord{Code: "UTILITY_SPENT", Source: window.ID, Value: -float64(cost), Weight: modifier}}, nil
 }
 
-func spendScopedUtility(state *RoundState, side string, effectType UtilityEffectType, actorIDs []string, actionID, encounterID string, duration, divisor int) (UtilitySpendResult, error) {
+func spendScopedUtility(state *roundState, side string, effectType utilityEffectType, actorIDs []string, actionID, encounterID string, duration, divisor int) (utilitySpendResult, error) {
 	if state == nil || len(validUtilityActors(state, side, actorIDs)) == 0 {
-		return UtilitySpendResult{}, nil
+		return utilitySpendResult{}, nil
 	}
 	remainingTimeline := state.constants.Int("MaxRoundTimeline", 0) - state.Timeline
 	duration = minDamageInt(duration, remainingTimeline)
 	if duration <= 0 {
-		return UtilitySpendResult{}, nil
+		return utilitySpendResult{}, nil
 	}
 	if divisor <= 0 {
 		divisor = 10
 	}
-	return SpendUtility(state, side, UtilityRequest{
+	return spendUtility(state, side, utilityRequest{
 		Type: effectType, ActorIDs: actorIDs, ScopeActionID: actionID, ScopeEncounterID: encounterID,
 		StartAt: state.Timeline, Duration: duration, BaseCost: maxInt(1, state.constants.Int("UtilityBudget", 0)/divisor),
 	})
 }
 
-func addUtilityReason(event *GameEvent, result UtilitySpendResult) {
+func addUtilityReason(event *GameEvent, result utilitySpendResult) {
 	if event == nil || event.Reason == nil || result.Reason.Code == "" {
 		return
 	}
 	event.Reason.Modifiers = append(event.Reason.Modifiers, ReasonModifier{Code: result.Reason.Code, Value: result.Reason.Value, Detail: result.Reason.Detail})
 }
 
-func ScopedUtilityModifier(state *RoundState, side string, effectType UtilityEffectType, actionID, encounterID string, at int) float64 {
+func scopedUtilityModifier(state *roundState, side string, effectType utilityEffectType, actionID, encounterID string, at int) float64 {
 	teamUtility := state.Utility[side]
 	if teamUtility == nil {
 		return 0
@@ -164,18 +164,18 @@ func ScopedUtilityModifier(state *RoundState, side string, effectType UtilityEff
 	return total
 }
 
-func utilityBaseModifier(effectType UtilityEffectType) float64 {
+func utilityBaseModifier(effectType utilityEffectType) float64 {
 	switch effectType {
-	case UtilityOpeningInitiative:
+	case utilityOpeningInitiative:
 		return 8
-	case UtilityVisibilitySuppression, UtilityExposureReduction, UtilitySyncPeekQuality, UtilityPlantCover, UtilityDefuseCover:
+	case utilityVisibilitySuppression, utilityExposureReduction, utilitySyncPeekQuality, utilityPlantCover, utilityDefuseCover:
 		return 0.2
 	default:
 		return 0
 	}
 }
 
-func validUtilityActors(state *RoundState, side string, actorIDs []string) []string {
+func validUtilityActors(state *roundState, side string, actorIDs []string) []string {
 	var out []string
 	for _, actorID := range actorIDs {
 		player := state.Players[actorID]

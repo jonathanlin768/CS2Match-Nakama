@@ -21,11 +21,11 @@ func TestStrategyScoreIsStableExplainedAndDecisiveNoiseCannotReverse(t *testing.
 		PreviousSuccess: map[string]int{"T_HIGH": 2}, RecentTemplates: []string{"T_HIGH", "T_HIGH", "T_HIGH"},
 		CounterReads: map[string]int{"T_HIGH": 1},
 	}
-	first, err := ScoreStrategyCandidates(config, makeTestTeam("t", "T", 82), SideT, 4, 8, memory, 9001, 0)
+	first, err := scoreStrategyCandidates(config, makeTestTeam("t", "T", 82), SideT, 4, 8, memory, 9001, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := ScoreStrategyCandidates(config, makeTestTeam("t", "T", 82), SideT, 4, 8, memory, 9001, 0)
+	second, err := scoreStrategyCandidates(config, makeTestTeam("t", "T", 82), SideT, 4, 8, memory, 9001, 0)
 	if err != nil || !reflect.DeepEqual(first, second) {
 		t.Fatalf("strategy scores are not reproducible: equal=%v err=%v", reflect.DeepEqual(first, second), err)
 	}
@@ -41,7 +41,7 @@ func TestStrategyScoreIsStableExplainedAndDecisiveNoiseCannotReverse(t *testing.
 	}
 
 	config.RouteTemplates = reverseTemplateMap(config.RouteTemplates)
-	reordered, err := ScoreStrategyCandidates(config, makeTestTeam("t", "T", 82), SideT, 4, 8, memory, 9001, 0)
+	reordered, err := scoreStrategyCandidates(config, makeTestTeam("t", "T", 82), SideT, 4, 8, memory, 9001, 0)
 	if err != nil || !reflect.DeepEqual(first, reordered) {
 		t.Fatalf("template map order changed scoring: equal=%v err=%v", reflect.DeepEqual(first, reordered), err)
 	}
@@ -71,7 +71,7 @@ func TestRoleAssignmentBombCarrierAndGapReasonsAreStable(t *testing.T) {
 	}
 	template := makeTestMapConfig().RouteTemplates["TPL_A"]
 	template.RequiredRoles = []string{"Entry", "Support", "IGL", "Lurker", "AWPer"}
-	roles := AssignRoles(team, template)
+	roles := assignRoles(team, template)
 	if len(roles.Assignments) != 5 || len(roles.GapRoles) != 0 || roles.Penalty != 0 {
 		t.Fatalf("exact role assignment failed: %+v", roles)
 	}
@@ -80,7 +80,7 @@ func TestRoleAssignmentBombCarrierAndGapReasonsAreStable(t *testing.T) {
 	for _, profile := range team.Players {
 		routes[profile.PlayerID] = "D2_A_LONG"
 	}
-	carrier, err := SelectBombCarrier(team, roles.Assignments, routes, config)
+	carrier, err := selectBombCarrier(team, roles.Assignments, routes, config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +90,7 @@ func TestRoleAssignmentBombCarrierAndGapReasonsAreStable(t *testing.T) {
 		}
 	}
 	template.RequiredRoles = []string{"Coach"}
-	gap := AssignRoles(team, template)
+	gap := assignRoles(team, template)
 	if len(gap.GapRoles) != 1 || gap.GapRoles[0] != "Coach" || gap.Penalty == 0 || len(gap.Reasons) == 0 || gap.Reasons[0].Code != "ROLE_GAP" {
 		t.Fatalf("role gap was not explained: %+v", gap)
 	}
@@ -100,15 +100,15 @@ func TestOpeningPlanDeploysTenLegalActionsAtTimelineZero(t *testing.T) {
 	input := makeTestRoundInput(9002)
 	tTemplate := input.MapConfig.RouteTemplates["TPL_A"]
 	ctTemplate := input.MapConfig.RouteTemplates["TPL_CT"]
-	plan, _, err := BuildRoundPlan(input, tTemplate, ctTemplate)
+	plan, _, err := buildRoundPlan(input, tTemplate, ctTemplate)
 	if err != nil {
 		t.Fatal(err)
 	}
-	state, err := NewRoundState(input, plan)
+	state, err := newRoundState(input, plan)
 	if err != nil {
 		t.Fatal(err)
 	}
-	actions, err := DeployOpeningActions(state)
+	actions, err := deployOpeningActions(state)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,20 +149,20 @@ func TestConfiguredTemplateFamiliesReachableAndCTSelectionIndependent(t *testing
 			if template.Side == SideCT {
 				spawn = "CT_SPAWN"
 			}
-			if _, feedback, err := FindBoundedPath(config, spawn, route.Nodes[len(route.Nodes)-1], 100); err != nil || feedback != nil {
+			if _, feedback, err := findBoundedPath(config, spawn, route.Nodes[len(route.Nodes)-1], 100); err != nil || feedback != nil {
 				t.Fatalf("template %s route %s unreachable: %+v/%v", template.ID, routeID, feedback, err)
 			}
 		}
 	}
 	ctTeam := makeTestTeam("ct", "CT", 80)
-	before, err := SelectCTSetup(config, ctTeam, 2, 4, StrategyMemory{}, 777, 0)
+	before, err := selectCTSetup(config, ctTeam, 2, 4, StrategyMemory{}, 777, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	tTemplate := config.RouteTemplates["A_Long_Rush"]
 	tTemplate.TargetSite = "SECRET_CHANGED_T_PLAN"
 	config.RouteTemplates["A_Long_Rush"] = tTemplate
-	after, err := SelectCTSetup(config, ctTeam, 2, 4, StrategyMemory{}, 777, 0)
+	after, err := selectCTSetup(config, ctTeam, 2, 4, StrategyMemory{}, 777, 0)
 	if err != nil || before.Template.ID != after.Template.ID || !reflect.DeepEqual(before.Score, after.Score) {
 		t.Fatalf("CT setup read current hidden T plan: before=%+v after=%+v err=%v", before, after, err)
 	}
@@ -176,7 +176,7 @@ func TestSideSwitchMemoryDecayPreservesTeamStyle(t *testing.T) {
 		PreviousSuccess: map[string]int{"TPL_A": 5}, CounterReads: map[string]int{"TPL_A": 3}, SideTendency: map[string]float64{"A": 8},
 		TeamStyle: map[string]float64{"aggression": 0.7}, RecentTemplates: []string{"TPL_A"},
 	}
-	decayed := DecayStrategyMemoryForSideSwitch(memory)
+	decayed := decayStrategyMemoryForSideSwitch(memory)
 	if decayed.PreviousSuccess["TPL_A"] != 2 || decayed.CounterReads["TPL_A"] != 1 || decayed.SideTendency["A"] != 4 || decayed.TeamStyle["aggression"] != 0.7 || len(decayed.RecentTemplates) != 0 {
 		t.Fatalf("side-switch memory boundary mismatch: %+v", decayed)
 	}

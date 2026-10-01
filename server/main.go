@@ -10,6 +10,7 @@ import (
 	"github.com/heroiclabs/nakama-common/runtime"
 	cfg "windypath.com/cs2match/config"
 	"windypath.com/cs2match/server/internal/framework/matchengine"
+	"windypath.com/cs2match/server/internal/framework/rpcregistry"
 	"windypath.com/cs2match/server/internal/identity"
 	"windypath.com/cs2match/server/internal/match"
 	"windypath.com/cs2match/server/internal/social"
@@ -59,26 +60,20 @@ func InitModule(
 }
 
 func registerRpcFunc(initializer runtime.Initializer, logger runtime.Logger) error {
-	if err := initializer.RegisterRpc("HealthCheck", healthCheckRPC); err != nil {
-		logger.Error("Failed to register HealthCheck RPC: %v", err)
+	if err := rpcregistry.Register(initializer, logger, []rpcregistry.Entry{
+		{Name: "HealthCheck", Handler: healthCheckRPC},
+	}); err != nil {
 		return err
 	}
-	logger.Info("HealthCheck RPC registered")
 
 	// 初始化 match 子系统与战斗引擎
 	engineService := matchengine.NewService(logger)
 	matchService := match.NewService(engineService, logger)
 
-	if err := initializer.RegisterRpc("DebugSimuMatch", match.RPCDebugSimuMatch(matchService)); err != nil {
-		logger.Error("Failed to register DebugSimuMatch RPC: %v", err)
+	if err := match.RegisterRPCs(initializer, logger, matchService); err != nil {
 		return err
 	}
-	logger.Info("DebugSimuMatch RPC registered")
-	if err := initializer.RegisterRpc("SimuMatch", match.RPCSimuMatch(matchService)); err != nil {
-		logger.Error("Failed to register SimuMatch RPC: %v", err)
-		return err
-	}
-	logger.Info("SimuMatch RPC registered")
+
 	return nil
 }
 

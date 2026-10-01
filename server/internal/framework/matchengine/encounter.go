@@ -6,59 +6,59 @@ import (
 )
 
 const (
-	EncounterActive = "Active"
-	EncounterEnded  = "Ended"
+	encounterActive = "Active"
+	encounterEnded  = "Ended"
 )
 
-type ThreatCandidate struct {
+type threatCandidate struct {
 	PlayerID    string
 	Side        string
 	ThreatScore float64
 	Exposure    float64
 }
 
-type EncounterCandidatePlan struct {
+type encounterCandidatePlan struct {
 	ID             string
 	SourceActionID string
 	ScenarioID     string
 	NodeID         string
-	Actors         []ThreatCandidate
+	Actors         []threatCandidate
 	PriorityScore  float64
 }
 
-type EncounterSchedule struct {
+type encounterSchedule struct {
 	EncounterID  string
-	PulseActions []ScheduledAction
-	EndAction    ScheduledAction
+	PulseActions []scheduledAction
+	EndAction    scheduledAction
 }
 
-type CombatEndResult struct {
+type combatEndResult struct {
 	EncounterID       string
 	LocalWinnerSide   string
 	EndReason         string
 	DecisionTriggered bool
 }
 
-func BuildEncounterCandidate(state *RoundState, sourceActionID, scenarioID, nodeID string, actorIDs []string) (EncounterCandidatePlan, error) {
+func buildEncounterCandidate(state *roundState, sourceActionID, scenarioID, nodeID string, actorIDs []string) (encounterCandidatePlan, error) {
 	if state == nil || state.scenarios[scenarioID].ID == "" || nodeID == "" {
-		return EncounterCandidatePlan{}, newError("INVALID_ENCOUNTER", "encounter requires configured scenario and contact node")
+		return encounterCandidatePlan{}, newError("INVALID_ENCOUNTER", "encounter requires configured scenario and contact node")
 	}
 	ids := append([]string(nil), actorIDs...)
 	sort.Strings(ids)
 	ids = uniqueStrings(ids)
-	actors := make([]ThreatCandidate, 0, len(ids))
+	actors := make([]threatCandidate, 0, len(ids))
 	sides := map[string]bool{}
 	for _, actorID := range ids {
 		player := state.Players[actorID]
 		if player == nil || !player.Alive || player.EngagementID != "" || !actionCanEnterEncounter(player.Action.Status) {
 			continue
 		}
-		candidate := ThreatCandidate{PlayerID: actorID, Side: player.Side, ThreatScore: encounterThreatScore(player), Exposure: playerExposure(player)}
+		candidate := threatCandidate{PlayerID: actorID, Side: player.Side, ThreatScore: encounterThreatScore(player), Exposure: playerExposure(player)}
 		actors = append(actors, candidate)
 		sides[player.Side] = true
 	}
 	if !sides[SideT] || !sides[SideCT] {
-		return EncounterCandidatePlan{}, newError("INVALID_ENCOUNTER", "encounter has no legal opposing actors")
+		return encounterCandidatePlan{}, newError("INVALID_ENCOUNTER", "encounter has no legal opposing actors")
 	}
 	sort.SliceStable(actors, func(i, j int) bool {
 		if actors[i].ThreatScore != actors[j].ThreatScore {
@@ -74,11 +74,11 @@ func BuildEncounterCandidate(state *RoundState, sourceActionID, scenarioID, node
 	}
 	sort.Strings(stableIDs)
 	id := stableObjectID("enc", state.Seed, sourceActionID, scenarioID, nodeID, joinStrings(stableIDs))
-	return EncounterCandidatePlan{ID: id, SourceActionID: sourceActionID, ScenarioID: scenarioID, NodeID: nodeID, Actors: actors, PriorityScore: priority}, nil
+	return encounterCandidatePlan{ID: id, SourceActionID: sourceActionID, ScenarioID: scenarioID, NodeID: nodeID, Actors: actors, PriorityScore: priority}, nil
 }
 
-func ArbitrateEncounterCandidates(candidates []EncounterCandidatePlan) []EncounterCandidatePlan {
-	ordered := append([]EncounterCandidatePlan(nil), candidates...)
+func arbitrateEncounterCandidates(candidates []encounterCandidatePlan) []encounterCandidatePlan {
+	ordered := append([]encounterCandidatePlan(nil), candidates...)
 	sort.SliceStable(ordered, func(i, j int) bool {
 		if ordered[i].PriorityScore != ordered[j].PriorityScore {
 			return ordered[i].PriorityScore > ordered[j].PriorityScore
@@ -86,7 +86,7 @@ func ArbitrateEncounterCandidates(candidates []EncounterCandidatePlan) []Encount
 		return ordered[i].ID < ordered[j].ID
 	})
 	usedActors, usedNodes := map[string]bool{}, map[string]bool{}
-	accepted := make([]EncounterCandidatePlan, 0, len(ordered))
+	accepted := make([]encounterCandidatePlan, 0, len(ordered))
 	for _, candidate := range ordered {
 		conflict := usedNodes[candidate.NodeID]
 		for _, actor := range candidate.Actors {
@@ -107,7 +107,7 @@ func ArbitrateEncounterCandidates(candidates []EncounterCandidatePlan) []Encount
 	return accepted
 }
 
-func StartEncounter(state *RoundState, candidate EncounterCandidatePlan) (*EncounterSchedule, error) {
+func startEncounter(state *roundState, candidate encounterCandidatePlan) (*encounterSchedule, error) {
 	if state == nil || candidate.ID == "" || state.ActiveEngagements[candidate.ID] != nil {
 		return nil, newError("INVALID_ENCOUNTER", "encounter cannot start")
 	}
@@ -122,9 +122,9 @@ func StartEncounter(state *RoundState, candidate EncounterCandidatePlan) (*Encou
 	sort.Strings(actorIDs)
 	scenario := state.scenarios[candidate.ScenarioID]
 	duration := clampInt(scenario.BaseTimeCost, state.constants.Int("MinCombatDuration", 1), state.constants.Int("MaxCombatDuration", 1))
-	utilityReasons := make([]ReasonRecord, 0, 2)
+	utilityReasons := make([]reasonRecord, 0, 2)
 	for _, side := range []string{SideT, SideCT} {
-		result, err := spendScopedUtility(state, side, UtilityOpeningInitiative, actorIDs, "", candidate.ID, duration, 5)
+		result, err := spendScopedUtility(state, side, utilityOpeningInitiative, actorIDs, "", candidate.ID, duration, 5)
 		if err != nil {
 			return nil, err
 		}
@@ -132,8 +132,8 @@ func StartEncounter(state *RoundState, candidate EncounterCandidatePlan) (*Encou
 			utilityReasons = append(utilityReasons, result.Reason)
 		}
 	}
-	temporary := &EncounterState{ID: candidate.ID, ScenarioID: candidate.ScenarioID, ActorIDs: actorIDs, NodeID: candidate.NodeID, StartedAt: state.Timeline}
-	scores, err := CalculateEncounterScorePair(state, temporary, candidate.ScenarioID, deriveSeed(state.Seed, "encounter", candidate.ID))
+	temporary := &encounterState{ID: candidate.ID, ScenarioID: candidate.ScenarioID, ActorIDs: actorIDs, NodeID: candidate.NodeID, StartedAt: state.Timeline}
+	scores, err := calculateEncounterScorePair(state, temporary, candidate.ScenarioID, deriveSeed(state.Seed, "encounter", candidate.ID))
 	if err != nil {
 		return nil, err
 	}
@@ -147,26 +147,26 @@ func StartEncounter(state *RoundState, candidate EncounterCandidatePlan) (*Encou
 	pulseWindow := maxInt(1, state.constants.Int("PulseFireWindow", 1))
 	pulseCount := clampInt(int(math.Ceil(float64(duration)/float64(pulseWindow))), 1, state.constants.Int("MaxEncounterPulses", 1))
 	pulseCount = minDamageInt(pulseCount, maxInt(1, duration))
-	encounter := &EncounterState{
+	encounter := &encounterState{
 		ID: candidate.ID, SourceActionID: candidate.SourceActionID, ScenarioID: candidate.ScenarioID, ActorIDs: actorIDs,
 		NodeID: candidate.NodeID, StartedAt: state.Timeline, EndsAt: state.Timeline + duration, MaxPulses: pulseCount,
-		InitiativeSide: initiativeSide, Status: EncounterActive,
-		Reasons: append(append(append([]ReasonRecord(nil), scores[SideT].Reasons...), scores[SideCT].Reasons...), utilityReasons...),
+		InitiativeSide: initiativeSide, Status: encounterActive,
+		Reasons: append(append(append([]reasonRecord(nil), scores[SideT].Reasons...), scores[SideCT].Reasons...), utilityReasons...),
 	}
 	for _, actorID := range actorIDs {
 		player := state.Players[actorID]
 		cancelCurrentAction(state, player)
 		player.Action.Version++
 		player.Action.CurrentActionID = encounter.ID
-		player.Action.Status = ActionEngaged
+		player.Action.Status = actionEngaged
 		player.Action.BusyUntil = encounter.EndsAt
-		player.Action.Busy = BusyInterval{ActionID: encounter.ID, StartAt: state.Timeline, EndAt: encounter.EndsAt}
+		player.Action.Busy = busyInterval{ActionID: encounter.ID, StartAt: state.Timeline, EndAt: encounter.EndsAt}
 		player.EngagementID = encounter.ID
 		player.Posture = initialEncounterPosture(player, initiativeSide)
 	}
 	state.ActiveEngagements[encounter.ID] = encounter
 
-	schedule := &EncounterSchedule{EncounterID: encounter.ID}
+	schedule := &encounterSchedule{EncounterID: encounter.ID}
 	for pulseIndex := 1; pulseIndex <= pulseCount; pulseIndex++ {
 		resolveAt := state.Timeline + int(math.Ceil(float64(duration*pulseIndex)/float64(pulseCount)))
 		if len(encounter.PulseTimes) > 0 && resolveAt <= encounter.PulseTimes[len(encounter.PulseTimes)-1] {
@@ -174,13 +174,13 @@ func StartEncounter(state *RoundState, candidate EncounterCandidatePlan) (*Encou
 		}
 		resolveAt = minDamageInt(resolveAt, encounter.EndsAt)
 		encounter.PulseTimes = append(encounter.PulseTimes, resolveAt)
-		action := encounterAction(state, encounter, ActionCombatPulse, resolveAt, PriorityCombatPulseCommit, pulseIndex-1)
+		action := encounterAction(state, encounter, actionCombatPulse, resolveAt, priorityCombatPulseCommit, pulseIndex-1)
 		if err := state.Scheduler.Schedule(action); err != nil {
 			return nil, err
 		}
 		schedule.PulseActions = append(schedule.PulseActions, action)
 	}
-	endAction := encounterAction(state, encounter, ActionCombatEnd, encounter.EndsAt, 50, 0)
+	endAction := encounterAction(state, encounter, actionCombatEnd, encounter.EndsAt, 50, 0)
 	endAction.ActorIDs = nil
 	endAction.VersionByActor = nil
 	endAction.ParentActionID = ""
@@ -192,10 +192,10 @@ func StartEncounter(state *RoundState, candidate EncounterCandidatePlan) (*Encou
 	return schedule, nil
 }
 
-func EndEncounter(state *RoundState, encounterID, reason string) (CombatEndResult, error) {
+func endEncounter(state *roundState, encounterID, reason string) (combatEndResult, error) {
 	encounter := state.ActiveEngagements[encounterID]
-	if encounter == nil || encounter.Status != EncounterActive {
-		return CombatEndResult{}, newError("INVALID_ENCOUNTER", "encounter %s is not active", encounterID)
+	if encounter == nil || encounter.Status != encounterActive {
+		return combatEndResult{}, newError("INVALID_ENCOUNTER", "encounter %s is not active", encounterID)
 	}
 	alive := map[string][]string{SideT: {}, SideCT: {}}
 	for _, actorID := range encounter.ActorIDs {
@@ -205,23 +205,23 @@ func EndEncounter(state *RoundState, encounterID, reason string) (CombatEndResul
 		}
 	}
 	localWinner := ""
-	control := ControlUnknown
+	control := controlUnknown
 	if len(alive[SideT]) > 0 && len(alive[SideCT]) == 0 {
-		localWinner, control = SideT, ControlT
+		localWinner, control = SideT, controlT
 	} else if len(alive[SideCT]) > 0 && len(alive[SideT]) == 0 {
-		localWinner, control = SideCT, ControlCT
+		localWinner, control = SideCT, controlCT
 	}
 	if node := state.Nodes[encounter.NodeID]; node != nil {
 		beforeControl := node.ActualControl
 		observed := map[string][]string{SideT: alive[SideT], SideCT: alive[SideCT]}
 		if err := node.ResolveContest(control, state.Timeline, state.constants.Int("ControlIntelTTL", 1), observed); err != nil {
-			return CombatEndResult{}, err
+			return combatEndResult{}, err
 		}
-		if control != ControlUnknown && control != beforeControl {
-			effectID := NewEffectID(state.Seed, encounter.ID, EffectControl, 0)
-			eventID := NewEventID(state.Seed, encounter.ID, effectID, EventControlGained, 0)
-			reason, _ := ProjectReasonRecord(ReasonRecord{Code: "ENCOUNTER_CONTROL_RESOLVED", Source: encounter.ID, Value: 1, Weight: 1, StateChanges: []ReasonStateChange{{Field: "control.status", Before: StringReasonValue(string(beforeControl)), After: StringReasonValue(string(control))}}}, encounter.ID, effectID)
-			event := &GameEvent{EventID: eventID, SourceActionID: encounter.ID, SourceEffectID: effectID, Timestamp: int64(state.Timeline), EventType: EventControlGained, Message: "node control resolved from encounter", Reason: reason, Location: eventLocation(state, PlayerLocation{NodeID: encounter.NodeID}, eventID, effectID), State: snapshotForEvent(state), sortPriority: 40, sortActionType: string(ActionCombatEnd)}
+		if control != controlUnknown && control != beforeControl {
+			effectID := newEffectID(state.Seed, encounter.ID, effectControl, 0)
+			eventID := newEventID(state.Seed, encounter.ID, effectID, EventControlGained, 0)
+			reason, _ := projectReasonRecord(reasonRecord{Code: "ENCOUNTER_CONTROL_RESOLVED", Source: encounter.ID, Value: 1, Weight: 1, StateChanges: []ReasonStateChange{{Field: "control.status", Before: stringReasonValue(string(beforeControl)), After: stringReasonValue(string(control))}}}, encounter.ID, effectID)
+			event := &GameEvent{EventID: eventID, SourceActionID: encounter.ID, SourceEffectID: effectID, Timestamp: int64(state.Timeline), EventType: EventControlGained, Message: "node control resolved from encounter", Reason: reason, Location: eventLocation(state, playerLocation{NodeID: encounter.NodeID}, eventID, effectID), State: snapshotForEvent(state), sortPriority: 40, sortActionType: string(actionCombatEnd)}
 			if len(alive[localWinner]) > 0 {
 				actor := state.Players[alive[localWinner][0]]
 				event.AttackerID, event.AttackerName, event.AttackerTeamID = actor.Profile.PlayerID, actor.Profile.DisplayName, actor.TeamID
@@ -237,22 +237,22 @@ func EndEncounter(state *RoundState, encounterID, reason string) (CombatEndResul
 		if player.Action.CurrentActionID == encounter.ID {
 			player.Action.Version++
 			player.Action.CurrentActionID = ""
-			player.Action.Status = ActionIdle
+			player.Action.Status = actionIdle
 			player.Action.BusyUntil = state.Timeline
-			player.Action.Busy = BusyInterval{}
+			player.Action.Busy = busyInterval{}
 		}
 		player.EngagementID = ""
 		if player.Alive {
-			player.Posture = PostureDefault
+			player.Posture = postureDefault
 		}
 	}
-	encounter.Status = EncounterEnded
+	encounter.Status = encounterEnded
 	delete(state.ActiveEngagements, encounterID)
-	return CombatEndResult{EncounterID: encounterID, LocalWinnerSide: localWinner, EndReason: reason, DecisionTriggered: true}, nil
+	return combatEndResult{EncounterID: encounterID, LocalWinnerSide: localWinner, EndReason: reason, DecisionTriggered: true}, nil
 }
 
-func EncounterShouldEnd(state *RoundState, encounter *EncounterState) (bool, string) {
-	if encounter == nil || encounter.Status != EncounterActive {
+func encounterShouldEnd(state *roundState, encounter *encounterState) (bool, string) {
+	if encounter == nil || encounter.Status != encounterActive {
 		return true, "inactive"
 	}
 	aliveT, aliveCT := 0, 0
@@ -279,53 +279,53 @@ func EncounterShouldEnd(state *RoundState, encounter *EncounterState) (bool, str
 	return false, ""
 }
 
-func encounterAction(state *RoundState, encounter *EncounterState, actionType ActionType, resolveAt, priority, ordinal int) ScheduledAction {
+func encounterAction(state *roundState, encounter *encounterState, actionType actionType, resolveAt, priority, ordinal int) scheduledAction {
 	versions := make(map[string]int, len(encounter.ActorIDs))
 	for _, actorID := range encounter.ActorIDs {
 		versions[actorID] = state.Players[actorID].Action.Version
 	}
-	action := ScheduledAction{
+	action := scheduledAction{
 		ParentActionID: encounter.ID, IntentID: encounter.ID, Type: actionType, ActorIDs: append([]string(nil), encounter.ActorIDs...),
 		StartAt: encounter.StartedAt, ResolveAt: resolveAt, Priority: priority, VersionByActor: versions, MinRequiredActors: 1,
-		Payload: ActionPayload{ScenarioID: encounter.ScenarioID, TargetID: encounter.ID},
+		Payload: actionPayload{ScenarioID: encounter.ScenarioID, TargetID: encounter.ID},
 	}
-	action.ID = NewActionID(state.Seed, actionType, encounter.ID, action.StartAt, action.ResolveAt, action.ActorIDs, ordinal)
+	action.ID = newActionID(state.Seed, actionType, encounter.ID, action.StartAt, action.ResolveAt, action.ActorIDs, ordinal)
 	return action
 }
 
-func actionCanEnterEncounter(status ActionStatus) bool {
+func actionCanEnterEncounter(status actionStatus) bool {
 	switch status {
-	case ActionIdle, ActionMoving, ActionHolding, ActionPlanting, ActionDefusing:
+	case actionIdle, actionMoving, actionHolding, actionPlanting, actionDefusing:
 		return true
 	default:
 		return false
 	}
 }
 
-func encounterThreatScore(player *RoundPlayerState) float64 {
+func encounterThreatScore(player *roundPlayerState) float64 {
 	attributes := player.Profile.Attributes
 	return float64(attributes.Firepower+attributes.Aim+attributes.Reaction+attributes.Awareness)/4 + float64(player.HP)/10 + playerExposure(player)
 }
 
-func playerExposure(player *RoundPlayerState) float64 {
+func playerExposure(player *roundPlayerState) float64 {
 	exposure := 0.0
 	if player.Location.Edge != nil {
 		exposure += 20
 	}
 	switch player.Posture {
-	case PostureMoving:
+	case postureMoving:
 		exposure += 15
-	case PostureHolding:
+	case postureHolding:
 		exposure -= 10
 	}
 	return exposure
 }
 
-func initialEncounterPosture(player *RoundPlayerState, initiativeSide string) CombatPosture {
+func initialEncounterPosture(player *roundPlayerState, initiativeSide string) combatPosture {
 	if player.Side == initiativeSide {
-		return PostureEngaged
+		return postureEngaged
 	}
-	return PostureHolding
+	return postureHolding
 }
 
 func joinStrings(values []string) string {

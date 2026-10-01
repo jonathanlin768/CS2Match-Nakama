@@ -14,8 +14,8 @@
 | 04 | [配置世界：Luban 管线与地图快照](./04-配置管线与校验.md) | 策划 xlsx 如何变成引擎的 MapConfig，校验如何兜底 | 03 |
 | 05 | [整场编排：MR12、换边与加时](./05-整场编排.md) | 比分权威、半场换边、加时块的正确姿势 | 03 |
 | 06 | [回合主循环：离散事件状态机](./06-回合主循环.md) | runCausalRound 的每一次循环在做什么 | 03, 05 |
-| 07 | [权威状态与不变量](./07-权威状态.md) | RoundState/BombState/控制权/情报容器的所有权规则 | 06 |
-| 08 | [行动生命周期与调度器](./08-行动与调度器.md) | Intent→Action→Busy、版本失效、确定性优先队列 | 06, 07 |
+| 07 | [权威状态与不变量](./07-权威状态.md) | roundState/bombState/控制权/情报容器的所有权规则 | 06 |
+| 08 | [行动生命周期与调度器](./08-行动与调度器.md) | intent→Action→Busy、版本失效、确定性优先队列 | 06, 07 |
 | 09 | [语义地图与移动](./09-语义地图与移动.md) | MapNode/MapEdge/Route/Visibility 如何参与结算 | 04, 07 |
 | 10 | [战术选择与 AI 决策](./10-战术与决策.md) | 六模板评分、CT 独立性、中期决策、情报边界 | 07, 08 |
 | 11 | [遭遇战：从接触到评分](./11-遭遇战与评分.md) | Encounter 生命周期与三层评分公式 | 09, 10 |
@@ -57,6 +57,8 @@ flowchart TD
 
 ## 引用约定
 
+本次结构整理后的源码入口和职责索引见 [`matchengine/README.md`](../../server/internal/framework/matchengine/README.md)。输入、战报、地图配置分别位于 `input.go`、`report.go`、`map_config.go`；运行时类型与 resolver 改为包内名称，例如 `roundState`、`resolveCombatPulse`。教程中的当前源码符号已同步，历史 Review 仍保留原提交名称。
+
 教程里的代码引用统一为 `路径#符号名` 格式，例如：
 
 - `server/internal/framework/matchengine/engine.go#simulateMatch` —— 指该文件中的函数/类型/字段。
@@ -74,7 +76,7 @@ flowchart TD
 | `doc/simuMatchDesign.md` | 模拟对局**需求设计**（权威语义来源） | 每篇内核文章都标注了对应章节 |
 | `openspec/changes/implement-causal-simu-match-engine/proposal.md` | 提案：为什么改、改什么 | 01 篇背景 |
 | `openspec/changes/implement-causal-simu-match-engine/design.md` | 工程化设计决策（22 个 Decisions） | 内核各篇的"设计依据" |
-| `openspec/specs/simu-*-*.md` | 已同步的主规格（SHALL 要求） | 验收口径 |
+| `openspec/specs/simu-*/spec.md` | 已同步的主规格（SHALL 要求） | 验收口径 |
 | `doc/reviews/ebc8906-review-guide.md` | 对 ebc8906 提交的深度 Review | 第 15 篇的"已知断链"主要来源 |
 | `openspec/changes/implement-causal-simu-match-engine/calibration-summary.md` | 批量标定实测指标 | 第 15 篇 |
 

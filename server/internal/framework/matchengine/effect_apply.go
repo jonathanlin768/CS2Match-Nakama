@@ -3,21 +3,21 @@ package matchengine
 import "sort"
 
 const (
-	PriorityCombatPulseCommit = 100
-	PriorityCombatAftermath   = 90
-	PriorityBombDrop          = 80
+	priorityCombatPulseCommit = 100
+	priorityCombatAftermath   = 90
+	priorityBombDrop          = 80
 )
 
 type damageContribution struct {
-	effect  Effect
+	effect  effect
 	applied int
 }
 
-// ApplyCombatPulseCommit atomically applies every damage effect produced from
+// applyCombatPulseCommit atomically applies every damage effect produced from
 // one immutable combat-pulse snapshot. Death, kill attribution, bomb drop and
 // external-action interruption are derived only after all HP changes commit.
-func ApplyCombatPulseCommit(state *RoundState, action ScheduledAction, effects []Effect) (*AppliedBatch, error) {
-	if state == nil || action.ID == "" || action.Type != ActionCombatPulse || action.Priority != PriorityCombatPulseCommit {
+func applyCombatPulseCommit(state *roundState, action scheduledAction, effects []effect) (*appliedBatch, error) {
+	if state == nil || action.ID == "" || action.Type != actionCombatPulse || action.Priority != priorityCombatPulseCommit {
 		return nil, newError("INVALID_EFFECT_BATCH", "combat pulse commit requires a priority-100 CombatPulse action")
 	}
 	if action.ResolveAt != state.Timeline {
@@ -27,16 +27,16 @@ func ApplyCombatPulseCommit(state *RoundState, action ScheduledAction, effects [
 		return nil, err
 	}
 
-	normalized := append([]Effect(nil), effects...)
+	normalized := append([]effect(nil), effects...)
 	sort.SliceStable(normalized, func(i, j int) bool {
 		if normalized[i].TargetID != normalized[j].TargetID {
 			return normalized[i].TargetID < normalized[j].TargetID
 		}
 		return normalized[i].ID < normalized[j].ID
 	})
-	byTarget := make(map[string][]Effect)
+	byTarget := make(map[string][]effect)
 	for _, effect := range normalized {
-		if effect.ID == "" || effect.SourceActionID != action.ID || effect.Type != EffectDamage || effect.Timestamp != state.Timeline || effect.Amount < 0 {
+		if effect.ID == "" || effect.SourceActionID != action.ID || effect.Type != effectDamage || effect.Timestamp != state.Timeline || effect.Amount < 0 {
 			return nil, newError("INVALID_EFFECT_BATCH", "combat pulse contains an invalid damage effect")
 		}
 		if state.Players[effect.ActorID] == nil || state.Players[effect.TargetID] == nil {
@@ -71,7 +71,7 @@ func ApplyCombatPulseCommit(state *RoundState, action ScheduledAction, effects [
 		return nil, err
 	}
 
-	batch := &AppliedBatch{Timestamp: state.Timeline}
+	batch := &appliedBatch{Timestamp: state.Timeline}
 	contributions := make(map[string][]damageContribution, len(targetIDs))
 	for _, targetID := range targetIDs {
 		target := state.Players[targetID]
@@ -84,7 +84,7 @@ func ApplyCombatPulseCommit(state *RoundState, action ScheduledAction, effects [
 			totalApplied += contribution.applied
 			attacker := state.Players[contribution.effect.ActorID]
 			attacker.Damage += contribution.applied
-			batch.Effects = append(batch.Effects, AppliedEffect{Effect: contribution.effect, AppliedAmount: contribution.applied})
+			batch.Effects = append(batch.Effects, appliedEffect{Effect: contribution.effect, AppliedAmount: contribution.applied})
 			if contribution.applied > 0 {
 				batch.Events = append(batch.Events, damageEvent(state, action, contribution))
 			}
@@ -124,14 +124,14 @@ func ApplyCombatPulseCommit(state *RoundState, action ScheduledAction, effects [
 		state.Players[killer.effect.ActorID].Kills++
 		cancelCurrentAction(state, target)
 
-		death := Effect{
-			ID: NewEffectID(actionSeed(state), action.ID, EffectDeath, deathOrdinal), SourceActionID: action.ID,
-			Type: EffectDeath, Priority: PriorityCombatPulseCommit, Timestamp: state.Timeline,
+		death := effect{
+			ID: newEffectID(actionSeed(state), action.ID, effectDeath, deathOrdinal), SourceActionID: action.ID,
+			Type: effectDeath, Priority: priorityCombatPulseCommit, Timestamp: state.Timeline,
 			ActorID: killer.effect.ActorID, TargetID: targetID,
-			StringValue: killer.effect.StringValue, ReasonRecords: append([]ReasonRecord(nil), killer.effect.ReasonRecords...),
+			StringValue: killer.effect.StringValue, ReasonRecords: append([]reasonRecord(nil), killer.effect.ReasonRecords...),
 		}
 		deathOrdinal++
-		batch.Effects = append(batch.Effects, AppliedEffect{Effect: death, AppliedAmount: 1})
+		batch.Effects = append(batch.Effects, appliedEffect{Effect: death, AppliedAmount: 1})
 		killerSide := state.Players[death.ActorID].Side
 		isTrade := lastKillSide != "" && lastKillSide != killerSide && state.Timeline-lastKillAt <= 5
 		assistIDs := assistIDsForKill(state.Events, contributions[targetID], death.ActorID, targetID)
@@ -140,9 +140,9 @@ func ApplyCombatPulseCommit(state *RoundState, action ScheduledAction, effects [
 		lastKillSide, lastKillAt = killerSide, state.Timeline
 
 		if target.HasBomb {
-			bombDrop := Effect{
-				ID: NewEffectID(actionSeed(state), action.ID, EffectBombDrop, bombOrdinal), SourceActionID: action.ID,
-				Type: EffectBombDrop, Priority: PriorityBombDrop, Timestamp: state.Timeline,
+			bombDrop := effect{
+				ID: newEffectID(actionSeed(state), action.ID, effectBombDrop, bombOrdinal), SourceActionID: action.ID,
+				Type: effectBombDrop, Priority: priorityBombDrop, Timestamp: state.Timeline,
 				ActorID: targetID, TargetID: targetID, NodeID: projectedNodeID(target.Location),
 			}
 			bombOrdinal++
@@ -150,7 +150,7 @@ func ApplyCombatPulseCommit(state *RoundState, action ScheduledAction, effects [
 				return nil, err
 			}
 			target.HasBomb = false
-			batch.Effects = append(batch.Effects, AppliedEffect{Effect: bombDrop, AppliedAmount: 1})
+			batch.Effects = append(batch.Effects, appliedEffect{Effect: bombDrop, AppliedAmount: 1})
 			batch.Events = append(batch.Events, bombDropEvent(state, action, bombDrop))
 		}
 	}
@@ -162,8 +162,8 @@ func ApplyCombatPulseCommit(state *RoundState, action ScheduledAction, effects [
 	return batch, nil
 }
 
-func allocateActualDamage(hp int, effects []Effect) []damageContribution {
-	ordered := append([]Effect(nil), effects...)
+func allocateActualDamage(hp int, effects []effect) []damageContribution {
+	ordered := append([]effect(nil), effects...)
 	sort.SliceStable(ordered, func(i, j int) bool {
 		if ordered[i].Amount != ordered[j].Amount {
 			return ordered[i].Amount > ordered[j].Amount
@@ -215,45 +215,45 @@ func hasAppliedDamage(contributions []damageContribution) bool {
 	return false
 }
 
-func interruptExternalAction(state *RoundState, player *RoundPlayerState) {
+func interruptExternalAction(state *roundState, player *roundPlayerState) {
 	player.Action.Version++
 	switch player.Action.Status {
-	case ActionMoving, ActionPlanting, ActionDefusing:
+	case actionMoving, actionPlanting, actionDefusing:
 		interruptBombActionForPlayer(state, player)
 		player.Action.CurrentActionID = ""
-		player.Action.Status = ActionIdle
+		player.Action.Status = actionIdle
 		player.Action.BusyUntil = state.Timeline
-		player.Action.Busy = BusyInterval{}
+		player.Action.Busy = busyInterval{}
 	}
 }
 
-func cancelCurrentAction(state *RoundState, player *RoundPlayerState) {
+func cancelCurrentAction(state *roundState, player *roundPlayerState) {
 	interruptBombActionForPlayer(state, player)
 	player.Action.Version++
 	player.Action.CurrentActionID = ""
-	player.Action.Status = ActionIdle
+	player.Action.Status = actionIdle
 	player.Action.BusyUntil = state.Timeline
-	player.Action.Busy = BusyInterval{}
+	player.Action.Busy = busyInterval{}
 }
 
-func interruptBombActionForPlayer(state *RoundState, player *RoundPlayerState) {
+func interruptBombActionForPlayer(state *roundState, player *roundPlayerState) {
 	if state == nil || player == nil || player.Action.CurrentActionID == "" {
 		return
 	}
-	if player.Action.Status == ActionPlanting {
+	if player.Action.Status == actionPlanting {
 		actionID := player.Action.CurrentActionID
 		if state.Bomb.InterruptPlant(player.Profile.PlayerID, actionID) {
-			action := ScheduledAction{ID: actionID, Type: ActionPlantComplete, ActorIDs: []string{player.Profile.PlayerID}, Priority: PriorityPlantComplete}
+			action := scheduledAction{ID: actionID, Type: actionPlantComplete, ActorIDs: []string{player.Profile.PlayerID}, Priority: priorityPlantComplete}
 			event, _ := newActionLifecycleEvent(state, action, EventPlantInterrupt, "bomb plant interrupted", 0)
 			event.VictimID, event.VictimName, event.VictimTeamID = player.Profile.PlayerID, player.Profile.DisplayName, player.TeamID
 			event.Bomb, event.State = projectBombState(state.Bomb), snapshotForEvent(state)
 			state.Events = append(state.Events, event)
 		}
 	}
-	if player.Action.Status == ActionDefusing {
+	if player.Action.Status == actionDefusing {
 		actionID := player.Action.CurrentActionID
 		if state.Bomb.InterruptDefuse(player.Profile.PlayerID, actionID) {
-			action := ScheduledAction{ID: actionID, Type: ActionDefuseComplete, ActorIDs: []string{player.Profile.PlayerID}, Priority: PriorityDefuseComplete}
+			action := scheduledAction{ID: actionID, Type: actionDefuseComplete, ActorIDs: []string{player.Profile.PlayerID}, Priority: priorityDefuseComplete}
 			event, _ := newActionLifecycleEvent(state, action, EventDefuseInterrupt, "bomb defuse interrupted", 0)
 			event.VictimID, event.VictimName, event.VictimTeamID = player.Profile.PlayerID, player.Profile.DisplayName, player.TeamID
 			event.Bomb, event.State = projectBombState(state.Bomb), snapshotForEvent(state)
@@ -262,39 +262,39 @@ func interruptBombActionForPlayer(state *RoundState, player *RoundPlayerState) {
 	}
 }
 
-func damageEvent(state *RoundState, action ScheduledAction, contribution damageContribution) *GameEvent {
+func damageEvent(state *roundState, action scheduledAction, contribution damageContribution) *GameEvent {
 	attacker := state.Players[contribution.effect.ActorID]
 	victim := state.Players[contribution.effect.TargetID]
-	eventID := NewEventID(actionSeed(state), action.ID, contribution.effect.ID, EventDamage, 0)
+	eventID := newEventID(actionSeed(state), action.ID, contribution.effect.ID, EventDamage, 0)
 	reasonRecord := firstEffectReason(contribution.effect, "DAMAGE_APPLIED")
 	reasonRecord.Formula = "AppliedDamage = min(TargetHP, RawDamageShare)"
 	reasonRecord.Inputs = map[string]float64{"raw_damage": float64(contribution.effect.Amount), "applied_damage": float64(contribution.applied)}
-	reasonRecord.StateChanges = []ReasonStateChange{{Field: "player.hp", Before: NumberReasonValue(float64(victim.HP + contribution.applied)), After: NumberReasonValue(float64(victim.HP))}}
-	reason, _ := ProjectReasonRecord(reasonRecord, action.ID, contribution.effect.ID)
+	reasonRecord.StateChanges = []ReasonStateChange{{Field: "player.hp", Before: numberReasonValue(float64(victim.HP + contribution.applied)), After: numberReasonValue(float64(victim.HP))}}
+	reason, _ := projectReasonRecord(reasonRecord, action.ID, contribution.effect.ID)
 	event := &GameEvent{
 		EventID: eventID, SourceActionID: action.ID, SourceEffectID: contribution.effect.ID,
 		Timestamp: int64(state.Timeline), EventType: EventDamage, AttackerID: attacker.Profile.PlayerID, AttackerName: attacker.Profile.DisplayName,
 		AttackerTeamID: attacker.TeamID, VictimID: victim.Profile.PlayerID, VictimName: victim.Profile.DisplayName, VictimTeamID: victim.TeamID,
 		Weapon: contribution.effect.StringValue, Message: "damage applied", Location: eventLocation(state, victim.Location, eventID, contribution.effect.ID), Extra: map[string]interface{}{"damage": contribution.applied},
-		Reason: reason, sortPriority: PriorityCombatPulseCommit, sortActionType: string(action.Type) + "/00Damage", sortMinActorID: action.MinActorID(),
+		Reason: reason, sortPriority: priorityCombatPulseCommit, sortActionType: string(action.Type) + "/00Damage", sortMinActorID: action.MinActorID(),
 	}
 	event.State = snapshotForEvent(state)
 	return event
 }
 
-func killEvent(state *RoundState, action ScheduledAction, death Effect, assistIDs []string, firstKill, trade bool) *GameEvent {
+func killEvent(state *roundState, action scheduledAction, death effect, assistIDs []string, firstKill, trade bool) *GameEvent {
 	attacker := state.Players[death.ActorID]
 	victim := state.Players[death.TargetID]
-	eventID := NewEventID(actionSeed(state), action.ID, death.ID, EventKill, 0)
+	eventID := newEventID(actionSeed(state), action.ID, death.ID, EventKill, 0)
 	reasonRecord := firstEffectReason(death, "PLAYER_KILLED")
-	reasonRecord.StateChanges = []ReasonStateChange{{Field: "player.alive", Before: BoolReasonValue(true), After: BoolReasonValue(false)}}
-	reason, _ := ProjectReasonRecord(reasonRecord, action.ID, death.ID)
+	reasonRecord.StateChanges = []ReasonStateChange{{Field: "player.alive", Before: boolReasonValue(true), After: boolReasonValue(false)}}
+	reason, _ := projectReasonRecord(reasonRecord, action.ID, death.ID)
 	event := &GameEvent{
 		EventID: eventID, SourceActionID: action.ID, SourceEffectID: death.ID,
 		Timestamp: int64(state.Timeline), EventType: EventKill, AttackerID: attacker.Profile.PlayerID, AttackerName: attacker.Profile.DisplayName,
 		AttackerTeamID: attacker.TeamID, VictimID: victim.Profile.PlayerID, VictimName: victim.Profile.DisplayName, VictimTeamID: victim.TeamID,
 		Weapon: death.StringValue, IsFirstKill: firstKill, IsTrade: trade, Message: "player killed", Location: eventLocation(state, victim.Location, eventID, death.ID),
-		Reason: reason, Bomb: projectBombState(state.Bomb), sortPriority: PriorityCombatPulseCommit, sortActionType: string(action.Type) + "/10Kill", sortMinActorID: action.MinActorID(),
+		Reason: reason, Bomb: projectBombState(state.Bomb), sortPriority: priorityCombatPulseCommit, sortActionType: string(action.Type) + "/10Kill", sortMinActorID: action.MinActorID(),
 	}
 	if len(assistIDs) > 0 {
 		event.Extra = map[string]interface{}{"assist_ids": assistIDs}
@@ -328,34 +328,34 @@ func assistIDsForKill(previousEvents []*GameEvent, current []damageContribution,
 	return ids
 }
 
-func projectEffectReason(effect Effect) *EventReason {
+func projectEffectReason(effect effect) *EventReason {
 	if len(effect.ReasonRecords) == 0 {
 		return nil
 	}
-	reason, _ := ProjectReasonRecord(effect.ReasonRecords[0], effect.SourceActionID, effect.ID)
+	reason, _ := projectReasonRecord(effect.ReasonRecords[0], effect.SourceActionID, effect.ID)
 	return reason
 }
 
-func firstEffectReason(effect Effect, fallback string) ReasonRecord {
+func firstEffectReason(effect effect, fallback string) reasonRecord {
 	if len(effect.ReasonRecords) > 0 {
 		return effect.ReasonRecords[0]
 	}
-	return ReasonRecord{Code: fallback, Source: string(effect.Type), Value: float64(effect.Amount), Weight: 1}
+	return reasonRecord{Code: fallback, Source: string(effect.Type), Value: float64(effect.Amount), Weight: 1}
 }
 
-func bombDropEvent(state *RoundState, action ScheduledAction, drop Effect) *GameEvent {
+func bombDropEvent(state *roundState, action scheduledAction, drop effect) *GameEvent {
 	carrier := state.Players[drop.ActorID]
-	eventID := NewEventID(actionSeed(state), action.ID, drop.ID, EventBombDrop, 0)
-	reason, _ := ProjectReasonRecord(ReasonRecord{Code: "BOMB_CARRIER_KILLED", Source: carrier.Profile.PlayerID, Value: 1, Weight: 1, StateChanges: []ReasonStateChange{{Field: "bomb.status", Before: StringReasonValue(string(BombCarried)), After: StringReasonValue(string(BombDropped))}}}, action.ID, drop.ID)
+	eventID := newEventID(actionSeed(state), action.ID, drop.ID, EventBombDrop, 0)
+	reason, _ := projectReasonRecord(reasonRecord{Code: "BOMB_CARRIER_KILLED", Source: carrier.Profile.PlayerID, Value: 1, Weight: 1, StateChanges: []ReasonStateChange{{Field: "bomb.status", Before: stringReasonValue(string(bombCarried)), After: stringReasonValue(string(bombDropped))}}}, action.ID, drop.ID)
 	return &GameEvent{
 		EventID: eventID, SourceActionID: action.ID, SourceEffectID: drop.ID,
 		Timestamp: int64(state.Timeline), EventType: EventBombDrop, VictimID: carrier.Profile.PlayerID, VictimName: carrier.Profile.DisplayName,
 		VictimTeamID: carrier.TeamID, Message: "bomb dropped", Location: eventLocation(state, carrier.Location, eventID, drop.ID), Bomb: projectBombState(state.Bomb), Reason: reason, State: snapshotForEvent(state),
-		sortPriority: PriorityBombDrop, sortActionType: string(action.Type), sortMinActorID: action.MinActorID(),
+		sortPriority: priorityBombDrop, sortActionType: string(action.Type), sortMinActorID: action.MinActorID(),
 	}
 }
 
-func actionSeed(state *RoundState) int64 {
+func actionSeed(state *roundState) int64 {
 	return state.Seed
 }
 
