@@ -1,0 +1,9 @@
+FROM heroiclabs/nakama-pluginbuilder:3.30.0 AS delve-builder
+
+# Keep Delve reproducible and build it with the same Go toolchain as Nakama.
+ARG GOPROXY=https://goproxy.cn,direct
+RUN CGO_ENABLED=0 GOPROXY="$GOPROXY" go install github.com/go-delve/delve/cmd/dlv@v1.25.2
+
+FROM heroiclabs/nakama-dsym:3.30.0
+
+COPY --from=delve-builder /go/bin/dlv /nakama/dlv

@@ -1,38 +1,38 @@
-# ==============================================
-# CS2Match Go Plugin 编译脚本 (Windows)
-# ==============================================
-# 用途: 编译 main.go 为 .so 插件，供 Nakama 容器加载
-# 输出: server/build/backend.so
-# 前置: WSL2 + Go 1.24.5 (在 WSL2 中运行)
-#
-# 使用: wsl bash server/build.sh
-#       或直接在 WSL2 终端中: bash server/build.sh
-# ==============================================
+# Build the Linux Nakama plugin with Nakama's pinned Go toolchain.
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
-Write-Host "=== CS2Match Go Plugin Build (Windows) ===" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "This script must be run inside WSL2 (Windows Subsystem for Linux)"
-Write-Host "because the Go plugin binary must be Linux ELF format."
-Write-Host ""
-Write-Host "Please run one of the following commands instead:" -ForegroundColor Yellow
-Write-Host ""
-Write-Host "  wsl bash server/build.sh" -ForegroundColor Green
-Write-Host ""
-Write-Host "Or open a WSL2 terminal and run:" -ForegroundColor Yellow
-Write-Host ""
-Write-Host "  cd /mnt/d/Project/CS2Match-Nakama" -ForegroundColor Green
-Write-Host "  bash server/build.sh" -ForegroundColor Green
-Write-Host ""
+$serverDir = (Resolve-Path -LiteralPath $PSScriptRoot).Path
+$buildDir = Join-Path $serverDir 'build'
+$temporaryOutput = Join-Path $buildDir 'backend.so.tmp'
+$output = Join-Path $buildDir 'backend.so'
+$moduleProxy = if ($env:CS2MATCH_GOPROXY) { $env:CS2MATCH_GOPROXY } else { 'https://goproxy.cn,direct' }
 
-# 尝试在 WSL 中自动执行
-$wslPath = (Get-Command wsl -ErrorAction SilentlyContinue)
-if ($wslPath) {
-    Write-Host "WSL detected! Attempting to compile in WSL..." -ForegroundColor Cyan
-    $projectDir = $PWD.Path -replace '\\', '/' -replace '^([A-Z]):', '/mnt/$1'
-    $projectDir = $projectDir.ToLower()
-    wsl bash -c "cd '$projectDir' && bash server/build.sh"
-} else {
-    Write-Host "ERROR: WSL not found. Please install WSL2 and try again." -ForegroundColor Red
-    Write-Host "https://learn.microsoft.com/en-us/windows/wsl/install" -ForegroundColor Yellow
-    exit 1
+if (-not (Test-Path -LiteralPath (Join-Path $serverDir 'config/Tables.go'))) {
+    throw 'Generated Go config is missing. Run scripts/gen-config.ps1 first.'
+}
+
+New-Item -ItemType Directory -Path $buildDir -Force | Out-Null
+Remove-Item -LiteralPath $temporaryOutput -Force -ErrorAction SilentlyContinue
+
+try {
+    & docker run --rm --entrypoint go `
+        --mount "type=bind,source=$serverDir,target=/app" `
+        --mount 'type=volume,source=cs2match-go-mod-cache,target=/go/pkg/mod' `
+        --mount 'type=volume,source=cs2match-go-build-cache,target=/root/.cache/go-build' `
+        --env "GOPROXY=$moduleProxy" `
+        --workdir /app `
+        heroiclabs/nakama-pluginbuilder:3.30.0 `
+        build -mod=mod -buildmode=plugin -trimpath '-gcflags=all=-N -l' `
+        -o build/backend.so.tmp .
+    if ($LASTEXITCODE -ne 0) {
+        throw "Nakama plugin build failed with exit code $LASTEXITCODE."
+    }
+    if (-not (Test-Path -LiteralPath $temporaryOutput) -or (Get-Item -LiteralPath $temporaryOutput).Length -eq 0) {
+        throw 'Nakama plugin build produced no output.'
+    }
+    Move-Item -LiteralPath $temporaryOutput -Destination $output -Force
+    Write-Host "Debug plugin built: $output"
+} finally {
+    Remove-Item -LiteralPath $temporaryOutput -Force -ErrorAction SilentlyContinue
 }

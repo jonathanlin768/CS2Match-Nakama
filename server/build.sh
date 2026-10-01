@@ -32,12 +32,20 @@ fi
 
 # 使用 Nakama 官方 pluginbuilder 镜像编译
 # 该镜像包含与 Nakama 3.30.0 完全匹配的 Go 1.24.5 及依赖
+TEMP_OUTPUT="${BUILD_DIR}/backend.so.tmp"
+trap 'rm -f "${TEMP_OUTPUT}"' EXIT
 docker run --rm \
   --entrypoint "" \
   -v "${SCRIPT_DIR}:/app" \
+  --mount type=volume,source=cs2match-go-mod-cache,target=/go/pkg/mod \
+  --mount type=volume,source=cs2match-go-build-cache,target=/root/.cache/go-build \
+  -e "GOPROXY=${CS2MATCH_GOPROXY:-https://goproxy.cn,direct}" \
   -w /app \
   heroiclabs/nakama-pluginbuilder:3.30.0 \
-  go build -v -mod=mod -buildmode=plugin -trimpath -o build/backend.so .
+  go build -mod=mod -buildmode=plugin -trimpath -gcflags='all=-N -l' -o build/backend.so.tmp .
+
+test -s "${TEMP_OUTPUT}"
+mv -f "${TEMP_OUTPUT}" "${OUTPUT}"
 
 echo "=== Build complete: ${OUTPUT} ==="
 echo "Restart Nakama to reload: docker compose restart nakama"

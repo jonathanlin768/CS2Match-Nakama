@@ -16,7 +16,7 @@
 
 - **Docker Desktop** 4.x+ (含 Docker Compose)
 - 建议 4GB+ 内存分配给 Docker
-- Windows 用户需启用 WSL2
+- Windows Docker Desktop 使用 WSL2 后端；构建脚本无需手动进入 WSL 或在 WSL 中安装 Go
 
 **可选**（仅 Option A 开发模式需要）：
 - Node.js 22+（Vite 8 要求）
@@ -35,47 +35,38 @@ openspec --version   # 确认安装成功（当前版本: 1.4.1+）
 
 ## 快速启动
 
-### 🚀 Option B: Docker 一键启动（推荐新人）
+### 🚀 Option B: Docker 本地调试（推荐）
 
-无需安装 Node.js 或 Go，只需 Docker：
+两台 Windows 开发设备都可以在克隆后让 Codex 执行 `$cs2match-local-update`，并说“启动本地调试”。技能会调用仓库脚本，自动创建缺失的 `.env`、编译 Go 插件、启动并检查 Docker 服务。也可直接在项目根目录运行：
 
-```bash
-# 1. 克隆项目
-git clone <repo-url> && cd cs2-simu-project
-
-# 2. 创建环境变量（使用默认值）
-cp .env.example .env
-
-# 3. 一键启动全部服务
-docker compose up -d
-
-# 4. 访问
-#    前端:   http://localhost:3000
-#    Console: http://localhost:7351  (admin / password)
-#    API:    http://localhost:7350
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/start-local-debug.ps1
 ```
 
-三条命令即可看到完整应用。
+脚本不会覆盖现有 `.env`，也不依赖宿主机 Go 或 Node.js。成功后网页在 `http://localhost:3000`，Nakama Console 在 `http://localhost:7351`，Go Remote 调试器在 `127.0.0.1:2345`。Linux/macOS 可先运行 `bash server/build.sh`，再运行 `docker compose up -d --build`（首次运行先从 `.env.example` 创建 `.env`）。
+
+本地 Docker 构建默认从 `goproxy.cn` 下载 Go 模块，并由 Go 校验模块校验和；如设备使用其他可达代理，可设置 `CS2MATCH_GOPROXY` 环境变量覆盖。生产镜像的构建流程不使用此本地设置。
+
+#### GoLand 断点调试
+
+1. 在 GoLand 2026.2.3 打开仓库根目录；首次打开时为 `server/go.mod` 选择本机 Go 1.24.5 SDK。
+2. 在运行配置下拉框选择项目共享的 **Nakama (Go Remote)**，点击 **Debug**。它连接 `127.0.0.1:2345`；停止调试连接时选择 **Leave it running**，容器里的 Delve 继续运行，之后可以重连。
+3. 在 `server/internal/identity/hooks.go` 的 `BeforeAuthenticateDevice` 设置行断点，再用**新的浏览器无痕窗口**打开 `http://localhost:3000`。网页没有既有 Session 时会自动进行访客设备认证，触发该 Hook；普通刷新可能只恢复 Session。
+4. 在 `server/internal/match/api_rpc.go` 的 `RPCSimuMatch` **返回的请求处理函数内**设置行断点，在网页进入“选择对战方式”，点击“电脑对战／开始模拟”，触发 `SimuMatch` RPC。
+
+修改 Go 代码后，请让 Codex 执行 `$cs2match-local-update` 的“更新后端”，或手动重新运行 `server/build.ps1` 并重启 Nakama。Go 插件需要**重新编译和重启**；重启后在 GoLand 重新连接。断开调试前若程序停在断点，请先继续运行。前端需要保存即生效时，可按 Option A 使用 Vite HMR。
+
+本地 `nakama-config.yml` 将 HTTP 写入超时设置为 10 分钟，方便暂停 Hook/RPC 请求并单步检查；它不用于生产镜像。调试暂停期间，当前请求及其他 Goroutine 可能暂时无法响应。
 
 ### 💻 Option A: 本地开发模式（活跃前端开发）
 
 适合需要即时热更新（HMR）的前端开发：
 
 ```bash
-# 1. 启动后端服务
-cp .env.example .env
-docker compose up -d db nakama
+# 1. 先按 Option B 启动本地调试环境；如使用 Vite，可停止 Docker 前端
+docker compose stop frontend
 
-# 2. 编译 Go 插件
-cd server
-bash build.sh        # Linux/Mac
-# 或 Windows WSL2: wsl bash build.sh
-cd ..
-
-# 3. 重启 Nakama 加载插件
-docker compose restart nakama
-
-# 4. 启动前端开发服务器
+# 2. 启动前端开发服务器
 cd client
 cp .env.example .env
 npm install
@@ -98,7 +89,7 @@ cs2-simu-project/
 │   ├── go.mod               # 模块: windypath.com/cs2match/server
 │   ├── main.go              # InitModule 入口 + RPC 注册
 │   ├── build.sh             # 编译脚本 (Linux/Mac)
-│   ├── build.ps1            # 编译脚本 (Windows WSL2)
+│   ├── build.ps1            # 编译脚本 (Windows Docker)
 │   └── build/               # 编译产物 (.so)
 │
 ├── configs/                 # 策划配表 (Excel) + Luban 配置
@@ -113,6 +104,7 @@ cs2-simu-project/
 ├── scripts/                  # 工具脚本
 │   ├── gen-config.sh         # 导表脚本 (Linux/Mac/Git Bash)
 │   ├── gen-config.ps1        # 导表脚本 (Windows PowerShell)
+│   ├── start-local-debug.ps1 # 本地调试首次启动与就绪检查
 │   └── update-local-config.ps1 # 导表并更新本地前后端
 │
 ├── tools/luban/              # Luban Docker 镜像
@@ -127,13 +119,13 @@ cs2-simu-project/
 │   ├── package.json
 │   ├── vite.config.ts
 │   └── src/
-│       ├── App.tsx          # 主页面 (连接状态 + HealthCheck)
-│       ├── App.css
 │       ├── main.tsx
 │       ├── index.css
 │       ├── nakama.ts        # Nakama 客户端单例
-│       └── hooks/
-│           └── useNakamaAuth.ts  # 认证 Hook
+│       ├── api/auth.ts      # 访客设备认证
+│       ├── api/simu.ts      # SimuMatch RPC 客户端
+│       ├── pages/MatchPage.tsx # 电脑对战入口
+│       └── hooks/useNakamaAuth.ts # 认证状态 Hook
 │
 ├── doc/                     # 项目文档
 │   └── cs2SimuProject.md
@@ -150,7 +142,7 @@ cs2-simu-project/
 ### Docker 服务管理
 
 ```bash
-docker compose up -d           # 启动全部服务
+docker compose up -d           # 已完成首次构建后启动全部服务
 docker compose up -d db nakama # 仅启动后端
 docker compose ps              # 查看服务状态
 docker compose logs -f nakama  # 查看 Nakama 日志
@@ -164,9 +156,9 @@ docker compose down -v         # 停止并删除数据卷（清空数据库）
 从项目根目录执行：
 
 ```powershell
-# Windows PowerShell / CMD
-.\server\build.bat
-docker compose up -d db nakama
+# Windows PowerShell / CMD（build.bat 也调用同一个 PowerShell 构建脚本）
+.\server\build.ps1
+docker compose up -d --build db nakama
 docker compose restart nakama
 docker compose logs --tail 100 nakama
 ```
@@ -174,7 +166,7 @@ docker compose logs --tail 100 nakama
 ```bash
 # Linux / macOS / WSL2
 bash server/build.sh
-docker compose up -d db nakama
+docker compose up -d --build db nakama
 docker compose restart nakama
 docker compose logs --tail 100 nakama
 ```
@@ -365,8 +357,8 @@ A: 必须同时完成“生成新的 Linux `.so`”和“重启 Nakama 加载新
 Windows PowerShell / CMD：
 
 ```powershell
-.\server\build.bat
-docker compose up -d db nakama
+.\server\build.ps1
+docker compose up -d --build db nakama
 docker compose restart nakama
 docker compose logs --tail 100 nakama
 ```
@@ -375,12 +367,12 @@ Linux / macOS / WSL2：
 
 ```bash
 bash server/build.sh
-docker compose up -d db nakama
+docker compose up -d --build db nakama
 docker compose restart nakama
 docker compose logs --tail 100 nakama
 ```
 
-`server/build.bat` 和 `server/build.sh` 都使用 `heroiclabs/nakama-pluginbuilder:3.30.0`，并带上项目需要的 `-mod=mod -buildmode=plugin -trimpath`。原先 FAQ 中的多行命令是 Bash 语法，直接粘贴到 PowerShell 时，反斜杠 `\` 不会续行；而且只编译不重启 Nakama，也不会加载新插件。
+`server/build.ps1`、`server/build.bat` 和 `server/build.sh` 均使用 `heroiclabs/nakama-pluginbuilder:3.30.0`，以 `-mod=mod -buildmode=plugin -trimpath -gcflags='all=-N -l'` 编译本地调试插件。生产镜像使用独立的 `server/Dockerfile.prod`，不会加入 Delve 或调试编译参数。
 
 如果只想确认编译产物已刷新，可查看 `server/build/backend.so` 的修改时间；若日志显示插件加载失败，以 `docker compose logs --tail 100 nakama` 的错误为准。
 

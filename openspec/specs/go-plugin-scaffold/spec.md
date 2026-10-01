@@ -1,6 +1,8 @@
 # Go Plugin Scaffold
 
-Go 插件项目骨架规格 — 模块路径、编译工具链、入口函数。
+## Purpose
+
+定义 Nakama Go 插件的模块布局、依赖版本、编译方式与入口函数约束，保证本地调试插件能够被开发服务器加载，同时与独立的生产构建保持兼容。
 
 ## Requirements
 
@@ -27,14 +29,15 @@ Go 插件项目 SHALL 位于 `server/` 目录，包含 `go.mod`、`main.go`（`I
 
 ### Requirement: 插件编译
 
-编译使用官方 `heroiclabs/nakama-pluginbuilder:3.30.0` Docker 镜像（Go 1.24.5，依赖与 Nakama 二进制精确匹配）。编译输出为 `server/build/backend.so`。
+插件 SHALL 使用官方 `heroiclabs/nakama-pluginbuilder:3.30.0` Docker 镜像编译（Go 1.24.5，依赖与 Nakama 二进制精确匹配）。编译输出为 `server/build/backend.so`。
 
 #### Scenario: 编译插件
 
 - **WHEN** 开发者执行 `bash server/build.sh` 或等效 Docker 命令
 - **THEN** `server/build/backend.so` 文件被生成
 - **AND** 文件格式为 Linux ELF 64-bit shared object
-- **AND** 编译命令中设置了 `-buildmode=plugin -trimpath`
+- **AND** 本地编译命令中设置了 `-buildmode=plugin -trimpath -gcflags='all=-N -l'`
+- **AND** 仅在编译成功后替换先前的 `backend.so`
 
 ### Requirement: InitModule 入口函数
 

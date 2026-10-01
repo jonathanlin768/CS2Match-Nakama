@@ -1,0 +1,6 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Nakama (Go Remote)" type="GoRemoteDebugConfigurationType" factoryName="Go Remote" host="127.0.0.1" port="2345">
+    <option name="disconnect" value="LEAVE" />
+    <method v="2" />
+  </configuration>
+</component>

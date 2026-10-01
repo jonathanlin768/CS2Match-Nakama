@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import test from "node:test"
 
-const compose = readFileSync(new URL("../../docker-compose.prod.yml", import.meta.url), "utf8")
+const compose = readFileSync(new URL("../../docker-compose.prod.yml", import.meta.url), "utf8").replace(/\r\n/g, "\n")
 const devCompose = readFileSync(new URL("../../docker-compose.yml", import.meta.url), "utf8")
 const tunnel = readFileSync(new URL("../cloudflared/config.yml.example", import.meta.url), "utf8")
 const env = readFileSync(new URL("../../.env.production.example", import.meta.url), "utf8")
@@ -51,6 +51,13 @@ test("production template contains no real credentials and pins immutable backen
 test("development compose remains a separate local stack", () => {
   assert.match(devCompose, /7350:7350/)
   assert.doesNotMatch(devCompose, /cloudflared/)
+})
+
+test("production build excludes the local debugger", () => {
+  assert.match(workflow, /-f server\/Dockerfile\.prod/)
+  assert.doesNotMatch(workflow, /Dockerfile\.dev|2345/)
+  assert.doesNotMatch(backendDockerfile, /nakama-dsym|\bdlv\b|-gcflags/)
+  assert.doesNotMatch(compose, /2345/)
 })
 
 test("PostgreSQL readiness waits for the final TCP listener", () => {

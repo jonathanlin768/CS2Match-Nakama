@@ -11,6 +11,8 @@ console:
 # Socket 配置 (WebSocket + HTTP)
 socket:
   port: 7350
+  # Allow time to inspect Hook/RPC breakpoints in the local debugger.
+  write_timeout_ms: 600000
   # 开发环境允许所有来源
   allowed_origins:
     - "*"

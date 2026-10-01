@@ -1,22 +1,25 @@
 # Dev Environment
 
-开发环境基础设施规格 — Docker Compose 编排、服务拓扑、数据持久化。
+## Purpose
+
+定义开发设备上 Docker Compose 的服务拓扑、持久化、本地 Go 插件构建和远程断点调试的可重复启动方式，确保两台 Windows 设备获得一致的开发体验。
 
 ## Requirements
 
 ### Requirement: Docker Compose 一键启动全部服务
 
-系统 SHALL 提供 `docker-compose.yml` 编排文件，开发者执行 `docker compose up -d` 后，Nakama、PostgreSQL 和前端（Nginx）三个服务自动启动并就绪。
+系统 SHALL 提供 `docker-compose.yml` 编排文件，开发者编译 Go 插件并执行 `docker compose up -d --build` 后，Nakama、PostgreSQL 和前端（Nginx）三个服务自动启动并就绪。
 
 #### Scenario: 首次启动环境
 
-- **WHEN** 开发者在项目根目录执行 `docker compose up -d`
-- **THEN** Docker 自动拉取 Nakama 3.30+ 和 PostgreSQL 15+ 镜像
+- **WHEN** 开发者在项目根目录编译 Go 插件并执行 `docker compose up -d --build`
+- **THEN** Docker 自动拉取 Nakama dsym 3.30.0 和 PostgreSQL 15+ 镜像
 - **AND** PostgreSQL 容器先启动并完成初始化
 - **AND** Nakama 容器启动后自动执行 `nakama migrate up` 完成数据库迁移
 - **AND** Nakama 进程启动，监听 7350 (HTTP/WebSocket)、7351 (Console) 端口
 - **AND** 前端 Nginx 容器启动，监听 3000 端口，可通过 `http://localhost:3000` 访问
 - **AND** 执行 `docker compose ps` 显示三个服务状态均为 healthy
+- **AND** Delve 监听宿主机 `127.0.0.1:2345`
 
 #### Scenario: 宿主机访问 Nakama API
 
@@ -84,6 +87,54 @@
 - **THEN** 前端容器不启动
 - **AND** Nakama API 和 Console 仍然可用
 - **AND** 开发者可使用 Option A（Vite dev server）在宿主机开发前端
+
+### Requirement: Windows 一键启动本地调试
+
+系统 SHALL 提供 `scripts/start-local-debug.ps1` 并由 `cs2match-local-update` 技能的“启动本地调试”入口调用。脚本 SHALL 使用 Docker 编译 Go 插件、启动 Compose，并验证三个容器、前端、HealthCheck RPC 与 Go Remote 端口就绪。
+
+#### Scenario: 新设备首次启动
+
+- **GIVEN** Windows 开发设备已安装 Docker Desktop，项目根目录无 `.env`
+- **WHEN** 开发者运行“启动本地调试”技能
+- **THEN** 脚本从 `.env.example` 创建 `.env` 并编译调试插件
+- **AND** `docker compose up -d --build` 启动三个服务
+- **AND** 调试器仅经宿主机回环地址的 `2345` 端口可访问
+
+#### Scenario: 现有设备重复启动
+
+- **GIVEN** 项目根目录已有 `.env`
+- **WHEN** 开发者再次运行“启动本地调试”技能
+- **THEN** 脚本不覆盖 `.env`
+- **AND** 脚本在检查全部服务和 RPC 成功后报告就绪
+
+#### Scenario: 插件编译失败
+
+- **GIVEN** 现有 Nakama 容器正在运行
+- **WHEN** 调试插件编译失败
+- **THEN** 脚本报告失败且不执行 Compose 重启
+- **AND** 现有 `backend.so` 不被失败的编译产物覆盖
+
+### Requirement: GoLand 远程调试与生产隔离
+
+项目 SHALL 提交共享的 Go Remote 配置，连接 `127.0.0.1:2345` 并在 IDE 断开时保留 Delve 运行。本地 Nakama SHALL 使用 `nakama-dsym:3.30.0` 与 Delve，并将 HTTP 写入超时设置为 10 分钟以允许断点单步检查；生产构建 SHALL 继续使用 `server/Dockerfile.prod` 和普通 Nakama 3.30.0 镜像。
+
+#### Scenario: Hook 与 RPC 断点
+
+- **GIVEN** 开发者在 GoLand 选择共享 Go Remote 配置并连接
+- **WHEN** 浏览器首次访客设备认证或网页发起 `SimuMatch` RPC
+- **THEN** 对应 Go 插件源码行断点命中
+
+#### Scenario: GoLand 断开与重连
+
+- **GIVEN** Nakama 在 Delve 下运行且未停在断点
+- **WHEN** GoLand 断开远程调试连接
+- **THEN** Delve 与 Nakama 继续运行并可再次连接
+
+#### Scenario: 生产镜像构建
+
+- **WHEN** GitHub Actions 构建生产后端镜像
+- **THEN** 镜像中不包含 Delve 或本地调试编译参数
+- **AND** 生产服务不开放 `2345` 端口
 
 ### Requirement: Go 插件自动加载
 
